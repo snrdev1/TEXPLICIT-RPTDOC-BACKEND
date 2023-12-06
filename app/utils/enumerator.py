@@ -5,31 +5,6 @@ from typing import TypeVar
 class Enumerator:
     T = TypeVar("T")
 
-    # The CommentType class is an enumeration that represents different types of comments.
-    class CommentType(enum.Enum):
-        Review = 1
-        Discussion = 2
-
-    # The CommentSortBy class is an enumeration that represents different sorting options for
-    # comments.
-    class CommentSortBy(enum.Enum):
-        TOP_COMMENTS = 1
-        LATEST_COMMENTS = 2
-        OLDEST_COMMENTS = 3
-
-    # The above class defines an enumeration for the status of a knowledge item.
-    class KnowledgeItemStatus(enum.Enum):
-        Open = 1
-        Approved = 2
-        Rejected = 3
-
-    # The DatasourceTypes class is an enumeration that represents different types of data sources.
-    class DatasourceTypes(enum.Enum):
-        MYSQL = 0
-        MSSQL = 1
-        POSTGRESQL = 2
-        MONGODB = 3
-
     # The Role class is an enumeration that represents different roles.
     class Role(enum.Enum):
         Admin = 1
@@ -92,31 +67,10 @@ class Enumerator:
         except Exception:
             return "Not Available"
 
-    # The class KiRejectionReason is an enumeration that represents different reasons for rejection.
-    class KiRejectionReason(enum.Enum):
-        preface = "Our team identified the following issue(s) with your submission: "
-        reasons = [
-            "It violates Texplicit02's community guidelines or terms of service.",
-            "It contains offensive or inappropriate content.",
-            "It lacks sufficient relevance or value to the Texplicit02 community.",
-            "It has already been submitted by another user.",
-            "It is too similar to existing knowledge items on the platform.",
-            "It contains inaccurate or misleading information.",
-            "It is too promotional in nature.",
-            "It contains copyrighted material that the user does not have the right to share.",
-            "It is too short or incomplete to provide meaningful value to the community.",
-        ]
-        suffix = "Comments from the Admin: "
-
     # MenuItems
     class MenuItems(enum.Enum):
         Home = 0
-        MyNetwork = 1
-        MyTexplicit = 2
-        MyDocuments = 3
-        MyDatasources = 4
-        News = 5
-        AIChat = 6
-        UserManagement = 7
-        Admin = 8
-        Reports = 9
+        MyDocuments = 1
+        Reports = 2
+        UserManagement = 3
+        Admin = 4

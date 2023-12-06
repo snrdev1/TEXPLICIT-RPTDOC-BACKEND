@@ -90,7 +90,6 @@ class Config(object):
 
     # User related folders and files
     USER_FOLDER = os.getcwd() + "\\assets\\users"
-    USER_MY_DATASOURCES_FOLDER = "mydatasources"
     USER_VECTORSTORE_PATH = "vectorstore\\db_faiss"
 
     # Vectorstore
@@ -98,14 +97,6 @@ class Config(object):
 
     # Summary
     SUMMARY_DEFAULT_NUM_SENTENCES = 10
-
-    # Datasources configurations
-    # Maximum allowed response size (in bytes)
-    MAX_DATASOURCE_RESPONSE_SIZE = 5000
-    # Maximum number of datasource responses per query allowed to be stored
-    MAX_DATASOURCE_QUERY_RESPONSES = 5
-    # Maximum number of queries allowed to be stored
-    MAX_DATASOURCE_QUERIES = 10
 
     # GCP Bucket Names
     # GCP_BUCKET_USERS = "texplicit-02-users"
