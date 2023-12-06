@@ -99,5 +99,5 @@ class Config(object):
     SUMMARY_DEFAULT_NUM_SENTENCES = 10
 
     # GCP Bucket Names
-    # GCP_BUCKET_USERS = "texplicit-02-users"
-    # GCP_BUCKET_KNOWLEDGEITEMS = "texplicit-02-knowledgeitems"
+    GCP_BUCKET_USERS = "texplicit-02-users"
+    GCP_BUCKET_KNOWLEDGEITEMS = "texplicit-02-knowledgeitems"
