@@ -171,6 +171,3 @@ assets/
 #ppt images
 app/ppt_outputs/
 app/excel_outputs/
-
-main.py
-.temp/
