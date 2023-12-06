@@ -883,9 +883,9 @@ class MyDocumentsService:
             # Delete the source blob after copying
             source_blob.delete()
 
-            print(
-                f"File '{source_blob_name}' moved to '{destination_blob_name}' in bucket '{self.bucket_name}'."
-            )
+            # print(
+            #     f"File '{source_blob_name}' moved to '{destination_blob_name}' in bucket '{self.bucket_name}'."
+            # )
 
         else:
             root_folder_path = os.path.join(Config.USER_FOLDER, user_id)
@@ -1686,14 +1686,14 @@ class MyDocumentsService:
             if blob.exists():
                 blob.delete()
                 deleted = True
-                print(
-                    f"File '{file_name}' deleted successfully from bucket '{self.bucket_name}'."
-                )
+                # print(
+                #     f"File '{file_name}' deleted successfully from bucket '{self.bucket_name}'."
+                # )
             else:
                 deleted = False
-                print(
-                    f"File '{file_name}' does not exist in bucket '{self.bucket_name}'."
-                )
+                # print(
+                #     f"File '{file_name}' does not exist in bucket '{self.bucket_name}'."
+                # )
         else:
             file_path = MyDocumentsService.get_file_path(file, user_id)
             if os.path.isfile(file_path):
@@ -1769,14 +1769,14 @@ class MyDocumentsService:
                 if blob.exists():
                     blob.delete()
                     deleted = True
-                    print(
-                        f"File '{file_name}' deleted successfully from bucket '{self.bucket_name}'."
-                    )
+                    # print(
+                    #     f"File '{file_name}' deleted successfully from bucket '{self.bucket_name}'."
+                    # )
                 else:
                     deleted = False
-                    print(
-                        f"File '{file_name}' does not exist in bucket '{self.bucket_name}'."
-                    )
+                    # print(
+                    #     f"File '{file_name}' does not exist in bucket '{self.bucket_name}'."
+                    # )
             else:
                 file_name = file["virtualFileName"]
                 # print("Filename : : : " + file_name)

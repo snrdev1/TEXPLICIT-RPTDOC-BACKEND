@@ -402,7 +402,7 @@ class UserService:
                 # Upload an empty string to create an empty folder
                 folder_blob.upload_from_string("")
 
-                print(f"Created folder {folder_name} in bucket {bucket_name}!")
+                # print(f"Created folder {folder_name} in bucket {bucket_name}!")
 
             return id
 
