@@ -1,4 +1,3 @@
-from celery import Celery
 from flask import Flask
 from flask_cors import CORS
 from flask_socketio import SocketIO
@@ -32,27 +31,15 @@ def create_app():
 
 
 app, socketio = create_app()
-celery = Celery(
-    app.name, broker=Config.CELERY_BROKER_URL, backend=Config.CELERY_BACKEND_URL
-)
-celery.conf.update(app.config)
 
 from app.routes.admin.account import admin_account
-from app.routes.admin.knowledgeitem import admin_knowledgeitem
 from app.routes.admin.users import admin_users
 from app.routes.user.account import account
 from app.routes.user.chat import chat
-from app.routes.user.domains import domains
 from app.routes.user.feedback import feedback
-from app.routes.user.group import groups
-from app.routes.user.knowledgeitem import knowledgeitem
 from app.routes.user.menu import menu
-from app.routes.user.mydatasources import mydatasources
 from app.routes.user.mydocuments import mydocuments
-from app.routes.user.mytexplicit import mytexplicit
 from app.routes.user.news import news
-from app.routes.user.notes import notes
-from app.routes.user.posts import posts
 from app.routes.user.report_generator import report_generator
 from app.routes.user.summary import summary
 from app.routes.user.usermanagement import usermanagement
@@ -60,22 +47,14 @@ from app.routes.user.users import users
 
 # Admin routes
 app.register_blueprint(admin_account)
-app.register_blueprint(admin_knowledgeitem)
 app.register_blueprint(admin_users)
 
 # User routes
 app.register_blueprint(account)
 app.register_blueprint(chat)
-app.register_blueprint(domains)
 app.register_blueprint(feedback)
-app.register_blueprint(groups)
-app.register_blueprint(knowledgeitem)
-app.register_blueprint(mydatasources)
 app.register_blueprint(mydocuments)
-app.register_blueprint(mytexplicit)
 app.register_blueprint(news)
-app.register_blueprint(notes)
-app.register_blueprint(posts)
 app.register_blueprint(summary)
 app.register_blueprint(usermanagement)
 app.register_blueprint(users)

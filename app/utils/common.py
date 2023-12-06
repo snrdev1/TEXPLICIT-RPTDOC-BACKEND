@@ -17,8 +17,6 @@ from app.utils.pipelines import PipelineStages
 
 class Common:
     
-    KI_COLLECTION = Config.MONGO_KI_COLLECTION
-
     @staticmethod
     def encrypt_password(password):
         """Generates password hash from string password
@@ -263,23 +261,3 @@ class Common:
                 return param
         
         return None
-
-    def get_ki_tags(self):
-        """
-        The function `get_ki_tags` retrieves a list of tags from a MongoDB collection and returns them
-        in sorted order.
-        
-        Returns:
-          a list of tags.
-        """
-
-        m_db = MongoClient.connect()
-
-        pipeline = [
-            PipelineStages.stage_group({"_id": "$tags"})
-        ]
-
-        tags = Common.cursor_to_dict(m_db[self.KI_COLLECTION].aggregate(pipeline))
-        tags = sorted([tag["_id"] for tag in tags])
-
-        return tags

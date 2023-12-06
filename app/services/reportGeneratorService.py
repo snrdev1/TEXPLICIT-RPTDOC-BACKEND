@@ -5,7 +5,6 @@ from typing import Union
 
 from bson import ObjectId
 
-from app import celery
 from app.config import Config
 from app.models.mongoClient import MongoClient
 from app.utils.common import Common
@@ -14,7 +13,6 @@ from app.utils.llm_researcher.llm_researcher import research
 from app.utils.response import Response
 
 
-@celery.task
 def report_generate(
     user_id: Union[str, ObjectId],
     task: str,

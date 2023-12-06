@@ -7,7 +7,6 @@ from datetime import datetime
 from flask import Blueprint, request, send_file
 from app.config import Config
 from app.auth.userauthorization import authorized
-from app.services.domainService import DomainService
 from app.services.userService import UserService
 from app.utils.common import Common
 from app.utils.enumerator import Enumerator
