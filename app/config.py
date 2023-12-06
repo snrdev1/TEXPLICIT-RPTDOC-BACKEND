@@ -92,9 +92,6 @@ class Config(object):
     USER_FOLDER = os.getcwd() + "\\assets\\users"
     USER_VECTORSTORE_PATH = "vectorstore\\db_faiss"
 
-    # Vectorstore
-    KNOWLEDGEITEM_VECTORSTORE_PATH = "app\\vectorstores\\knowledgeitems-faiss"
-
     # Summary
     SUMMARY_DEFAULT_NUM_SENTENCES = 10
 
