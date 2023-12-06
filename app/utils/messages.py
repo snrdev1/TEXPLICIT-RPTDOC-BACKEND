@@ -13,7 +13,6 @@ class Messages:
     DUPLICATE_KI = "Knowledge Item already exists!"
     DUPLICATE_GROUP = "Similar group already exists!"
     DUPLICATE_GROUP_MEMBER = "User is already a member of this group"
-    DUPLICATE_DOMAIN = "Domain already exists / has already been requested!"
     DUPLICATE_NOTE_TITLE = "This note title already exists for this user!"
 
     # ERROR_
@@ -41,7 +40,6 @@ class Messages:
     ERROR_KI_STATUS = "Failed to change KI status!"
     ERROR_KI_REJECTION_RESPONSES = "Failed to retrieve knowledge item rejection responses"
     ERROR_GROUP_UPDATE = "Failed to update group media!"
-    ERROR_REQUESTING_NEW_DOMAIN = "Failed to request new domain!"
     ERROR_GROUP_CREATOR_LEAVE_GROUP = "Creator of the group cannot leave the group!"
     ERROR_POST_LIKE = "Failed to toggle like on post!"
     ERROR_CHAT_DELETE = "Failed to delete chats!"
@@ -67,7 +65,6 @@ class Messages:
     ERROR_PASSWORD_RESET_EMAIL_SENT = "Failed to send password reset link to user email!"
     ERROR_INACTIVE_USER = "User has been deleted/ not approved by Admin!"
     ERROR_MENU_NAMES = "Failed to retrieve menu names!"
-    ERROR_DOMAIN_NAMES = "Failed to retrieve domain names!"
     ERROR_USER_ACTIVATED = "Failed to activated user!"
     ERROR_USER_DEACTIVATED = "Failed to deactivate user!"
 
@@ -94,7 +91,6 @@ class Messages:
     NOT_FOUND_MY_TEXPLICIT = "My Texplicit Knowledge Items not found!"
     NOT_FOUND_GROUP = "Group not found!"
     NOT_MEMBER_GROUP = "User is not a member of this group!"
-    NOT_FOUND_DOMAIN = "Domain not found!"
     NOT_FOUND_POST = "Post not found!"
 
     # OK_
@@ -130,8 +126,6 @@ class Messages:
     OK_GROUP_KI_ADD = "Knowledge item added to group successfully!"
     OK_GROUP_KI_DELETE = "Knowledge item deleted from group successfully!"
     OK_GROUP_UPDATE = "Group data updated successfully!"
-    OK_REQUESTED_NEW_DOMAIN = "Requested new domain successfully!"
-    OK_DOMAINS_RETRIEVAL = "Domains found successfully!"
     OK_POST_LIKE = "Toggled like on post successfully!"
     OK_GENERATE_SUMMARY="Summary generated successfully"
     OK_GENERATE_HIGHLIGHTS="Highlights generated successfully"
@@ -168,7 +162,6 @@ class Messages:
     OK_USER_DEACTIVATED = "User has been deactivated successfully!"
     OK_MENU_RETRIEVAL = "Menu items retrieved successfully!"
     OK_MENU_NAMES_FOUND = "Menu item names retrieved successfully!"
-    OK_DOMAIN_NAMES_FOUND = "Domain names retrieved successfully!"
     OK_REPORT_GENERATING = "Report generation successfully started!"
     OK_REPORTS_FOUND = "Reports found successfully!"
     OK_REPORT_DELETED = "Report deleted successfully!"

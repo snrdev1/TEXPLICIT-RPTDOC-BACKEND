@@ -41,7 +41,7 @@ def account_signup():
         request_params = request.get_json()
 
         # Required parameters
-        required_params = ["name", "email", "password", "domains", "role"]
+        required_params = ["name", "email", "password", "role"]
 
         # Check if all required parameters are present in the request params
         if not all(
@@ -60,7 +60,6 @@ def account_signup():
             website=request_params.get("website", ""),
             role=int(Enumerator.Role.Personal.value),
             subscription=request_params.get("subscription", 1),
-            domains=request_params.get("domains", []),
             menu=request_params.get("menu", []),
         )
 
@@ -373,37 +372,6 @@ def account_update_user_image(logged_in_user):
 
     except Exception as e:
         Common.exception_details("account.py : account_update_user_image", e)
-        return Response.server_error()
-
-
-@account.route("/domains", methods=["GET"])
-@authorized
-def domains_get_user_domains(logged_in_user):
-    """
-    The function `domains_get_user_domains` retrieves the domains associated with a logged-in user and
-    returns a response containing the retrieved domains.
-
-    Args:
-      logged_in_user: The parameter "logged_in_user" is expected to be an object representing a
-    logged-in user. It is used to retrieve the "domains" array from the user object.
-
-    Returns:
-      a custom response object.
-    """
-    try:
-        user = logged_in_user
-        # Get the domains array from the user object
-        domains = user["domains"]
-
-        print("Domains : ", domains)
-
-        response = DomainService().get_domains_by_ids(domains)
-        return Response.custom_response(
-            response, Messages.OK_DOMAINS_RETRIEVAL, True, 200
-        )
-
-    except Exception as e:
-        Common.exception_details("domains.py: domains_get_user_domains", e)
         return Response.server_error()
 
 

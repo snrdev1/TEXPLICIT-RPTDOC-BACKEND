@@ -103,7 +103,6 @@ def admin_add_update_user(logged_in_user):
             "mobileNumber": request_params.get("mobileNumber", ""),
             "companyName": request_params.get("companyName", ""),
             "website": request_params.get("website", ""),
-            "domains": request_params.get("domains", []),
             "role": request_params.get("role", int(Enumerator.Role.Personal.value)),
             "permissions": {"menu": request_params.get("menu", [])},
             "subscription": request_params.get("subscription", 1)
@@ -135,7 +134,6 @@ def admin_add_update_user(logged_in_user):
                 website=user_info["website"],
                 role=user_info["role"],
                 subscription=user_info["subscription"],
-                domains=user_info["domains"],
                 menu=user_info["permissions"]["menu"],
             )
             response = UserService().create_user(new_user_info)

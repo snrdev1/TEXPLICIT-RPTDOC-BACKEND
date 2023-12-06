@@ -376,8 +376,6 @@ class UserService:
             The id of the user created
         """
 
-        # Convert string domain _ids into ObjectId
-        user_data["domains"] = [ObjectId(domain) for domain in user_data["domains"]]
         user_data["isActive"] = True
 
         # Credentials for GCP Connection
@@ -525,7 +523,6 @@ class UserService:
         role=int(Enumerator.Role.Personal.value),
         subscription=1,
         image="",
-        domains=[],
         invoices="",
         favourites=[],
         recommends=[],
@@ -542,7 +539,6 @@ class UserService:
                 "role": role,
                 "subscription": subscription,
                 "image": image,
-                "domains": domains,
                 "invoices": invoices,
                 "favourites": favourites,
                 "recommends": recommends,
@@ -579,9 +575,6 @@ class UserService:
                             "then": {"$concat": [user_image_route, "$image"]},
                             "else": "$image",
                         }
-                    },
-                    "domains": {
-                        "$map": {"input": "$domains", "in": {"$toString": "$$this"}}
                     },
                     "favourites": {
                         "$map": {

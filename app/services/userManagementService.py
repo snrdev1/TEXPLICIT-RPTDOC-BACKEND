@@ -86,9 +86,7 @@ class UserManagementService:
             "image",
             "favourites",
             "recommends",
-            "invoices",
-            "domainsObjectedId",
-            "domainsArray",
+            "invoices"
         ]
         if user_id == "":
             skip = (pageIndex - 1) * pageSize
@@ -110,32 +108,12 @@ class UserManagementService:
                         "isActive": True,
                     }
                 ),
-                PipelineStages.stage_unwind("domains"),
-                PipelineStages.stage_add_fields(
-                    {"domainsObjectedId": {"$toObjectId": "$domains"}}
-                ),
-                PipelineStages.stage_lookup(
-                    Config.MONGO_DOMAIN_MASTER_COLLECTION, "domainsObjectedId", "_id", "domainsArray"
-                ),
-                PipelineStages.stage_add_fields(
-                    {
-                        "domainNames": {
-                            "$reduce": {
-                                "input": "$domainsArray.topic",
-                                "initialValue": "",
-                                "in": {"$concat": ["$$value", "", "$$this"]},
-                            }
-                        }
-                    }
-                ),
                 PipelineStages.stage_unset(unset_fields),
                 {
                     "$group": {
                         "_id": "$_id",
                         "name": {"$first": "$name"},
                         "email": {"$first": "$email"},
-                        "domainNames": {"$push": "$domainNames"},
-                        "domains": {"$push": "$domains"},
                     }
                 },
                 # PipelineStages.stage_group({"_id": "$_id"})
@@ -162,43 +140,14 @@ class UserManagementService:
 
         return Common.cursor_to_dict(response), total_recs
 
-    def get_user_domains(self, domain_ids):
-        """
-        The function `get_user_domains` retrieves user domains based on a list of domain IDs.
-
-        Args:
-          domain_ids: The parameter `domain_ids` is a list of domain IDs.
-
-        Returns:
-          The function `get_user_domains` returns a list of dictionaries containing the id and name of
-        the domains. If the `domain_ids` list is empty, it returns `None`.
-        """
-        m_db = MongoClient.connect()
-        results = []
-        if len(domain_ids) > 0:
-            # Converting domainIds to object ids
-            domain_ids = [ObjectId(id) for id in domain_ids]
-            query = {"_id": {"$in": domain_ids}}
-            domains = m_db[Config.MONGO_DOMAIN_MASTER_COLLECTION].find(query)
-
-            for domain in domains:
-                results.append(
-                    {"id": str(domain["_id"]), "name": str(domain["topic"]).title()}
-                )
-            return results
-        else:
-            return None
-
     def get_user_menus(self, menu_ids):
         """
-        The function `get_user_menus` retrieves user domains based on a list of domain IDs.
-
-        Args:
-          menu_ids: The parameter `menu_ids` is a list of domain IDs.
-
-        Returns:
-          The function `get_user_menus` returns a list of dictionaries containing the id and name of
-        the domains. If the `domain_ids` list is empty, it returns `None`.
+        The function `get_user_menus` retrieves menu information from a MongoDB database based on a list
+        of menu IDs.
+        
+        :param menu_ids: A list of menu IDs that we want to retrieve from the database
+        :return: If the length of `menu_ids` is greater than 0, a list of dictionaries containing the
+        `id` and `name` of each menu is returned. If `menu_ids` is empty, `None` is returned.
         """
         m_db = MongoClient.connect()
         results = []
@@ -239,7 +188,6 @@ class UserManagementService:
                     "$set": {
                         "name": data["name"],
                         "email": data["email"],
-                        "domains": data["domains"],
                         "permissions": {"menu": data["menus"]},
                     }
                 },

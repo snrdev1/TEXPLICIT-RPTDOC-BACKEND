@@ -39,7 +39,6 @@ def add_user(logged_in_user):
             "role": int(Enumerator.Role.Child.value),
             "subscription": 1,
             "image": "",
-            "domains": request_body["domains"],
             "permissions": {
                 "menu" : request_body["menus"]
             },
@@ -176,27 +175,6 @@ def del_user(logged_in_user, user_id):
 
 
 # Utils
-@usermanagement.route("/get-domains", methods=["GET"])
-@authorized
-def get_domains(logged_in_user):
-    """
-    Get all the domain names associated with the requested domain IDs
-    """
-    try:
-        req = request.args
-        domain_ids = [value for value in req.getlist("domainIds")]
-
-        response = UserManagementService().get_user_domains(domain_ids)
-
-        if response:
-            return Response.custom_response(
-                response, Messages.OK_DOMAIN_NAMES_FOUND, True, 200
-            )
-        else:
-            return Response.custom_response([], Messages.ERROR_DOMAIN_NAMES, True, 400)
-
-    except Exception as e:
-        Common.exception_details("usermanagement.py : get_domains", e)
 
 @usermanagement.route("/get-menu-names", methods=["GET"])
 @authorized
