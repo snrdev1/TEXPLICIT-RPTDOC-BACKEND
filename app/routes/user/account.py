@@ -53,13 +53,13 @@ def account_signup():
         # Extract user data from request body
         user_data = UserService.construct_user_data(
             name=request_params.get("name", ""),
-            mobileNumber=request_params.get("mobileNumber", ""),
             email=request_params.get("email", ""),
             passwordHash=Common.encrypt_password(request_params.get("password", "")),
+            role=int(request_params.get("role", Enumerator.Role.Personal.value)),
+            mobileNumber=request_params.get("mobileNumber", ""),
             companyName=request_params.get("companyName", ""),
             website=request_params.get("website", ""),
-            role=int(Enumerator.Role.Personal.value),
-            subscription=request_params.get("subscription", 1),
+            subscription=int(request_params.get("subscription", 1)),
             menu=request_params.get("menu", []),
         )
 
