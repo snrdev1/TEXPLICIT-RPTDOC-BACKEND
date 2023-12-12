@@ -17,8 +17,8 @@ class Config:
         self.allow_downloads = ApplicationConfig.REPORT_ALLOW_DOWNLOADS
         self.selenium_web_browser = ApplicationConfig.REPORT_WEB_BROWSER
         self.llm_provider = ApplicationConfig.REPORT_LLM_PROVIDER
-        self.fast_llm_model = ApplicationConfig.REPORT_FAST_LLM_MODEL
-        self.smart_llm_model = ApplicationConfig.REPORT_SMART_LLM_MODEL
+        self.fast_llm_model = ApplicationConfig.FAST_LLM_MODEL
+        self.smart_llm_model = ApplicationConfig.SMART_LLM_MODEL
         self.fast_token_limit = ApplicationConfig.REPORT_FAST_TOKEN_LIMIT
         self.smart_token_limit = ApplicationConfig.REPORT_SMART_TOKEN_LIMIT
         self.browse_chunk_max_length = ApplicationConfig.REPORT_BROWSE_CHUNK_MAX_LENGTH

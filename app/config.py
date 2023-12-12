@@ -43,6 +43,10 @@ class Config(object):
 
     # Constant variable for environment
     GCP_PROD_ENV = eval(os.getenv("GCP_PROD_ENV", False))
+    
+    # LLM models used
+    FAST_LLM_MODEL = os.getenv("FAST_LLM_MODEL", "gpt-3.5-turbo-1106")
+    SMART_LLM_MODEL = os.getenv("SMART_LLM_MODEL", "gpt-4-1106-preview")
 
     # REPORT GENERATION
     REPORT_DEBUG_MODE = False
@@ -50,8 +54,6 @@ class Config(object):
 
     REPORT_WEB_BROWSER = os.getenv("USE_WEB_BROWSER", "chrome")
     REPORT_LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ChatOpenAI")
-    REPORT_FAST_LLM_MODEL = os.getenv("FAST_LLM_MODEL", "gpt-3.5-turbo-1106")
-    REPORT_SMART_LLM_MODEL = os.getenv("SMART_LLM_MODEL", "gpt-4-1106-preview")
     REPORT_FAST_TOKEN_LIMIT = int(os.getenv("FAST_TOKEN_LIMIT", 2000))
     REPORT_SMART_TOKEN_LIMIT = int(os.getenv("SMART_TOKEN_LIMIT", 4000))
     REPORT_BROWSE_CHUNK_MAX_LENGTH = int(os.getenv("BROWSE_CHUNK_MAX_LENGTH", 8192))
