@@ -205,6 +205,82 @@ async def detailed_report(
     return detailed_report, detailed_report_path
 
 
+async def complete_report(
+    user_id: Union[str, ObjectId],
+    task: str,
+    websearch: bool,
+    agent: str,
+    agent_role_prompt: str,
+    report_type: str,
+    source: str,
+    format: str,
+    report_generation_id: Union[str, None],
+    subtopics: list = [],
+    websocket=None,
+) -> [str, str]:
+    assistant = ResearchAgent(
+        user_id=user_id,
+        question=task,
+        agent=agent,
+        agent_role_prompt=agent_role_prompt,
+        source=source,
+        format=format,
+        websocket=websocket,
+    )
+    path = await assistant.check_existing_report(report_type)
+    if path:
+        report_markdown = await assistant.get_report_markdown(report_type)
+
+    else:
+        outline_report_markdown, outline_report_path = await basic_report(
+            user_id=user_id,
+            task=task,
+            websearch=websearch,
+            agent=agent,
+            agent_role_prompt=agent_role_prompt,
+            report_type="outline_report",
+            source=source,
+            format=format,
+            websocket=websocket,
+            report_generation_id=report_generation_id,
+        )
+        
+        resource_report_markdown, resource_report_path = await basic_report(
+            user_id=user_id,
+            task=task,
+            websearch=websearch,
+            agent=agent,
+            agent_role_prompt=agent_role_prompt,
+            report_type="resource_report",
+            source=source,
+            format=format,
+            websocket=websocket,
+            report_generation_id=report_generation_id,
+        )
+        
+        detailed_report_markdown, detailed_report_path = await detailed_report(
+            user_id=user_id,
+            task=task,
+            websearch=websearch,
+            agent=agent,
+            agent_role_prompt=agent_role_prompt,
+            report_type=report_type,
+            source=source,
+            format=format,
+            websocket=websocket,
+            report_generation_id=report_generation_id,
+            subtopics=subtopics,
+        )
+
+        report_markdown = outline_report_markdown + "\n\n\n\n" + resource_report_markdown + "\n\n\n\n" + detailed_report_markdown
+
+        print("Report markdown : \n", report_markdown)
+        path = await assistant.save_report(report_type, report_markdown)
+
+    return report_markdown, path
+
+
+
 async def run_agent(
     user_id: Union[str, ObjectId],
     task: str,
@@ -224,21 +300,6 @@ async def run_agent(
 
     print({"type": "logs", "output": f"Start time: {str(start_time)}\n\n"})
 
-    # Basic report generation
-    if report_type != "detailed_report":
-        report_markdown, path = await basic_report(
-            user_id=user_id,
-            task=task,
-            websearch=websearch,
-            agent=agent,
-            agent_role_prompt=agent_role_prompt,
-            report_type=report_type,
-            source=source,
-            format=format,
-            websocket=websocket,
-            report_generation_id=report_generation_id,
-        )
-
     # In depth report generation
     if report_type == "detailed_report":
         report_markdown, path = await detailed_report(
@@ -253,6 +314,37 @@ async def run_agent(
             websocket=websocket,
             report_generation_id=report_generation_id,
             subtopics=subtopics,
+        )
+
+    # Complete report generation
+    elif report_type == "complete_report":
+        report_markdown, path = await complete_report(
+            user_id=user_id,
+            task=task,
+            websearch=websearch,
+            agent=agent,
+            agent_role_prompt=agent_role_prompt,
+            report_type=report_type,
+            source=source,
+            format=format,
+            websocket=websocket,
+            report_generation_id=report_generation_id,
+            subtopics=subtopics,
+        )
+
+    else:
+        # Basic report generation
+        report_markdown, path = await basic_report(
+            user_id=user_id,
+            task=task,
+            websearch=websearch,
+            agent=agent,
+            agent_role_prompt=agent_role_prompt,
+            report_type=report_type,
+            source=source,
+            format=format,
+            websocket=websocket,
+            report_generation_id=report_generation_id,
         )
 
     print({"type": "path", "output": path})

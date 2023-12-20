@@ -324,6 +324,7 @@ def generate_subtopic_report_prompt(
             - As this report will be part of a bigger report, you must ONLY include the main body divided into suitable subtopics,
             without any introduction, conclusion, or reference section.
             - Include hyperlinked urls to relevant sources wherever possible in the text.
+            - All related numerical values (if any) should be bold.
             - Also avoid including any details from these other subtopics: {[subtopic for subtopic in subtopics[1:] if subtopic!=current_subtopic]}
             - Ensure that you use smaller Markdown headers (e.g., H2 or H3) to structure your content and avoid using the largest Markdown header (H1).
             The H1 header will be used for the heading of the larger report later on.
@@ -338,6 +339,7 @@ def generate_subtopic_report_prompt(
             - As this report will be part of a bigger report, you must ONLY include the main body divided into suitable subtopics,
             without any introduction, conclusion, or reference section.
             - Include hyperlinked urls to relevant sources wherever possible in the text.
+            - All related numerical values (if any) should be bold.
             - Also avoid including any details from these other subtopics: {[subtopic for subtopic in subtopics[1:] if subtopic!=current_subtopic]}
             - Ensure that you use smaller Markdown headers (e.g., H2 or H3) to structure your content and avoid using the largest Markdown header (H1).
             The H1 header will be used for the heading of the larger report later on.
@@ -403,6 +405,7 @@ def generate_report_conclusion(question: str, research_summary: str = "") -> str
         - Do NOT defer to general and meaningless conclusions.
         - Since the conclusion will be part of a larger report, do not generate any other sections that are generally present in reports.
         - Use a 'Conclusion' H2 header.
+        - If there are urls present, they MUST be hyperlinked.
         Assume that the current date is {datetime.now().strftime('%B %d, %Y')} if required.
         """
     if research_summary:

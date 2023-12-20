@@ -1,31 +1,36 @@
 """Selenium web scraping module."""
 from __future__ import annotations
 
-import logging
 import asyncio
+import io
+import json
+import logging
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from sys import platform
-from PyPDF2 import PdfReader
+
 import requests
-import io
 from bs4 import BeautifulSoup
-from webdriver_manager.chrome import ChromeDriverManager
-from webdriver_manager.firefox import GeckoDriverManager
+from newspaper import Article
+from PyPDF2 import PdfReader
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.safari.options import Options as SafariOptions
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
+from sympy import content
+from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.firefox import GeckoDriverManager
+
+from app.config import Config as ApplicationConfig
 
 from ..config import Config
 from ..processing import text as summary
 from ..processing.html import extract_hyperlinks, format_hyperlinks
-
-from concurrent.futures import ThreadPoolExecutor
 
 executor = ThreadPoolExecutor()
 
@@ -49,18 +54,39 @@ async def async_browse(url: str, question: str, websocket=None) -> str:
 
     print(f"Scraping url {url} with question {question}")
     print(
-        {"type": "logs", "output": f"🔎 Browsing the {url} for relevant about: {question}..."})
+        {
+            "type": "logs",
+            "output": f"🔎 Browsing the {url} for relevant about: {question}..."
+        }
+    )
 
     try:
-        if url.endswith('.pdf'):
+        if url.endswith(".pdf"):
             text = await loop.run_in_executor(executor, extract_text_from_pdf, url)
-            summary_text = await loop.run_in_executor(executor, summary.summarize_text, url, text, question)
+            summary_text = await loop.run_in_executor(
+                executor, summary.summarize_text, url, text, question
+            )
         else:
-            driver, text = await loop.run_in_executor(executor, scrape_text_with_selenium, url)
-            summary_text = await loop.run_in_executor(executor, summary.summarize_text, url, text, question, driver)
+            if ApplicationConfig.REPORT_WEB_SCRAPER == "selenium":
+                # Use Selenium to scrape url and gather content
+                driver, text = await loop.run_in_executor(
+                    executor, scrape_text_with_selenium, url
+                )
+                summary_text = await loop.run_in_executor(
+                    executor, summary.summarize_text, url, text, question, driver
+                )
+            else:
+                # User Newspaper to scrape url and gather content
+                summary_text = await loop.run_in_executor(
+                    executor, scrape_url_with_newspaper, url
+                )
 
         print(
-            {"type": "logs", "output": f"📝 Information gathered from url {url}: {summary_text}"})
+            {
+                "type": "logs",
+                "output": f"📝 Information gathered from url {url}: {summary_text}"
+            }
+        )
 
         return f"Information gathered from url {url}: {summary_text}"
     except Exception as e:
@@ -78,6 +104,7 @@ def extract_text_from_pdf(pdf_path: str) -> str:
         str: The text extracted from the PDF
     """
     from tqdm import tqdm
+
     text = ""
     response = requests.get(pdf_path)
     pdf_reader = PdfReader(io.BytesIO(response.content))
@@ -88,6 +115,7 @@ def extract_text_from_pdf(pdf_path: str) -> str:
         page = pdf_reader.pages[page_number]
         text += page.extract_text()
     return text
+
 
 def browse_website(url: str, question: str) -> tuple[str, WebDriver]:
     """Browse a website and return the answer and links to the user
@@ -137,14 +165,12 @@ def scrape_text_with_selenium(url: str) -> tuple[WebDriver, str]:
 
     options = options_available[CFG.selenium_web_browser]()
     options.add_argument(f"user-agent={CFG.user_agent}")
-    options.add_argument('--headless')
+    options.add_argument("--headless")
     options.add_argument("--enable-javascript")
 
     if CFG.selenium_web_browser == "firefox":
         service = Service(executable_path=GeckoDriverManager().install())
-        driver = webdriver.Firefox(
-            service=service, options=options
-        )
+        driver = webdriver.Firefox(service=service, options=options)
     elif CFG.selenium_web_browser == "safari":
         # Requires a bit more setup on the users end
         # See https://developer.apple.com/documentation/webkit/testing_with_webdriver_in_safari
@@ -154,9 +180,7 @@ def scrape_text_with_selenium(url: str) -> tuple[WebDriver, str]:
             options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--remote-debugging-port=9222")
         options.add_argument("--no-sandbox")
-        options.add_experimental_option(
-            "prefs", {"download_restrictions": 3}
-        )
+        options.add_experimental_option("prefs", {"download_restrictions": 3})
         driver = webdriver.Chrome(options=options)
 
     print(f"scraping url {url}...")
@@ -192,7 +216,7 @@ def get_text(soup):
         str: The text from the soup
     """
     text = ""
-    tags = ['h1', 'h2', 'h3', 'h4', 'h5', 'p']
+    tags = ["h1", "h2", "h3", "h4", "h5", "p"]
     for element in soup.find_all(tags):  # Find all the <p> elements
         text += element.text + "\n\n"
     return text
@@ -228,3 +252,43 @@ def close_browser(driver: WebDriver) -> None:
         None
     """
     driver.quit()
+
+
+def scrape_url_with_newspaper(url: str) -> str:
+    """
+    The function `scrape_url_with_newspaper` takes a URL as input and uses the `newspaper` library to
+    scrape the article title and text from the webpage, returning them as a string in the format "title
+    : text".
+
+    Args:
+      url (str): The `url` parameter is a string that represents the URL of the webpage you want to
+    scrape.
+
+    Returns:
+      The function `scrape_url_with_newspaper` returns a string that contains the title of the article
+    followed by a colon and the text of the article. If there is an error during the scraping process,
+    an empty string is returned.
+    """
+    try:
+        article = Article(
+            url,
+            language="en",
+            memoize_articles=False,
+            fetch_images=True,
+            request_timeout=15,
+        )
+        article.download()
+        article.parse()
+
+        title = article.title
+        text = article.text
+
+        # If title, summary are not present then return None
+        if not (title and text) or len(text) < 300:
+            return ""
+
+        return f"{title} : {text}"
+
+    except Exception as e:
+        print("Error! : " + str(e))
+        return ""

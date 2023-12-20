@@ -17,7 +17,7 @@ from app.utils.production import Production
 
 from ..actions import retrieve_context_from_documents
 from ..actions.web_scraper import async_browse
-from ..actions.web_search import web_search
+from ..actions.web_search import web_search, serp_web_search
 from ..config import Config
 from ..processing.text import (
     create_chat_completion,
@@ -146,8 +146,11 @@ class ResearchAgent:
         Args: query (str): The query to run the async search for
         Returns: list[str]: The async search for the given query
         """
-        search_results = json.loads(web_search(query))
-        new_search_urls = self.get_new_urls([url.get("href") for url in search_results])
+        # search_results = json.loads(web_search(query))
+        # new_search_urls = self.get_new_urls([url.get("href") for url in search_results])
+        
+        search_results = json.loads(serp_web_search(query))
+        new_search_urls = self.get_new_urls([url.get('link') for url in search_results])
 
         await self.stream_output(
             f"🌐 Browsing the following sites for relevant information: {new_search_urls}..."
