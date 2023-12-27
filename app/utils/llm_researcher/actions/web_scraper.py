@@ -284,7 +284,7 @@ def scrape_url_with_newspaper(url: str) -> str:
         text = article.text
 
         # If title, summary are not present then return None
-        if not (title and text) or len(text) < 300:
+        if not (title and text):
             return ""
 
         return f"{title} : {text}"

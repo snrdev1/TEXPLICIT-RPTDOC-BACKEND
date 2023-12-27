@@ -16,8 +16,9 @@ from app.utils.files_and_folders import get_report_directory
 from app.utils.production import Production
 
 from ..actions import retrieve_context_from_documents
+from ..actions.tables import extract_tables
 from ..actions.web_scraper import async_browse
-from ..actions.web_search import web_search, serp_web_search
+from ..actions.web_search import serp_web_search, web_search
 from ..config import Config
 from ..processing.text import (
     create_chat_completion,
@@ -62,6 +63,8 @@ class ResearchAgent:
         self.user_id = user_id
         # Stores the entire research summary
         self.research_summary = ""
+        # Stores markdown format of any table if found
+        self.tables = []
         # Source of report: external(web) or my_documents
         self.source = source
         # Format of expected report eg: pdf, word, ppt etc.
@@ -141,16 +144,65 @@ class ResearchAgent:
         )
         return json.loads(result)
 
+    def read_tables(self):
+        if GlobalConfig.GCP_PROD_ENV:
+            return read_txt_files(self.dir_path, tables=True) or ""
+        else:
+            if os.path.isdir(self.dir_path):
+                return read_txt_files(self.dir_path, tables=True)
+            else:
+                return ""
+
+    def save_tables(self):
+        tables_path = os.path.join(self.dir_path, "tables.txt")
+        
+        # save tables
+        if GlobalConfig.GCP_PROD_ENV:
+            user_bucket = Production.get_users_bucket()
+            blob = user_bucket.blob(tables_path)
+            blob.upload_from_string(str(self.tables))
+        else:
+            os.makedirs(os.path.dirname(tables_path), exist_ok=True)
+            write_to_file(tables_path, str(self.tables))
+
+    async def extract_tables(self, urls: list = []):
+        # Else extract tables from the urls and save them
+        existing_tables = self.read_tables()
+        if len(existing_tables):
+            self.tables = eval(existing_tables)
+            print("💎 Found EXISTING table/s")
+        elif len(urls):
+            # Extract all tables from search urls
+            for url in urls:
+                new_table = extract_tables(url)
+                if len(new_table):
+                    new_tables = {"tables": new_table, "url": url}
+                    print(f"💎 Found table/s from {url}")
+                    self.tables.append(new_tables)
+
+            # If any tables at all are found then store them
+            if len(self.tables):
+                print("📝 Saving extracted tables")
+                self.save_tables()
+
     async def async_search(self, query):
         """Runs the async search for the given query.
         Args: query (str): The query to run the async search for
         Returns: list[str]: The async search for the given query
         """
-        # search_results = json.loads(web_search(query))
-        # new_search_urls = self.get_new_urls([url.get("href") for url in search_results])
-        
-        search_results = json.loads(serp_web_search(query))
-        new_search_urls = self.get_new_urls([url.get('link') for url in search_results])
+
+        if GlobalConfig.REPORT_WEB_SCRAPER == "selenium":
+            search_results = json.loads(web_search(query))
+            new_search_urls = await self.get_new_urls(
+                [url.get("href") for url in search_results]
+            )
+        else:
+            search_results = json.loads(serp_web_search(query))
+            new_search_urls = await self.get_new_urls(
+                [url.get("link") for url in search_results]
+            )
+
+        await self.extract_tables(new_search_urls)
 
         await self.stream_output(
             f"🌐 Browsing the following sites for relevant information: {new_search_urls}..."
@@ -158,10 +210,10 @@ class ResearchAgent:
 
         # Create a list to hold the coroutine objects
         tasks = [
-            async_browse(url, query, self.websocket) for url in await new_search_urls
+            async_browse(url, query, self.websocket) for url in new_search_urls
         ]
 
-        # Gather the results as they become available
+        # # Gather the results as they become available
         responses = await asyncio.gather(*tasks, return_exceptions=True)
 
         return responses
@@ -219,11 +271,11 @@ class ResearchAgent:
         """
         The function `check_existing_report` checks if a report of a given type already exists in a
         directory or a Google Cloud Storage bucket.
-        
+
         Args:
           report_type: The `report_type` parameter is a string that represents the type of report being
         checked. It is used to construct the file name of the report.
-        
+
         Returns:
           the report path if the report exists, otherwise it returns None.
         """
@@ -267,6 +319,7 @@ class ResearchAgent:
                     if os.path.isdir(self.dir_path)
                     else ""
                 )
+            await self.extract_tables()
 
             if not self.research_summary:
                 search_queries = await self.create_search_queries(num_queries)
@@ -321,11 +374,15 @@ class ResearchAgent:
             report_type, self.dir_path, markdown_report
         )
         if self.format == "word":
-            path = await write_md_to_word(report_type, self.dir_path, markdown_report)
+            path = await write_md_to_word(
+                report_type, self.dir_path, markdown_report, self.tables
+            )
         # elif self.format == "ppt":
         #     path = await write_md_to_ppt(report_type, self.dir_path, markdown_report)
         else:
-            path = await write_md_to_pdf(report_type, self.dir_path, markdown_report)
+            path = await write_md_to_pdf(
+                report_type, self.dir_path, markdown_report, self.tables
+            )
 
         return path
 
@@ -356,7 +413,9 @@ class ResearchAgent:
         # Print the extracted h2 headings without the index and HTML tags
         for heading in h2_headings:
             clean_heading = remove_roman_numerals(heading).split(".")[-1].strip()
-            subtopics.append({"task": clean_heading, "websearch": search, "source": source})
+            subtopics.append(
+                {"task": clean_heading, "websearch": search, "source": source}
+            )
 
         return subtopics
 

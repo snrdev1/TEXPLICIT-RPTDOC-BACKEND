@@ -1,4 +1,5 @@
 """Text processing functions"""
+import io
 import json
 import os
 import re
@@ -16,6 +17,7 @@ from weasyprint import HTML
 from app.config import Config as GlobalConfig
 from app.utils.production import Production
 
+from ..actions.tables import add_table_to_doc, tables_to_html
 from ..agent.llm_utils import create_chat_completion
 from ..config import Config
 
@@ -231,7 +233,7 @@ async def _save_markdown_dev(task: str, path: str, text: str) -> str:
     return encoded_file_path
 
 
-async def write_md_to_word(task: str, path: str, text: str):
+async def write_md_to_word(task: str, path: str, report: str, tables: list):
     """
     The function `write_md_to_word` writes markdown text to a Word document and returns the encoded file
     path.
@@ -240,48 +242,58 @@ async def write_md_to_word(task: str, path: str, text: str):
       task (str): A string representing the task or purpose of the document.
       path (str): The `path` parameter is a string that represents the file path where the Word document
     will be saved.
-      text (str): The `text` parameter is a string that represents the content of the Markdown file that
+      report (str): The `report` parameter is a string that represents the content of the Markdown file that
     you want to convert to a Word document.
 
     Returns:
       the encoded file path.
     """
     if GlobalConfig.GCP_PROD_ENV:
-        encoded_file_path = await _write_md_to_word_prod(task, path, text)
+        encoded_file_path = await _write_md_to_word_prod(task, path, report, tables)
     else:
-        encoded_file_path = await _write_md_to_word_dev(task, path, text)
+        encoded_file_path = await _write_md_to_word_dev(task, path, report, tables)
 
     return encoded_file_path
 
 
-async def _write_md_to_word_prod(task: str, path: str, text: str) -> str:
-    """
-    The function `_write_md_to_word_prod` takes a task, path, and text as input, converts the text from
-    Markdown to HTML, converts the HTML to a Word document, and uploads the Word document to a user's
-    bucket in production. It then returns the encoded file path of the uploaded document.
-
-    Args:
-      task (str): The `task` parameter is a string that represents the name or identifier of the task.
-    It is used to create the file name and path for the Word document.
-      path (str): The `path` parameter is a string representing the directory path where the file will
-    be saved.
-      text (str): The `text` parameter in the `_write_md_to_word_prod` function is a string that
-    contains the Markdown text that needs to be converted to a Word document.
-
-    Returns:
-      the encoded file path of the uploaded Word document.
-    """
+async def _write_md_to_word_prod(
+    task: str, path: str, report: str, tables: list
+) -> str:
     file_path = f"{path}/{task}"
     user_bucket = Production.get_users_bucket()
 
     # Convert Markdown to HTML
-    html = markdown.markdown(text)
+    html = markdown.markdown(report)
 
     # html2docx() returns an io.BytesIO() object. The HTML must be valid.
     doc_bytes = html2docx(html, title=f"{task}.docx")
-    print("doc_bytes : ", doc_bytes)
+    # print("doc_bytes : ", doc_bytes)
+    # blob = user_bucket.blob(f"{file_path}.docx")
+    # blob.upload_from_string(doc_bytes.getvalue())
+
+    doc = Document(doc_bytes)
+
+    if len(tables):
+        # Add "Data Tables" as a title before the tables section
+        doc.add_heading("Data Tables", level=1)
+
+        # Adding tables to the Word document
+        for tables_set in tables:
+            tables_in_url = tables_set["tables"]
+            url = tables_set["url"]
+            for table_data in tables_in_url:
+                print("Table title : ", table_data["title"])
+                add_table_to_doc(doc, table_data["title"], table_data["values"], url)
+                doc.add_paragraph()  # Adding an extra paragraph between tables
+
+    # Create a temporary file-like object to save the updated document
+    temp_doc_io = io.BytesIO()
+    doc.save(temp_doc_io)
+    temp_doc_io.seek(0)  # Reset the pointer to the beginning of the stream
+
+    # Upload the Docx file to the bucket
     blob = user_bucket.blob(f"{file_path}.docx")
-    blob.upload_from_string(doc_bytes.getvalue())
+    blob.upload_from_file(temp_doc_io, content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
     print(f"🎉 {task} written to {file_path}.docx")
 
@@ -290,19 +302,20 @@ async def _write_md_to_word_prod(task: str, path: str, text: str) -> str:
     return encoded_file_path
 
 
-async def _write_md_to_word_dev(task: str, path: str, text: str) -> str:
+async def _write_md_to_word_dev(task: str, path: str, report: str, tables: list) -> str:
     """
-    The function `_write_md_to_word_dev` takes a task, path, and text as input, converts the text from
-    Markdown to HTML, converts the HTML to a Word document, saves the Word document to the specified
-    path, and returns the encoded file path.
+    The function `_write_md_to_word_dev` takes a task, path, report, and tables as input, converts the
+    markdown report to HTML, converts the HTML to a Word document, adds tables to the Word document, and
+    saves the document to the specified path. It then returns the encoded file path.
 
     Args:
-      task (str): The `task` parameter is a string that represents the name or identifier of the task.
-    It is used to create the file name for the generated Word document.
-      path (str): The `path` parameter is a string that represents the directory path where the file
-    will be saved.
-      text (str): The `text` parameter is a string that contains the Markdown text that you want to
-    convert to a Word document.
+      task (str): The name of the task or report.
+      path (str): The `path` parameter is a string that represents the directory path where the Word
+    document will be saved.
+      report (str): The `report` parameter is a string that contains the markdown content that needs to
+    be converted to a Word document.
+      tables (list): The `tables` parameter is a list of dictionaries. Each dictionary represents a set
+    of tables related to a specific URL. Each dictionary has two keys:
 
     Returns:
       the encoded file path of the generated Word document.
@@ -313,13 +326,29 @@ async def _write_md_to_word_dev(task: str, path: str, text: str) -> str:
     # Get the complete file path based reports folder, type of report
     file_path = os.path.join(path, task)
 
-    html = markdown.markdown(text)
+    html = markdown.markdown(report)
 
     # html2docx() returns an io.BytesIO() object. The HTML must be valid.
     buf = html2docx(html, title=f"{task}.docx")
 
-    with open(f"{file_path}.docx", "wb") as fp:
-        fp.write(buf.getvalue())
+    # with open(f"{file_path}.docx", "wb") as fp:
+    #     fp.write(buf.getvalue())
+
+    doc = Document(buf)
+    # Add "Data Tables" as a title before the tables section
+    doc.add_heading("Data Tables", level=1)
+
+    if len(tables):
+        # Adding tables to the Word document
+        for tables_set in tables:
+            tables_in_url = tables_set["tables"]
+            url = tables_set["url"]
+            for table_data in tables_in_url:
+                print("Table title : ", table_data["title"])
+                add_table_to_doc(doc, table_data["title"], table_data["values"], url)
+                doc.add_paragraph()  # Adding an extra paragraph between tables
+
+    doc.save(f"{file_path}.docx")
 
     print(f"🎉 {task} written to {file_path}.docx")
 
@@ -328,7 +357,7 @@ async def _write_md_to_word_dev(task: str, path: str, text: str) -> str:
     return encoded_file_path
 
 
-async def write_md_to_pdf(task: str, path: str, text: str) -> str:
+async def write_md_to_pdf(task: str, path: str, report: str, tables: list) -> str:
     """
     The function `write_md_to_pdf` writes markdown text to a PDF file and returns the encoded file path.
 
@@ -336,22 +365,22 @@ async def write_md_to_pdf(task: str, path: str, text: str) -> str:
       task (str): A string representing the task or purpose of the PDF file.
       path (str): The `path` parameter is a string that represents the file path where the PDF file will
     be saved.
-      text (str): The `text` parameter is a string that represents the content of the Markdown file that
+      report (str): The `report` parameter is a string that represents the content of the Markdown file that
     you want to convert to a PDF.
 
     Returns:
       the encoded file path as a string.
     """
     if GlobalConfig.GCP_PROD_ENV:
-        encoded_file_path = await _write_md_to_pdf_prod(task, path, text)
+        encoded_file_path = await _write_md_to_pdf_prod(task, path, report, tables)
 
     else:
-        encoded_file_path = await _write_md_to_pdf_dev(task, path, text)
+        encoded_file_path = await _write_md_to_pdf_dev(task, path, report, tables)
 
     return encoded_file_path
 
 
-async def _write_md_to_pdf_prod(task: str, path: str, text: str) -> str:
+async def _write_md_to_pdf_prod(task: str, path: str, report: str, tables: list) -> str:
     """
     The function `_write_md_to_pdf_prod` takes a task, path, and text as input, uploads the text as a
     Markdown file to a user's bucket, converts the Markdown to HTML, generates a PDF file from the HTML
@@ -363,7 +392,7 @@ async def _write_md_to_pdf_prod(task: str, path: str, text: str) -> str:
     for which the Markdown file and PDF file will be created.
       path (str): The `path` parameter is a string representing the directory path where the files will
     be stored.
-      text (str): The `text` parameter is a string that contains the content of the Markdown file that
+      report (str): The `report` parameter is a string that contains the content of the Markdown file that
     needs to be converted to PDF.
 
     Returns:
@@ -372,8 +401,8 @@ async def _write_md_to_pdf_prod(task: str, path: str, text: str) -> str:
     file_path = f"{path}/{task}"
     user_bucket = Production.get_users_bucket()
 
-    # Convert Markdown to HTML
-    html = markdown.markdown(text)
+    # Combined html
+    html = get_combined_html(report, tables)
 
     # Create a WeasyPrint HTML object
     html_obj = HTML(string=html)
@@ -390,7 +419,7 @@ async def _write_md_to_pdf_prod(task: str, path: str, text: str) -> str:
     return encoded_file_path
 
 
-async def _write_md_to_pdf_dev(task: str, path: str, text: str) -> str:
+async def _write_md_to_pdf_dev(task: str, path: str, report: str, tables: list) -> str:
     """
     The function `_write_md_to_pdf_dev` takes a task, path, and text as input, writes the text to a
     markdown file, converts the markdown to HTML, generates a PDF file using WeasyPrint, and returns the
@@ -400,7 +429,7 @@ async def _write_md_to_pdf_dev(task: str, path: str, text: str) -> str:
       task (str): The `task` parameter is a string that represents the name or identifier of the task or
     report. It is used to create the file name for the markdown and PDF files.
       path (str): The `path` parameter is the directory path where the PDF file will be saved.
-      text (str): The `text` parameter is a string that contains the content of the report in Markdown
+      report (str): The `report` parameter is a string that contains the content of the report in Markdown
     format.
 
     Returns:
@@ -415,8 +444,8 @@ async def _write_md_to_pdf_dev(task: str, path: str, text: str) -> str:
     # print("📡 path : ", path)
     # print("📡 file_path : ", file_path)
 
-    # Convert Markdown to HTML
-    html = markdown.markdown(text)
+    # Combined html
+    html = get_combined_html(report, tables)
 
     # Create a WeasyPrint HTML object
     html_obj = HTML(string=html)
@@ -431,74 +460,116 @@ async def _write_md_to_pdf_dev(task: str, path: str, text: str) -> str:
     return encoded_file_path
 
 
-def read_txt_files(directory):
+def get_combined_html(report: str, tables: list):
+    # Convert Markdown to HTML
+    report_html = markdown.markdown(report)
+
+    # Get the html of the tables
+    tables_html = ""
+    for tables_in_url in tables:
+        current_tables = tables_in_url.get("tables", [])
+        current_url = tables_in_url.get("url", "")
+        tables_html += tables_to_html(current_tables, current_url)
+
+    combined_html = report_html
+    if len(tables_html):
+        combined_html += "<br><h1>Data Tables</h1><br>" + tables_html
+
+    return combined_html
+
+
+def read_txt_files(directory, tables=False):
     """
-    The function `read_txt_files` reads research text files from a given directory, and returns the text
-    from those files.
+    The function reads research text files from a specified directory, either in a production or
+    development environment.
 
     Args:
       directory: The directory parameter is the path to the directory where the text files are located.
+      tables: The `tables` parameter is a boolean flag that indicates whether or not to extract tables
+    from the text files. If `tables` is set to `True`, the function will extract tables from the text
+    files. If `tables` is set to `False` (default), the function will only read. Defaults to False
 
     Returns:
-      The function `read_txt_files` returns the variable `all_text`.
+      the variable "all_text".
     """
     print("📡 Reading research text files from : ", directory)
 
     if GlobalConfig.GCP_PROD_ENV:
-        all_text = _read_text_files_prod(directory)
+        all_text = _read_text_files_prod(directory, tables)
     else:
-        all_text = _read_text_files_dev(directory)
+        all_text = _read_text_files_dev(directory, tables)
 
     return all_text
 
 
-def _read_text_files_prod(directory):
+def _read_text_files_prod(directory, tables=False):
     """
-    The function `_read_text_files_prod` reads all text files in a given directory from a production
-    bucket and returns the concatenated content of all the files.
+    The function `_read_text_files_prod` reads the content of text files in a specified directory and
+    returns all the text concatenated together.
 
     Args:
-      directory: The `directory` parameter is a string that represents the directory path where the text
-    files are located.
+      directory: The `directory` parameter is the name of the directory in the production bucket where
+    the text files are located.
+      tables: The `tables` parameter is a boolean flag that determines whether to include only the
+    content of the "tables.txt" file or include the content of all ".txt" files in the specified
+    directory. Defaults to False
 
     Returns:
-      a string that contains the content of all the text files in the specified directory.
+      a string containing the content of all the text files in the specified directory.
     """
     bucket = Production.get_users_bucket()
     blobs = bucket.list_blobs(prefix=directory)
     all_text = ""
     for filename in blobs:
         print(f"📡 Filename : {filename}")
-        if filename.name.endswith(".txt"):
-            content = filename.download_as_text()
-            print(f"📡 content : {content}")
-            all_text += content + "\n"
+        if tables:
+            if filename == "tables.txt":
+                content = filename.download_as_text()
+                print(f"📡 content : {content}")
+                all_text += content + "\n"
+        else:
+            if filename.name.endswith(".txt"):
+                content = filename.download_as_text()
+                print(f"📡 content : {content}")
+                all_text += content + "\n"
 
     return all_text
 
 
-def _read_text_files_dev(directory):
+def _read_text_files_dev(directory, tables=False):
     """
-    The function `_read_text_files_dev` reads all text files in a given directory and returns the
-    concatenated content of all the files.
+    The function `_read_text_files_dev` reads the contents of text files in a given directory and
+    returns the concatenated text.
 
     Args:
-      directory: The "directory" parameter is a string that represents the path to the directory where
-    the text files are located.
+      directory: The directory parameter is the path to the directory where the text files are located.
+      tables: The `tables` parameter is a boolean flag that determines whether to include the contents
+    of a file named "tables.txt" in the `all_text` output. If `tables` is set to `True`, the function
+    will only include the contents of "tables.txt" in the output. If `. Defaults to False
 
     Returns:
-      a string that contains the contents of all the text files in the specified directory.
+      a string containing the contents of all the text files in the specified directory. If the `tables`
+    parameter is set to `True`, it only includes the contents of the "tables.txt" file.
     """
     all_text = ""
     for filename in os.listdir(directory):
-        if filename.endswith(".txt"):
-            with open(
-                os.path.join(directory, filename),
-                "r",
-                encoding="cp437",
-                errors="ignore",
-            ) as file:
-                all_text += file.read() + "\n"
+        if tables:
+            if filename == "tables.txt":
+                with open(
+                    os.path.join(directory, filename),
+                    "r",
+                    errors="ignore",
+                ) as file:
+                    all_text += file.read() + "\n"
+        else:
+            if filename.endswith(".txt"):
+                with open(
+                    os.path.join(directory, filename),
+                    "r",
+                    encoding="cp437",
+                    errors="ignore",
+                ) as file:
+                    all_text += file.read() + "\n"
 
     return all_text
 

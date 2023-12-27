@@ -32,6 +32,7 @@ async def basic_report(
     )
     path = await assistant.check_existing_report(report_type)
     if path:
+        await assistant.extract_tables()
         report_markdown = await assistant.get_report_markdown(report_type)
 
     else:
@@ -48,7 +49,7 @@ async def basic_report(
 
         path = await assistant.save_report(report_type, report_markdown)
 
-    return report_markdown, path
+    return report_markdown, path, assistant.tables
 
 
 async def detailed_report(
@@ -95,6 +96,7 @@ async def detailed_report(
 
         path = await assistant.check_existing_report(subtopic_report_type)
         if path:
+            await assistant.extract_tables()
             report_markdown = await assistant.get_report_markdown(subtopic_report_type)
         else:
             # Research on given task will only take place if:
@@ -111,21 +113,25 @@ async def detailed_report(
                 subtopic_report_type, task, subtopic_tasks, subtopic_task, websocket
             )
             path = await assistant.save_report(subtopic_report_type, report_markdown)
-        return report_markdown, path
+        return report_markdown, path, assistant.tables
 
     async def generate_subtopic_reports(subtopics):
         reports = []
         report_body = ""
+        tables = []
 
         # Function to fetch subtopic reports asynchronously
         async def fetch_report(subtopic):
-            subtopic_report_markdown, subtopic_path = await get_subtopic_report(
-                subtopic
-            )
+            (
+                subtopic_report_markdown,
+                subtopic_path,
+                subtopic_tables,
+            ) = await get_subtopic_report(subtopic)
             return {
                 "topic": subtopic,
                 "markdown_report": subtopic_report_markdown,
                 "path": subtopic_path,
+                "tables": subtopic_tables,
             }
 
         # Create a list of tasks for fetching reports
@@ -137,8 +143,12 @@ async def detailed_report(
         for result in results:
             reports.append(result)
             report_body = report_body + "\n\n\n" + result["markdown_report"]
+            tables.extend(result["tables"])
 
-        return reports, report_body
+        # Remove duplicate entries from tables
+        # tables = list(set(tables))
+
+        return reports, report_body, tables
 
     async def generate_detailed_report(report_body):
         (
@@ -153,7 +163,7 @@ async def detailed_report(
 
     async def get_all_subtopics() -> list:
         # 1. Get outline report
-        outline_report_markdown, outline_report_path = await basic_report(
+        outline_report_markdown, outline_report_path, _ = await basic_report(
             user_id=user_id,
             task=task,
             websearch=websearch,
@@ -193,16 +203,30 @@ async def detailed_report(
     # Check if detailed report already exists. If it exists then return it
     detailed_report_path = await main_task_assistant.check_existing_report(report_type)
     if detailed_report_path:
+        await main_task_assistant.extract_tables()
         detailed_report = await main_task_assistant.get_report_markdown(report_type)
-        return detailed_report, detailed_report_path
+        return detailed_report, detailed_report_path, main_task_assistant.tables
 
     # Get all the processed subtopics on which the detailed report is to be generated
     processed_subtopics = await get_all_subtopics()
 
-    reports, report_body = await generate_subtopic_reports(processed_subtopics)
-    detailed_report, detailed_report_path = await generate_detailed_report(report_body)
+    (
+        subtopics_reports,
+        subtopics_reports_body,
+        subtopics_tables,
+    ) = await generate_subtopic_reports(processed_subtopics)
 
-    return detailed_report, detailed_report_path
+    # If any tables at all are found then store them
+    main_task_assistant.tables = subtopics_tables
+    if len(main_task_assistant.tables):
+        print("📝 Saving extracted tables")
+        main_task_assistant.save_tables()
+
+    detailed_report, detailed_report_path = await generate_detailed_report(
+        subtopics_reports_body
+    )
+
+    return detailed_report, detailed_report_path, main_task_assistant.tables
 
 
 async def complete_report(
@@ -229,10 +253,15 @@ async def complete_report(
     )
     path = await assistant.check_existing_report(report_type)
     if path:
+        await assistant.extract_tables()
         report_markdown = await assistant.get_report_markdown(report_type)
 
     else:
-        outline_report_markdown, outline_report_path = await basic_report(
+        (
+            outline_report_markdown,
+            outline_report_path,
+            outline_report_tables,
+        ) = await basic_report(
             user_id=user_id,
             task=task,
             websearch=websearch,
@@ -244,8 +273,12 @@ async def complete_report(
             websocket=websocket,
             report_generation_id=report_generation_id,
         )
-        
-        resource_report_markdown, resource_report_path = await basic_report(
+
+        (
+            resource_report_markdown,
+            resource_report_path,
+            resource_report_tables,
+        ) = await basic_report(
             user_id=user_id,
             task=task,
             websearch=websearch,
@@ -257,8 +290,12 @@ async def complete_report(
             websocket=websocket,
             report_generation_id=report_generation_id,
         )
-        
-        detailed_report_markdown, detailed_report_path = await detailed_report(
+
+        (
+            detailed_report_markdown,
+            detailed_report_path,
+            detailed_reports_tables,
+        ) = await detailed_report(
             user_id=user_id,
             task=task,
             websearch=websearch,
@@ -272,13 +309,21 @@ async def complete_report(
             subtopics=subtopics,
         )
 
-        report_markdown = outline_report_markdown + "\n\n\n\n" + resource_report_markdown + "\n\n\n\n" + detailed_report_markdown
+        report_markdown = (
+            outline_report_markdown
+            + "\n\n\n\n"
+            + resource_report_markdown
+            + "\n\n\n\n"
+            + detailed_report_markdown
+        )
 
         print("Report markdown : \n", report_markdown)
+        assistant.tables = (
+            outline_report_tables + resource_report_tables + detailed_reports_tables
+        )
         path = await assistant.save_report(report_type, report_markdown)
 
-    return report_markdown, path
-
+    return report_markdown, path, assistant.tables
 
 
 async def run_agent(
@@ -302,7 +347,7 @@ async def run_agent(
 
     # In depth report generation
     if report_type == "detailed_report":
-        report_markdown, path = await detailed_report(
+        report_markdown, path, _ = await detailed_report(
             user_id=user_id,
             task=task,
             websearch=websearch,
@@ -318,7 +363,7 @@ async def run_agent(
 
     # Complete report generation
     elif report_type == "complete_report":
-        report_markdown, path = await complete_report(
+        report_markdown, path, _ = await complete_report(
             user_id=user_id,
             task=task,
             websearch=websearch,
@@ -334,7 +379,7 @@ async def run_agent(
 
     else:
         # Basic report generation
-        report_markdown, path = await basic_report(
+        report_markdown, path, _ = await basic_report(
             user_id=user_id,
             task=task,
             websearch=websearch,

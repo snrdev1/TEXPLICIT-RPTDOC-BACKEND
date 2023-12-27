@@ -32,6 +32,11 @@ class Config(object):
     SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID", "")
     SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET", "")
 
+    # URL prefix for knowledge item details
+    APPLICATION_KNOWLEDGEITEM_DETAIL_URL = os.getenv(
+        "APPLICATION_KNOWLEDGEITEM_DETAIL_URL", "http://localhost:4200/ki/"
+    )
+
     # OPENAI
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
     openai.api_key = OPENAI_API_KEY
@@ -52,6 +57,7 @@ class Config(object):
     REPORT_DEBUG_MODE = False
     REPORT_ALLOW_DOWNLOADS = False
 
+    REPORT_WEB_SCRAPER = os.getenv("USE_WEB_SCRAPER", "newspaper") # selenium / newspaper
     REPORT_WEB_BROWSER = os.getenv("USE_WEB_BROWSER", "chrome")
     REPORT_LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ChatOpenAI")
     REPORT_FAST_TOKEN_LIMIT = int(os.getenv("FAST_TOKEN_LIMIT", 2000))
@@ -70,11 +76,25 @@ class Config(object):
     REPORT_MEMORY_BACKEND = os.getenv("MEMORY_BACKEND", "local")
 
     # MongoDB
-    MONGO_DATABASE = "TEXPLICIT2_B2C_RPTDOC"
+    MONGO_DATABASE = "TEXPLICIT2_B2C"
     MONGO_USER_MASTER_COLLECTION = "USER_MASTER"
+    MONGO_KI_COLLECTION = "KNOWLEDGE_ITEM_MASTER"
+    MONGO_KI_PENDING_COLLECTION = "KNOWLEDGE_ITEM_PENDING_MASTER"
+    MONGO_KI_REJECTED_COLLECTION = "KNOWLEDGE_ITEM_REJECTED_MASTER"
+    MONGO_KI_COMMENTS_COLLECTION = "KNOWLEDGE_ITEM_COMMENT"
+    MONGO_DOMAIN_MASTER_COLLECTION = "DOMAIN_MASTER"
+    MONGO_DOMAIN_PENDING_COLLECTION = "DOMAIN_PENDING_MASTER"
+    MONGO_GROUP_COLLECTION = "GROUP_MASTER"
+    MONGO_POST_COLLECTION = "POST_MASTER"
+    MONGO_POST_COMMENT_COLLECTION = "POST_COMMENT"
+    MONGO_KI_LIKE_COLLECTION = "KI_LIKE_COLLECTION"
+    MONGO_POST_COMMENT_LIKE_COLLECTION = "POST_COMMENT_LIKE_COLLECTION"
     MONGO_DOCUMENT_MASTER_COLLECTION = "DOCUMENTS_MASTER"
-    MONGO_CUSTOMER_FEEDBACK_COLLECTION = "CUSTOMER_FEEDBACK_COLLECTION"
+    MONGO_CUSTOMER_FEEDBACK_COLLECTION = "CUSTOMER_FEEDBACK_COLLECT"
     MONGO_EMBEDDING_MASTER_COLLECTION = "EMBEDDING_MASTER"
+    MONGO_NOTE_MASTER_COLLECTION = "NOTE_MASTER"
+    MONGO_DATASOURCES_COLLECTION = "DATASOURCE_MASTER"
+    MONGO_DATASOURCE_TYPE = "DATASOURCE_TYPES"
     MONGO_CHAT_MASTER_COLLECTION = "CHAT_MASTER"
     MONGO_MENU_MASTER_COLLECTION = "MENU_MASTER"
     MONGO_REPORTS_MASTER_COLLECTION = "REPORTS_MASTER"
@@ -92,11 +112,28 @@ class Config(object):
 
     # User related folders and files
     USER_FOLDER = os.getcwd() + "\\assets\\users"
+    USER_MY_DATASOURCES_FOLDER = "mydatasources"
     USER_VECTORSTORE_PATH = "vectorstore\\db_faiss"
+
+    # Vectorstore
+    KNOWLEDGEITEM_VECTORSTORE_PATH = "app\\vectorstores\\knowledgeitems-faiss"
 
     # Summary
     SUMMARY_DEFAULT_NUM_SENTENCES = 10
 
+    # Datasources configurations
+    # Maximum allowed response size (in bytes)
+    MAX_DATASOURCE_RESPONSE_SIZE = 5000
+    # Maximum number of datasource responses per query allowed to be stored
+    MAX_DATASOURCE_QUERY_RESPONSES = 5
+    # Maximum number of queries allowed to be stored
+    MAX_DATASOURCE_QUERIES = 10
+
     # GCP Bucket Names
     GCP_BUCKET_USERS = "texplicit-02-users"
     GCP_BUCKET_KNOWLEDGEITEMS = "texplicit-02-knowledgeitems"
+    
+    GCP_PROJECT = os.getenv("GCP_PROJECT", 'texplicit-02')  # Replace with your GCP project ID
+    GCP_REPORT_QUEUE = os.getenv("GCP_REPORT_QUEUE", 'texplicit02-reports')  # Replace with your queue name
+    GCP_REPORT_QUEUE_LOCATION = os.getenv("GCP_REPORT_QUEUE_LOCATION", 'asia-south1')  # Replace with your queue location
+    GCP_REPORT_CLOUD_RUN_URL = os.getenv("GCP_REPORT_CLOUD_RUN_URL", 'https://texplicit.com/api/report/execute_report') # GCP Cloud Run url for report execution from google cloud task
