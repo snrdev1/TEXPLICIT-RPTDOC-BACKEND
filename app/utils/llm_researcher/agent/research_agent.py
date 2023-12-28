@@ -219,11 +219,15 @@ class ResearchAgent:
         return responses
 
     async def run_search_summary(self, query):
-        """Runs the search summary for the given query.
-        Args: query (str): The query to run the search summary for
-        Returns: str: The search summary for the given query
         """
-
+        The function runs a research query, saves the results to a file, and returns the results as a
+        string.
+        
+        :param query: The `query` parameter is a string that represents the search query for which the
+        research is being conducted
+        :return: the `result` variable, which is a string containing the responses from the search.
+        """
+        
         await self.stream_output(f"🔎 Running research for '{query}'...")
 
         responses = await self.async_search(query)
@@ -231,13 +235,14 @@ class ResearchAgent:
         result = "\n".join(responses)
         summary_path = os.path.join(f"{self.dir_path}", f"research-{query}.txt")
 
-        if GlobalConfig.GCP_PROD_ENV:
-            user_bucket = Production.get_users_bucket()
-            blob = user_bucket.blob(summary_path)
-            blob.upload_from_string(result)
-        else:
-            os.makedirs(os.path.dirname(summary_path), exist_ok=True)
-            write_to_file(summary_path, result)
+        if len(result.strip()) != 0:
+            if GlobalConfig.GCP_PROD_ENV:
+                user_bucket = Production.get_users_bucket()
+                blob = user_bucket.blob(summary_path)
+                blob.upload_from_string(result)
+            else:
+                os.makedirs(os.path.dirname(summary_path), exist_ok=True)
+                write_to_file(summary_path, result)
 
         return result
 

@@ -13,16 +13,39 @@ from app.utils.llm_researcher.llm_researcher import research
 from app.utils.response import Response
 
 
-def report_generate(
-    user_id: Union[str, ObjectId],
-    task: str,
-    websearch: bool,
-    report_type: str,
-    source: str,
-    format: str,
-    report_generation_id: Union[int, None],
-    subtopics: list,
-) -> None:
+def report_generate(user_id: Union[str, ObjectId],task: str,websearch: bool,report_type: str,source: str,format: str,report_generation_id: Union[int, None],subtopics: list) -> None:
+    """
+    The function `report_generate` generates a report based on user inputs and emits it using a socket,
+    or returns an error message if the report generation fails.
+    
+    :param user_id: The user_id parameter is the unique identifier of the user for whom the report is
+    being generated. It can be either a string or an ObjectId
+    :type user_id: Union[str, ObjectId]
+    :param task: The `task` parameter is a string that represents the task for which the report is being
+    generated. It could be any specific task or topic that the user wants to gather information on
+    :type task: str
+    :param websearch: The `websearch` parameter is a boolean value that indicates whether the report
+    should include web search results or not. If `websearch` is `True`, the report will include web
+    search results. If `websearch` is `False`, the report will not include web search results
+    :type websearch: bool
+    :param report_type: The `report_type` parameter specifies the type of report to be generated. It can
+    be a string value representing the type of report, such as "summary", "detailed", "analysis", etc
+    :type report_type: str
+    :param source: The `source` parameter is a string that represents the source from which the report
+    will gather data. It could be a specific website, database, or any other source of information
+    :type source: str
+    :param format: The `format` parameter specifies the format in which the report should be generated.
+    It can be a string value representing the desired format, such as "pdf", "csv", "xlsx", etc
+    :type format: str
+    :param report_generation_id: The `report_generation_id` parameter is an optional parameter that
+    represents the unique identifier for the report generation process. It can be either an integer or
+    None
+    :type report_generation_id: Union[int, None]
+    :param subtopics: The `subtopics` parameter is a list that contains the subtopics for the report. It
+    is used as an input for the `research` function, which generates the report. The subtopics can be
+    any relevant topics or keywords that are used to gather data for the report
+    :type subtopics: list
+    """
     try:
         start_time = datetime.now()
         report, report_path = asyncio.run(
@@ -37,14 +60,15 @@ def report_generate(
                 subtopics=subtopics,
             )
         )
-        report_folder = urllib.parse.quote(get_report_folder(task, source))
-        print(f"🖫 Saved report to {report_folder}")
         end_time = datetime.now()
 
         report_generation_time = (end_time - start_time).total_seconds()
 
         # Once report is ready emit it using socket and store it in the db
         if len(report):
+            report_folder = urllib.parse.quote(get_report_folder(task, source))
+            print(f"🖫 Saved report to {report_folder}")
+
             _save_and_emit(
                 task=task,
                 websearch=websearch,
@@ -60,6 +84,15 @@ def report_generate(
                 report_generation_time=report_generation_time,
             )
             print(f"📢 Emitted report!")
+
+        else:
+            Response.socket_reponse(
+                event=f"{user_id}_report",
+                data={"report_generation_id": report_generation_id},
+                message=f"Failed to generate {report_type}! Research failed to gather any data...",
+                success=False,
+                status=500,
+            )
 
     except Exception as e:
         Common.exception_details("generate_report", e)
