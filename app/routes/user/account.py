@@ -41,7 +41,7 @@ def account_signup():
         request_params = request.get_json()
 
         # Required parameters
-        required_params = ["name", "email", "password", "role"]
+        required_params = ["name", "email", "password"]
 
         # Check if all required parameters are present in the request params
         if not all(

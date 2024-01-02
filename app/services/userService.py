@@ -1,8 +1,9 @@
 import os
 from datetime import datetime
-from app.config import Config
+
 from bson import ObjectId
 from flask import request
+
 from app.config import Config
 from app.models.mongoClient import MongoClient
 from app.utils import constants as Constants
@@ -378,20 +379,13 @@ class UserService:
 
         user_data["isActive"] = True
 
-        # Credentials for GCP Connection
-        credential_path = "texplicit-02-f98951e4984c.json"
-
         m_db = MongoClient.connect()
 
         response = m_db[Config.MONGO_USER_MASTER_COLLECTION].insert_one(user_data)
 
         if response:
             id = str(response.inserted_id)
-            if Config.GCP_PROD_ENV == "False":
-                folder_path = os.path.join(Config.USER_FOLDER, id)
-                os.makedirs(folder_path, exist_ok=True)
-                print("Folder created for user : ", id)
-            else:
+            if Config.GCP_PROD_ENV:
                 bucket = Production.get_users_bucket()
 
                 # Name of the folder you want to create
@@ -403,6 +397,10 @@ class UserService:
                 folder_blob.upload_from_string("")
 
                 # print(f"Created folder {folder_name} in bucket {bucket_name}!")
+            else:
+                folder_path = os.path.join(Config.USER_FOLDER, id)
+                os.makedirs(folder_path, exist_ok=True)
+                print("Folder created for user : ", id)
 
             return id
 
