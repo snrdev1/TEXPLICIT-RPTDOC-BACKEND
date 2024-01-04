@@ -28,7 +28,7 @@ def create_order():
         ):
             return Response.missing_parameters()
 
-        amount = request_params.get("amount")
+        amount = int(request_params.get("amount"))
 
         # Create a Razorpay order
         order_payload = {
@@ -50,44 +50,63 @@ def create_order():
 
 @payment_gateway.route("/capture_payment", methods=["POST"])
 def capture_payment():
-    # Get the payment data sent by Razorpay after payment completion
-    request_params = request.get_json()
-    
-    print("request_params : ", request_params)
-
-    # Required parameters
-    required_params = ["razorpay_order_id", "razorpay_payment_id", "razorpay_signature"]
-
-    # Check if all required parameters are present in the request params
-    if not any(
-        (key in request_params) and (request_params[key] not in [None, ""])
-        for key in required_params
-    ):
-        return Response.missing_parameters()
-
-    # Verify payment signature to ensure authenticity
-    razorpay_order_id = request_params.get("razorpay_order_id")
-    razorpay_payment_id = request_params.get("razorpay_payment_id")
-    razorpay_signature = request_params.get("razorpay_signature")
-
     try:
+
+        # Get the payment data sent by Razorpay after payment completion
+        request_params = request.get_json()
+
+        print("request_params : ", request_params)
+
+        # Required parameters
+        required_params = [
+            "razorpay_order_id",
+            "razorpay_payment_id",
+            "razorpay_signature",
+            "amount",
+            "currency",
+        ]
+
+        # Check if all required parameters are present in the request params
+        if not any(
+            (key in request_params) and (request_params[key] not in [None, ""])
+            for key in required_params
+        ):
+            return Response.missing_parameters()
+
+        # Verify payment signature to ensure authenticity
+        razorpay_order_id = request_params.get("razorpay_order_id")
+        razorpay_payment_id = request_params.get("razorpay_payment_id")
+        razorpay_signature = request_params.get("razorpay_signature")
+        amount = int(request_params.get("amount"))
+
         # Verify payment signature
-        Config.razorpay_client.utility.verify_payment_signature(
-            {
-                "razorpay_order_id": razorpay_order_id,
-                "razorpay_payment_id": razorpay_payment_id,
-                "razorpay_signature": razorpay_signature,
-            }
+        signature_verification = (
+            Config.razorpay_client.utility.verify_payment_signature(
+                {
+                    "razorpay_order_id": razorpay_order_id,
+                    "razorpay_payment_id": razorpay_payment_id,
+                    "razorpay_signature": razorpay_signature,
+                }
+            )
         )
+
+        if not signature_verification:
+            return Response.custom_response(
+                [],
+                Messages.ERROR_RAZORPAY_PAYMENT_VERIFICATION,
+                False,
+                401
+            )
 
         # Capture payment
         captured_payment = Config.razorpay_client.payment.capture(
-            razorpay_payment_id, amount=None
+            razorpay_payment_id,
+            amount = amount * 100
         )
-
+        
         return Response.custom_response(
             {"captured_payment": captured_payment},
-            Messages.OK_RAZROPAY_PAYMENT_CAPTURED,
+            Messages.OK_RAZORPAY_PAYMENT_CAPTURED,
             True,
             200,
         )

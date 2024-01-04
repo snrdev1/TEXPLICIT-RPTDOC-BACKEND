@@ -66,7 +66,8 @@ class Messages:
     ERROR_INACTIVE_USER = "User has been deleted/ not approved by Admin!"
     ERROR_MENU_NAMES = "Failed to retrieve menu names!"
     ERROR_USER_ACTIVATED = "Failed to activated user!"
-    ERROR_USER_DEACTIVATED = "Failed to deactivate user!"
+    ERROR_USER_DEACTIVATED = "Failed to deactivate user!",
+    ERROR_RAZORPAY_PAYMENT_VERIFICATION = "Failed to verify payment!"
 
     # INVALID_
     INVALID_LOGIN_INFO = "Invalid login information!"
@@ -166,7 +167,7 @@ class Messages:
     OK_REPORTS_FOUND = "Reports found successfully!"
     OK_REPORT_DELETED = "Report deleted successfully!"
     OK_RAZORPAY_ORDERID_GENERATED = "OrderID generated successfully!"
-    OK_RAZROPAY_PAYMENT_CAPTURED = "Payment captured successfully!"
+    OK_RAZORPAY_PAYMENT_CAPTURED = "Payment captured successfully!"
 
     # UNAUTHORIZED_
     UNAUTHORIZED = "Unauthorized!"
