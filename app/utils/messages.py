@@ -165,6 +165,8 @@ class Messages:
     OK_REPORT_GENERATING = "Report generation successfully started!"
     OK_REPORTS_FOUND = "Reports found successfully!"
     OK_REPORT_DELETED = "Report deleted successfully!"
+    OK_RAZORPAY_ORDERID_GENERATED = "OrderID generated successfully!"
+    OK_RAZROPAY_PAYMENT_CAPTURED = "Payment captured successfully!"
 
     # UNAUTHORIZED_
     UNAUTHORIZED = "Unauthorized!"

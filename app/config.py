@@ -1,6 +1,7 @@
 import os
 import openai
 from dotenv import load_dotenv
+import razorpay
 
 # load environment variables from .env file
 load_dotenv()
@@ -97,3 +98,13 @@ class Config(object):
     GCP_REPORT_QUEUE = os.getenv("GCP_REPORT_QUEUE", 'texplicit02-reports')  # Replace with your queue name
     GCP_REPORT_QUEUE_LOCATION = os.getenv("GCP_REPORT_QUEUE_LOCATION", 'asia-south1')  # Replace with your queue location
     GCP_REPORT_CLOUD_RUN_URL = os.getenv("GCP_REPORT_CLOUD_RUN_URL", 'https://texplicit.com/api/report/execute_report') # GCP Cloud Run url for report execution from google cloud task
+    
+    # Payment Gateway
+    
+    # Razorpay
+    RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "")
+    RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "")
+    # Initialize Razorpay client with your API keys
+    razorpay_client = razorpay.Client(
+        auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET)
+    )
