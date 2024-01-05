@@ -2,8 +2,7 @@ from typing import Union
 
 from bson import ObjectId
 
-from llm_researcher.utils.llm import choose_agent
-from llm_researcher.agent.run import run_agent
+from .agent.run import run_agent
 
 
 async def research(
@@ -16,19 +15,12 @@ async def research(
     report_generation_id: Union[str, None],
     subtopics: list = [],
 ):
-    agent_dict = choose_agent(task)
-    agent = agent_dict.get("agent")
-    agent_role_prompt = agent_dict.get("agent_role_prompt")
-
-    print({"type": "logs", "output": f"Initiated an Agent: {agent}"})
-    if task and report_type and agent:
+    if task:
         report, path = await run_agent(
             user_id=user_id,
             task=task,
             websearch=websearch,
-            agent=agent,
             report_type=report_type,
-            agent_role_prompt=agent_role_prompt,
             websocket=None,
             source=source,
             format=format,

@@ -51,23 +51,10 @@ class Scraper:
                 return {"url": link, "raw_content": None}
             return {"url": link, "raw_content": content}
         except Exception as e:
+            print("Exception in extract_data_from_link : ", e)
             return {"url": link, "raw_content": None}
 
-    def scrape_url_with_newspaper(url: str) -> str:
-        """
-        The function `scrape_url_with_newspaper` takes a URL as input and uses the `newspaper` library to
-        scrape the article title and text from the webpage, returning them as a string in the format "title
-        : text".
-
-        Args:
-        url (str): The `url` parameter is a string that represents the URL of the webpage you want to
-        scrape.
-
-        Returns:
-        The function `scrape_url_with_newspaper` returns a string that contains the title of the article
-        followed by a colon and the text of the article. If there is an error during the scraping process,
-        an empty string is returned.
-        """
+    def scrape_url_with_newspaper(self, url: str) -> str:
         try:
             article = Article(
                 url,

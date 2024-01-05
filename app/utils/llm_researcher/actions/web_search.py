@@ -24,7 +24,7 @@ def web_search(query: str, num_results: int = 4) -> str:
         if not results:
             return json.dumps(search_results)
             
-        print(f"Web search results for query {query} : {results} ", file=sys.stdout)
+        # print(f"Web search results for query {query} : {results} ", file=sys.stdout)
         sys.stdout.flush()
 
         total_added = 0
@@ -39,7 +39,7 @@ def web_search(query: str, num_results: int = 4) -> str:
         return json.dumps(search_results, ensure_ascii=False, indent=4)
 
     except Exception as e:
-        Common.exception_details("web_search", e)
+        Common.exception_details("web_search.web_search", e)
         return json.dumps([])
     
 def serp_web_search(query: str, num_results: int = 4) -> str:
@@ -64,12 +64,12 @@ def serp_web_search(query: str, num_results: int = 4) -> str:
         if not results:
             return json.dumps(search_results)
             
-        print(f"Web search results for query {query} : {results} ", file=sys.stdout)
+        # print(f"Web search results for query {query} : {results} ", file=sys.stdout)
         sys.stdout.flush()
 
         total_added = 0
         for i in results:
-            print(i,file=sys.stdout)
+            # print(i,file=sys.stdout)
             sys.stdout.flush()
             search_results.append(i)
             total_added += 1
@@ -79,5 +79,5 @@ def serp_web_search(query: str, num_results: int = 4) -> str:
         return json.dumps(search_results, ensure_ascii=False, indent=4)
 
     except Exception as e:
-        Common.exception_details("web_search", e)
+        Common.exception_details("web_search.serp_web_search", e)
         return json.dumps([])

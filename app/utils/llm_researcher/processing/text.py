@@ -18,7 +18,7 @@ from app.config import Config as GlobalConfig
 from app.utils.production import Production
 
 from ..actions.tables import add_table_to_doc, tables_to_html
-from ..agent.llm_utils import create_chat_completion
+from ..utils.llm import create_chat_completion
 from ..config import Config
 
 CFG = Config()

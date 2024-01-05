@@ -1,22 +1,9 @@
 from datetime import datetime
 
-def generate_search_queries_prompt(question: str, num_queries: int = 3) -> str:
-    """
-    The function `generate_search_queries_prompt` generates a prompt asking the user to write a
-    specified number of Google search queries to form an objective opinion on a given question.
 
-    Args:
-      question: The question that you want to generate search queries for. It should be a string.
-      num_queries: The `num_queries` parameter is an optional parameter that specifies the number of
-    search queries to generate. By default, it is set to 3. Defaults to 3
-
-    Returns:
-      To generate search queries that form an objective opinion about the question "What is being
-    returned?", you can use the following code:
-    """
-
+def generate_search_queries_prompt(question: str, max_iterations: int = 3) -> str:
     return (
-        f'Write {num_queries} google search queries to search online that form an objective opinion from the following: "{question}"'
+        f'Write {max_iterations} google search queries to search online that form an objective opinion from the following: "{question}"'
         f'Use the current date if needed: {datetime.now().strftime("%B %d, %Y")}.\n'
         f'You must respond with a list of strings in the following format: ["query 1", "query 2", "query 3"].'
     )
@@ -30,8 +17,8 @@ def generate_report_prompt(
             research_summary (str): The research summary to generate the report prompt for
     Returns: str: The report prompt for the given question and research summary
     """
-    
-    current_source = "urls" if source=="external" else "documents"
+
+    current_source = "urls" if source == "external" else "documents"
 
     return (
         f'Information: """{context}"""\n\n'
@@ -66,8 +53,8 @@ def generate_resource_report_prompt(
         str: The resource report prompt for the given question and research summary.
     """
 
-    current_source = "urls" if source=="external" else "documents"
-    
+    current_source = "urls" if source == "external" else "documents"
+
     return (
         f'"""{context}"""\n\nBased on the above information, generate a bibliography recommendation report for the following'
         f' question or topic: "{question}". The report should provide a detailed analysis of each recommended resource,'
@@ -76,7 +63,7 @@ def generate_resource_report_prompt(
         "Ensure that the report is well-structured, informative, in-depth, and follows Markdown syntax.\n"
         "Include relevant facts, figures, and numbers whenever available.\n"
         "The report should have a minimum length of 700 words.\n"
-        f'You MUST include all relevant source {current_source}.'
+        f"You MUST include all relevant source {current_source}."
     )
 
 

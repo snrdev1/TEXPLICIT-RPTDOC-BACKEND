@@ -8,7 +8,7 @@ from typing import List, Optional
 import openai
 from colorama import Fore, Style
 from langchain.adapters import openai as lc_openai
-from llm_researcher.agent.prompts import auto_agent_instructions
+from ..agent.prompts import auto_agent_instructions
 
 
 async def create_chat_completion(
@@ -95,35 +95,32 @@ async def stream_response(
     return response
 
 
-def choose_agent(smart_llm_model: str, llm_provider: str, task: str) -> dict:
-    """Determines what server should be used
+async def choose_agent(query, cfg):
+    """
+    Chooses the agent automatically
     Args:
-        task (str): The research question the user asked
-        smart_llm_model (str): the llm model to be used
-        llm_provider (str): the llm provider used
+        query: original query
+        cfg: Config
+
     Returns:
-        server - The server that will be used
-        agent_role_prompt (str): The prompt for the server
+        agent: Agent name
+        agent_role_prompt: Agent role prompt
     """
     try:
-        response = create_chat_completion(
-            model=smart_llm_model,
+        response = await create_chat_completion(
+            model=cfg.smart_llm_model,
             messages=[
                 {"role": "system", "content": f"{auto_agent_instructions()}"},
-                {"role": "user", "content": f"task: {task}"},
-            ],
+                {"role": "user", "content": f"task: {query}"}],
             temperature=0,
-            llm_provider=llm_provider,
+            llm_provider=cfg.llm_provider
         )
         agent_dict = json.loads(response)
-        print(f"Agent: {agent_dict.get('server')}")
-        return agent_dict
+            
+        return agent_dict["agent"], agent_dict["agent_role_prompt"]
     except Exception as e:
-        print(f"{Fore.RED}Error in choose_agent: {e}{Style.RESET_ALL}")
-        return {
-            "server": "Default Agent",
-            "agent_role_prompt": "You are an AI critical thinker research assistant. Your sole purpose is to write well written, critically acclaimed, objective and structured reports on given text.",
-        }
+        print("Exception : ", e)
+        return "Default Agent", "You are an AI critical thinker research assistant. Your sole purpose is to write well written, critically acclaimed, objective and structured reports on given text."
 
 
 async def llm_process_subtopics(task: str, subtopics: list) -> list:

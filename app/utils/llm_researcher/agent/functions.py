@@ -1,8 +1,8 @@
 import json
 import asyncio
-from llm_researcher.utils.llm import *
-from llm_researcher.scraper import Scraper
-from llm_researcher.agent.prompts import *
+from ..utils.llm import *
+from ..scraper import Scraper
+from ..agent.prompts import *
 import json
 
 async def get_sub_queries(query, agent_role_prompt, cfg):
@@ -19,7 +19,7 @@ async def get_sub_queries(query, agent_role_prompt, cfg):
     """
     max_research_iterations = cfg.max_iterations if cfg.max_iterations else 1
     response = await create_chat_completion(
-        model=self.cfg.smart_llm_model,
+        model=cfg.smart_llm_model,
         messages=[
             {"role": "system", "content": f"{agent_role_prompt}"},
             {"role": "user", "content": generate_search_queries_prompt(query, max_iterations=max_research_iterations)}],
@@ -63,3 +63,37 @@ def scrape_urls(urls, cfg=None):
     except Exception as e:
         print(f"{Fore.RED}Error in scrape_urls: {e}{Style.RESET_ALL}")
     return content
+
+async def generate_report(query, context, agent_role_prompt, report_type, websocket, cfg):
+    """
+    generates the final report
+    Args:
+        query:
+        context:
+        agent_role_prompt:
+        report_type:
+        websocket:
+        cfg:
+
+    Returns:
+        report:
+
+    """
+    generate_prompt = get_report_by_type(report_type)
+    report = ""
+    try:
+        report = await create_chat_completion(
+            model=cfg.smart_llm_model,
+            messages=[
+                {"role": "system", "content": f"{agent_role_prompt}"},
+                {"role": "user", "content": f"{generate_prompt(query, context, cfg.report_format, cfg.total_words)}"}],
+            temperature=0,
+            llm_provider=cfg.llm_provider,
+            stream=True,
+            websocket=websocket,
+            max_tokens=cfg.smart_token_limit
+        )
+    except Exception as e:
+        print(f"{Fore.RED}Error in generate_report: {e}{Style.RESET_ALL}")
+
+    return report
