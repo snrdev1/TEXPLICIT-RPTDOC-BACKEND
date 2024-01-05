@@ -1,3 +1,4 @@
+# libraries
 from __future__ import annotations
 
 import json
@@ -7,19 +8,17 @@ from typing import List, Optional
 import openai
 from colorama import Fore, Style
 from langchain.adapters import openai as lc_openai
-
-from ..config import Config
-from .prompts import auto_agent_instructions
-
-CFG = Config()
+from llm_researcher.agent.prompts import auto_agent_instructions
 
 
-def create_chat_completion(
+async def create_chat_completion(
     messages: list,  # type: ignore
     model: Optional[str] = None,
-    temperature: float = CFG.temperature,
+    temperature: float = 1.0,
     max_tokens: Optional[int] = None,
+    llm_provider: Optional[str] = None,
     stream: Optional[bool] = False,
+    websocket=None,
 ) -> str:
     """Create a chat completion using the OpenAI API
     Args:
@@ -28,6 +27,8 @@ def create_chat_completion(
         temperature (float, optional): The temperature to use. Defaults to 0.9.
         max_tokens (int, optional): The max tokens to use. Defaults to None.
         stream (bool, optional): Whether to stream the response. Defaults to False.
+        llm_provider (str, optional): The LLM Provider to use.
+        webocket (WebSocket): The websocket used in the currect request
     Returns:
         str: The response from the chat completion
     """
@@ -37,13 +38,11 @@ def create_chat_completion(
         raise ValueError("Model cannot be None")
     if max_tokens is not None and max_tokens > 8001:
         raise ValueError(f"Max tokens cannot be more than 8001, but got {max_tokens}")
-    if stream is None:
-        raise ValueError("Websocket cannot be None when stream is True")
 
     # create response
     for attempt in range(10):  # maximum of 10 attempts
-        response = send_chat_completion_request(
-            messages, model, temperature, max_tokens, stream
+        response = await send_chat_completion_request(
+            messages, model, temperature, max_tokens, stream, llm_provider, websocket
         )
         return response
 
@@ -51,31 +50,36 @@ def create_chat_completion(
     raise RuntimeError("Failed to get response from OpenAI API")
 
 
-def send_chat_completion_request(messages, model, temperature, max_tokens, stream):
+async def send_chat_completion_request(
+    messages, model, temperature, max_tokens, stream, llm_provider, websocket=None
+):
     if not stream:
         result = lc_openai.ChatCompletion.create(
             model=model,  # Change model here to use different models
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
-            provider=CFG.llm_provider,  # Change provider here to use a different API
+            provider=llm_provider,  # Change provider here to use a different API
         )
         return result["choices"][0]["message"]["content"]
     else:
-        return stream_response(model, messages, temperature, max_tokens)
+        return await stream_response(
+            model, messages, temperature, max_tokens, llm_provider, websocket
+        )
 
 
-async def stream_response(model, messages, temperature, max_tokens):
+async def stream_response(
+    model, messages, temperature, max_tokens, llm_provider, websocket=None
+):
     paragraph = ""
     response = ""
-    print(f"streaming response...")
 
     for chunk in lc_openai.ChatCompletion.create(
         model=model,
         messages=messages,
         temperature=temperature,
         max_tokens=max_tokens,
-        provider=CFG.llm_provider,
+        provider=llm_provider,
         stream=True,
     ):
         content = chunk["choices"][0].get("delta", {}).get("content")
@@ -83,35 +87,41 @@ async def stream_response(model, messages, temperature, max_tokens):
             response += content
             paragraph += content
             if "\n" in paragraph:
-                print({"type": "report", "output": paragraph})
+                if websocket is not None:
+                    await websocket.send_json({"type": "report", "output": paragraph})
+                else:
+                    print(f"{Fore.GREEN}{paragraph}{Style.RESET_ALL}")
                 paragraph = ""
-    print(f"streaming response complete")
     return response
 
 
-def choose_agent(task: str) -> dict:
-    """Determines what agent should be used
+def choose_agent(smart_llm_model: str, llm_provider: str, task: str) -> dict:
+    """Determines what server should be used
     Args:
         task (str): The research question the user asked
+        smart_llm_model (str): the llm model to be used
+        llm_provider (str): the llm provider used
     Returns:
-        agent - The agent that will be used
-        agent_role_prompt (str): The prompt for the agent
+        server - The server that will be used
+        agent_role_prompt (str): The prompt for the server
     """
     try:
         response = create_chat_completion(
-            model=CFG.smart_llm_model,
+            model=smart_llm_model,
             messages=[
                 {"role": "system", "content": f"{auto_agent_instructions()}"},
                 {"role": "user", "content": f"task: {task}"},
             ],
             temperature=0,
+            llm_provider=llm_provider,
         )
-
-        return json.loads(response)
+        agent_dict = json.loads(response)
+        print(f"Agent: {agent_dict.get('server')}")
+        return agent_dict
     except Exception as e:
         print(f"{Fore.RED}Error in choose_agent: {e}{Style.RESET_ALL}")
         return {
-            "agent": "Default Agent",
+            "server": "Default Agent",
             "agent_role_prompt": "You are an AI critical thinker research assistant. Your sole purpose is to write well written, critically acclaimed, objective and structured reports on given text.",
         }
 

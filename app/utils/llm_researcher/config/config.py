@@ -25,6 +25,7 @@ class Config:
         self.temperature = ApplicationConfig.REPORT_TEMPERATURE
         self.user_agent = ApplicationConfig.REPORT_USER_AGENT
         self.memory_backend = ApplicationConfig.REPORT_MEMORY_BACKEND
+        self.max_search_results_per_query = ApplicationConfig.REPORT_MAX_SEARCH_RESULTS_PER_QUERY
 
         # Initialize the OpenAI API client
         openai.api_key = self.openai_api_key

@@ -5,22 +5,17 @@ import asyncio
 import json
 import os
 import re
-import string
 from typing import Union
 
 import markdown
 from bson import ObjectId
-
-from app.config import Config as GlobalConfig
-from app.utils.files_and_folders import get_report_directory
-from app.utils.production import Production
-from llm_researcher.agent.functions import *
-from llm_researcher.memory import Memory
 from llm_researcher.actions import retrieve_context_from_documents
 from llm_researcher.actions.tables import extract_tables
-from llm_researcher.actions.web_scraper import async_browse
 from llm_researcher.actions.web_search import serp_web_search, web_search
+from llm_researcher.agent.functions import *
 from llm_researcher.config import Config
+from llm_researcher.context.compression import ContextCompressor
+from llm_researcher.memory import Memory
 from llm_researcher.processing.text import (
     create_chat_completion,
     create_message,
@@ -31,7 +26,13 @@ from llm_researcher.processing.text import (
     write_md_to_word,
     write_to_file,
 )
+
+from app.config import Config as GlobalConfig
+from app.utils.files_and_folders import get_report_directory
+from app.utils.production import Production
+
 from . import prompts
+
 
 class ResearchAgent:
     def __init__(
@@ -59,13 +60,11 @@ class ResearchAgent:
         )
         self.visited_urls = set()
         self.user_id = user_id
-        
+
         # Stores the entire research summary
         self.research_summary = ""
+
         # Stores markdown format of any table if found
-        # self.report_type = report_type
-        self.context = []
-        
         self.tables = []
         # Source of report: external(web) or my_documents
         self.source = source
@@ -79,48 +78,24 @@ class ResearchAgent:
         self.role = None
         self.memory = Memory()
         self.cfg = Config()
-        
-    
+
     async def conduct_research(
         self, num_queries: int = 3, max_docs: int = 15, score_threshold: float = 1.2
     ):
-        """
-        The function conducts research by reading text files, creating search queries, running search
-        summaries, and returning the research summary.
-
-        Args:
-          num_queries: The `num_queries` parameter is an optional parameter that specifies the number of
-        search queries to create if the research summary is empty. If the research summary is not empty,
-        the `num_queries` parameter is ignored. Defaults to 3
-
-        Returns:
-          the research summary, which is a string containing the results of conducting research.
-        """
         if self.source == "external":
-            if GlobalConfig.GCP_PROD_ENV:
-                self.research_summary = read_txt_files(self.dir_path) or ""
-            else:
-                self.research_summary = (
-                    read_txt_files(self.dir_path)
-                    if os.path.isdir(self.dir_path)
-                    else ""
-                )
-            await self.extract_tables()
-
-            if not self.research_summary:
-                self.research_summary = await self.get_context_by_search(self.query)
-
-            await self.stream_output(
-                f"Total research words: {len(self.research_summary.split(' '))}"
-            )
+            self.research_summary = await self.get_context_by_search(self.query)
 
         else:
             self.research_summary = retrieve_context_from_documents(
                 self.user_id, self.question, max_docs, score_threshold
             )
 
+        await stream_output(
+            f"Total research words: {len(self.research_summary.split(' '))}"
+        )
+
         return self.research_summary
-    
+
     async def get_context_by_search(self, query):
         """
            Generates the context for the research task by searching the query and scraping the results
@@ -130,13 +105,17 @@ class ResearchAgent:
         context = []
         # Generate Sub-Queries including original query
         sub_queries = await get_sub_queries(query) + [query]
-        await stream_output("logs",
-                            f"🧠 I will conduct my research based on the following queries: {sub_queries}...",
-                            self.websocket)
+        await stream_output(
+            "logs",
+            f"🧠 I will conduct my research based on the following queries: {sub_queries}...",
+            self.websocket,
+        )
 
         # Run Sub-Queries
         for sub_query in sub_queries:
-            await stream_output("logs", f"\n🔎 Running research for '{sub_query}'...", self.websocket)
+            await stream_output(
+                "logs", f"\n🔎 Running research for '{sub_query}'...", self.websocket
+            )
             scraped_sites = await self.scrape_sites_by_query(sub_query)
             content = await self.get_similar_content_by_query(sub_query, scraped_sites)
             await stream_output("logs", f"📃 {content}", self.websocket)
@@ -144,10 +123,42 @@ class ResearchAgent:
 
         return context
 
-    async def stream_output(self, output):
-        if not self.websocket:
-            return print(output)
-        await self.websocket.send_json({"type": "logs", "output": output})
+    async def get_similar_content_by_query(self, query, pages):
+        await stream_output(
+            "logs",
+            f"📃 Getting relevant content based on query: {query}...",
+            self.websocket,
+        )
+        # Summarize Raw Data
+        context_compressor = ContextCompressor(
+            documents=pages, embeddings=self.memory.get_embeddings()
+        )
+        # Run Tasks
+        return context_compressor.get_context(query, max_results=8)
+
+    async def scrape_sites_by_query(self, sub_query):
+        """
+        Runs a sub-query
+        Args:
+            sub_query:
+
+        Returns:
+            Summary
+        """
+        # Get Urls
+        search_results = json.loads(
+            web_search(sub_query, self.cfg.max_search_results_per_query)
+        )
+        new_search_urls = await self.get_new_urls(
+            [url.get("href") for url in search_results]
+        )
+
+        # Scrape Urls
+        await stream_output(
+            "logs", f"🤔Researching for relevant information...\n", self.websocket
+        )
+        scraped_content_results = scrape_urls(new_search_urls, self.cfg)
+        return scraped_content_results
 
     async def summarize(self, text, topic):
         """Summarizes the given text for the given topic.
@@ -157,7 +168,7 @@ class ResearchAgent:
         """
 
         messages = [create_message(text, topic)]
-        await self.stream_output(f"📝 Summarizing text for query: {text}")
+        await stream_output(f"📝 Summarizing text for query: {text}")
 
         return create_chat_completion(
             model=self.cfg.fast_llm_model,
@@ -173,7 +184,7 @@ class ResearchAgent:
         new_urls = []
         for url in url_set_input:
             if url not in self.visited_urls:
-                await self.stream_output(f"✅ Adding source url to research: {url}\n")
+                await stream_output(f"✅ Adding source url to research: {url}\n")
 
                 self.visited_urls.add(url)
                 new_urls.append(url)
@@ -212,14 +223,12 @@ class ResearchAgent:
 
         await self.extract_tables(new_search_urls)
 
-        await self.stream_output(
+        await stream_output(
             f"🌐 Browsing the following sites for relevant information: {new_search_urls}..."
         )
 
         # Create a list to hold the coroutine objects
-        tasks = [
-            async_browse(url, query, self.websocket) for url in new_search_urls
-        ]
+        tasks = [async_browse(url, query, self.websocket) for url in new_search_urls]
 
         # # Gather the results as they become available
         responses = await asyncio.gather(*tasks, return_exceptions=True)
@@ -230,13 +239,13 @@ class ResearchAgent:
         """
         The function runs a research query, saves the results to a file, and returns the results as a
         string.
-        
+
         :param query: The `query` parameter is a string that represents the search query for which the
         research is being conducted
         :return: the `result` variable, which is a string containing the responses from the search.
         """
-        
-        await self.stream_output(f"🔎 Running research for '{query}'...")
+
+        await stream_output(f"🔎 Running research for '{query}'...")
 
         responses = await self.async_search(query)
 
@@ -254,35 +263,9 @@ class ResearchAgent:
 
         return result
 
-    async def get_report_markdown(self, report_type):
-        if GlobalConfig.GCP_PROD_ENV:
-            markdown_report_path = f"{self.dir_path}/{report_type}.md"
-            user_bucket = Production.get_users_bucket()
-            blob = user_bucket.blob(markdown_report_path)
-            if blob.exists():
-                markdown_content = blob.download_as_text()
-                return markdown_content
-        else:
-            if os.path.isdir(self.dir_path):
-                markdown_report_path = os.path.join(self.dir_path, f"{report_type}.md")
-                if os.path.exists(markdown_report_path):
-                    # Initialize an empty string to store the content
-                    markdown_content = ""
-
-                    # Open and read the Markdown file
-                    with open(
-                        markdown_report_path, "r", encoding="cp437", errors="ignore"
-                    ) as file:
-                        markdown_content = file.read()
-
-                    # Now, 'markdown_content' contains the content of the Markdown file
-                    return markdown_content
-
-        return None
-
     async def write_report(self, report_type, source, websocket=None):
         report_type_func = prompts.get_report_by_type(report_type)
-        await self.stream_output(
+        await stream_output(
             f"✍️ Writing {report_type} for research task: {self.question}..."
         )
 
@@ -341,7 +324,7 @@ class ResearchAgent:
         prompt = prompts.generate_subtopic_report_prompt(
             main_topic, subtopics, current_subtopic, self.research_summary
         )
-        await self.stream_output(
+        await stream_output(
             f"✍️ Writing {report_type} for subtopic research task: {self.question}..."
         )
 
@@ -372,11 +355,10 @@ class ResearchAgent:
 
         return topic_introduction, topic_conclusion
 
-
     ########################################################################################
-    
+
     # TABLES
-    
+
     def read_tables(self):
         if GlobalConfig.GCP_PROD_ENV:
             return read_txt_files(self.dir_path, tables=True) or ""
@@ -388,7 +370,7 @@ class ResearchAgent:
 
     def save_tables(self):
         tables_path = os.path.join(self.dir_path, "tables.txt")
-        
+
         # save tables
         if GlobalConfig.GCP_PROD_ENV:
             user_bucket = Production.get_users_bucket()
@@ -417,6 +399,5 @@ class ResearchAgent:
             if len(self.tables):
                 print("📝 Saving extracted tables")
                 self.save_tables()
-
 
     ########################################################################################

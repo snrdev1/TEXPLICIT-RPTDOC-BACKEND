@@ -65,6 +65,7 @@ class Config(object):
     REPORT_FORMAT = os.getenv('REPORT_FORMAT', "APA")
     REPORT_MAX_ITERATIONS = int(os.getenv('MAX_ITERATIONS', 3))
     REPORT_AGENT_ROLE = os.getenv('AGENT_ROLE', None)
+    REPORT_MAX_SEARCH_RESULTS_PER_QUERY = int(os.getenv('MAX_SEARCH_RESULTS_PER_QUERY', 5))
 
     # MongoDB
     MONGO_DATABASE = "TEXPLICIT2_B2C_RPTDOC"

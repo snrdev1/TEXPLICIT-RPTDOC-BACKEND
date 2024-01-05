@@ -2,8 +2,8 @@ from typing import Union
 
 from bson import ObjectId
 
-from .agent.llm_utils import choose_agent
-from .agent.run import run_agent
+from llm_researcher.utils.llm import choose_agent
+from llm_researcher.agent.run import run_agent
 
 
 async def research(

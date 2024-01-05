@@ -1,3 +1,10 @@
+import json
+import asyncio
+from llm_researcher.utils.llm import *
+from llm_researcher.scraper import Scraper
+from llm_researcher.agent.prompts import *
+import json
+
 async def get_sub_queries(query, agent_role_prompt, cfg):
     """
     Gets the sub queries
@@ -21,3 +28,38 @@ async def get_sub_queries(query, agent_role_prompt, cfg):
     )
     sub_queries = json.loads(response)
     return sub_queries
+
+async def stream_output(type, output, websocket=None, logging=True):
+    """
+    Streams output to the websocket
+    Args:
+        type:
+        output:
+
+    Returns:
+        None
+    """
+    if not websocket or logging:
+        print(output)
+
+    if websocket:
+        await websocket.send_json({"type": type, "output": output})
+        
+def scrape_urls(urls, cfg=None):
+    """
+    Scrapes the urls
+    Args:
+        urls: List of urls
+        cfg: Config (optional)
+
+    Returns:
+        text: str
+
+    """
+    content = []
+    user_agent = cfg.user_agent if cfg else "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0"
+    try:
+        content = Scraper(urls, user_agent).run()
+    except Exception as e:
+        print(f"{Fore.RED}Error in scrape_urls: {e}{Style.RESET_ALL}")
+    return content
