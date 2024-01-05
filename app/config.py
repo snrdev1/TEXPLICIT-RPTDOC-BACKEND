@@ -54,16 +54,17 @@ class Config(object):
     REPORT_SMART_TOKEN_LIMIT = int(os.getenv("SMART_TOKEN_LIMIT", 4000))
     REPORT_BROWSE_CHUNK_MAX_LENGTH = int(os.getenv("BROWSE_CHUNK_MAX_LENGTH", 8192))
     REPORT_SUMMARY_TOKEN_LIMIT = int(os.getenv("SUMMARY_TOKEN_LIMIT", 700))
-
-    REPORT_TEMPERATURE = float(os.getenv("TEMPERATURE", "1"))
-
+    REPORT_TEMPERATURE = float(os.getenv("TEMPERATURE", "0.55"))
     REPORT_USER_AGENT = os.getenv(
         "USER_AGENT",
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36"
         " (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36",
     )
-
     REPORT_MEMORY_BACKEND = os.getenv("MEMORY_BACKEND", "local")
+    REPORT_TOTAL_WORDS = int(os.getenv('TOTAL_WORDS', 1000))
+    REPORT_FORMAT = os.getenv('REPORT_FORMAT', "APA")
+    REPORT_MAX_ITERATIONS = int(os.getenv('MAX_ITERATIONS', 3))
+    REPORT_AGENT_ROLE = os.getenv('AGENT_ROLE', None)
 
     # MongoDB
     MONGO_DATABASE = "TEXPLICIT2_B2C_RPTDOC"

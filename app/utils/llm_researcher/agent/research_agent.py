@@ -14,13 +14,14 @@ from bson import ObjectId
 from app.config import Config as GlobalConfig
 from app.utils.files_and_folders import get_report_directory
 from app.utils.production import Production
-
-from ..actions import retrieve_context_from_documents
-from ..actions.tables import extract_tables
-from ..actions.web_scraper import async_browse
-from ..actions.web_search import serp_web_search, web_search
-from ..config import Config
-from ..processing.text import (
+from llm_researcher.agent.functions import *
+from llm_researcher.memory import Memory
+from llm_researcher.actions import retrieve_context_from_documents
+from llm_researcher.actions.tables import extract_tables
+from llm_researcher.actions.web_scraper import async_browse
+from llm_researcher.actions.web_search import serp_web_search, web_search
+from llm_researcher.config import Config
+from llm_researcher.processing.text import (
     create_chat_completion,
     create_message,
     read_txt_files,
@@ -31,9 +32,6 @@ from ..processing.text import (
     write_to_file,
 )
 from . import prompts
-
-CFG = Config()
-
 
 class ResearchAgent:
     def __init__(
@@ -61,9 +59,13 @@ class ResearchAgent:
         )
         self.visited_urls = set()
         self.user_id = user_id
+        
         # Stores the entire research summary
         self.research_summary = ""
         # Stores markdown format of any table if found
+        # self.report_type = report_type
+        self.context = []
+        
         self.tables = []
         # Source of report: external(web) or my_documents
         self.source = source
@@ -74,6 +76,79 @@ class ResearchAgent:
         print("📡 dir_path (report directory) : ", self.dir_path)
 
         self.websocket = websocket
+        self.role = None
+        self.memory = Memory()
+        self.cfg = Config()
+        
+    
+    async def conduct_research(
+        self, num_queries: int = 3, max_docs: int = 15, score_threshold: float = 1.2
+    ):
+        """
+        The function conducts research by reading text files, creating search queries, running search
+        summaries, and returning the research summary.
+
+        Args:
+          num_queries: The `num_queries` parameter is an optional parameter that specifies the number of
+        search queries to create if the research summary is empty. If the research summary is not empty,
+        the `num_queries` parameter is ignored. Defaults to 3
+
+        Returns:
+          the research summary, which is a string containing the results of conducting research.
+        """
+        if self.source == "external":
+            if GlobalConfig.GCP_PROD_ENV:
+                self.research_summary = read_txt_files(self.dir_path) or ""
+            else:
+                self.research_summary = (
+                    read_txt_files(self.dir_path)
+                    if os.path.isdir(self.dir_path)
+                    else ""
+                )
+            await self.extract_tables()
+
+            if not self.research_summary:
+                
+                self.research_summary = await self.get_context_by_search(self.query)
+                
+                # search_queries = await self.create_search_queries(num_queries)
+                # for query in search_queries:
+                #     research_result = await self.run_search_summary(query)
+                #     self.research_summary += f"{research_result}\n\n"
+
+            await self.stream_output(
+                f"Total research words: {len(self.research_summary.split(' '))}"
+            )
+
+        else:
+            self.research_summary = retrieve_context_from_documents(
+                self.user_id, self.question, max_docs, score_threshold
+            )
+
+        return self.research_summary
+    
+    async def get_context_by_search(self, query):
+        """
+           Generates the context for the research task by searching the query and scraping the results
+        Returns:
+            context: List of context
+        """
+        context = []
+        # Generate Sub-Queries including original query
+        sub_queries = await get_sub_queries(query) + [query]
+        await stream_output("logs",
+                            f"🧠 I will conduct my research based on the following queries: {sub_queries}...",
+                            self.websocket)
+
+        # Run Sub-Queries
+        for sub_query in sub_queries:
+            await stream_output("logs", f"\n🔎 Running research for '{sub_query}'...", self.websocket)
+            scraped_sites = await self.scrape_sites_by_query(sub_query)
+            content = await self.get_similar_content_by_query(sub_query, scraped_sites)
+            await stream_output("logs", f"📃 {content}", self.websocket)
+            context.append(content)
+
+        return context
 
     async def stream_output(self, output):
         if not self.websocket:
@@ -91,7 +166,7 @@ class ResearchAgent:
         await self.stream_output(f"📝 Summarizing text for query: {text}")
 
         return create_chat_completion(
-            model=CFG.fast_llm_model,
+            model=self.cfg.fast_llm_model,
             messages=messages,
         )
 
@@ -120,70 +195,9 @@ class ResearchAgent:
             },
         ]
         answer = create_chat_completion(
-            model=CFG.smart_llm_model, messages=messages, stream=stream
+            model=self.cfg.smart_llm_model, messages=messages, stream=stream
         )
         return answer
-
-    async def create_search_queries(self, num_queries=3):
-        """
-        The function `create_search_queries` generates search queries based on a given question and
-        returns them as a list.
-
-        Args:
-          num_queries: The `num_queries` parameter is an optional parameter that specifies the number of
-        search queries to generate. By default, it is set to 3. Defaults to 3
-
-        Returns:
-          The function `create_search_queries` returns a list of search queries in JSON format.
-        """
-        result = await self.call_agent(
-            prompts.generate_search_queries_prompt(self.question, num_queries)
-        )
-        await self.stream_output(
-            f"🧠 I will conduct my research based on the following queries: {result}..."
-        )
-        return json.loads(result)
-
-    def read_tables(self):
-        if GlobalConfig.GCP_PROD_ENV:
-            return read_txt_files(self.dir_path, tables=True) or ""
-        else:
-            if os.path.isdir(self.dir_path):
-                return read_txt_files(self.dir_path, tables=True)
-            else:
-                return ""
-
-    def save_tables(self):
-        tables_path = os.path.join(self.dir_path, "tables.txt")
-        
-        # save tables
-        if GlobalConfig.GCP_PROD_ENV:
-            user_bucket = Production.get_users_bucket()
-            blob = user_bucket.blob(tables_path)
-            blob.upload_from_string(str(self.tables))
-        else:
-            os.makedirs(os.path.dirname(tables_path), exist_ok=True)
-            write_to_file(tables_path, str(self.tables))
-
-    async def extract_tables(self, urls: list = []):
-        # Else extract tables from the urls and save them
-        existing_tables = self.read_tables()
-        if len(existing_tables):
-            self.tables = eval(existing_tables)
-            print("💎 Found EXISTING table/s")
-        elif len(urls):
-            # Extract all tables from search urls
-            for url in urls:
-                new_table = extract_tables(url)
-                if len(new_table):
-                    new_tables = {"tables": new_table, "url": url}
-                    print(f"💎 Found table/s from {url}")
-                    self.tables.append(new_tables)
-
-            # If any tables at all are found then store them
-            if len(self.tables):
-                print("📝 Saving extracted tables")
-                self.save_tables()
 
     async def async_search(self, query):
         """Runs the async search for the given query.
@@ -300,71 +314,14 @@ class ResearchAgent:
 
         return None
 
-    async def conduct_research(
-        self, num_queries: int = 3, max_docs: int = 15, score_threshold: float = 1.2
-    ):
-        """
-        The function conducts research by reading text files, creating search queries, running search
-        summaries, and returning the research summary.
-
-        Args:
-          num_queries: The `num_queries` parameter is an optional parameter that specifies the number of
-        search queries to create if the research summary is empty. If the research summary is not empty,
-        the `num_queries` parameter is ignored. Defaults to 3
-
-        Returns:
-          the research summary, which is a string containing the results of conducting research.
-        """
-        if self.source == "external":
-            if GlobalConfig.GCP_PROD_ENV:
-                self.research_summary = read_txt_files(self.dir_path) or ""
-            else:
-                self.research_summary = (
-                    read_txt_files(self.dir_path)
-                    if os.path.isdir(self.dir_path)
-                    else ""
-                )
-            await self.extract_tables()
-
-            if not self.research_summary:
-                search_queries = await self.create_search_queries(num_queries)
-                for query in search_queries:
-                    research_result = await self.run_search_summary(query)
-                    self.research_summary += f"{research_result}\n\n"
-
-            await self.stream_output(
-                f"Total research words: {len(self.research_summary.split(' '))}"
-            )
-
-        else:
-            self.research_summary = retrieve_context_from_documents(
-                self.user_id, self.question, max_docs, score_threshold
-            )
-
-        return self.research_summary
-
-    async def create_concepts(self):
-        """Creates the concepts for the given question.
-        Args: None
-        Returns: list[str]: The concepts for the given question
-        """
-        result = self.call_agent(
-            prompts.generate_concepts_prompt(self.question, self.research_summary)
-        )
-
-        await self.stream_output(
-            f"I will research based on the following concepts: {result}\n"
-        )
-        return json.loads(result)
-
     async def write_report(self, report_type, source, websocket=None):
-        report_type_func = prompts.get_report_by_type(report_type, source)
+        report_type_func = prompts.get_report_by_type(report_type)
         await self.stream_output(
             f"✍️ Writing {report_type} for research task: {self.question}..."
         )
 
         answer = await self.call_agent(
-            report_type_func(self.question, self.research_summary),
+            report_type_func(self.question, self.research_summary, source=self.source),
             stream=websocket is not None,
             websocket=websocket,
         )
@@ -390,18 +347,6 @@ class ResearchAgent:
             )
 
         return path
-
-    async def write_lessons(self):
-        """Writes lessons on essential concepts of the research.
-        Args: None
-        Returns: None
-        """
-        concepts = await self.create_concepts()
-        for concept in concepts:
-            answer = await self.call_agent(
-                prompts.generate_lesson_prompt(concept), stream=True
-            )
-            await write_md_to_word("Lesson", self.dir_path, answer)
 
     ########################################################################################
 
@@ -460,3 +405,52 @@ class ResearchAgent:
         )
 
         return topic_introduction, topic_conclusion
+
+
+    ########################################################################################
+    
+    # TABLES
+    
+    def read_tables(self):
+        if GlobalConfig.GCP_PROD_ENV:
+            return read_txt_files(self.dir_path, tables=True) or ""
+        else:
+            if os.path.isdir(self.dir_path):
+                return read_txt_files(self.dir_path, tables=True)
+            else:
+                return ""
+
+    def save_tables(self):
+        tables_path = os.path.join(self.dir_path, "tables.txt")
+        
+        # save tables
+        if GlobalConfig.GCP_PROD_ENV:
+            user_bucket = Production.get_users_bucket()
+            blob = user_bucket.blob(tables_path)
+            blob.upload_from_string(str(self.tables))
+        else:
+            os.makedirs(os.path.dirname(tables_path), exist_ok=True)
+            write_to_file(tables_path, str(self.tables))
+
+    async def extract_tables(self, urls: list = []):
+        # Else extract tables from the urls and save them
+        existing_tables = self.read_tables()
+        if len(existing_tables):
+            self.tables = eval(existing_tables)
+            print("💎 Found EXISTING table/s")
+        elif len(urls):
+            # Extract all tables from search urls
+            for url in urls:
+                new_table = extract_tables(url)
+                if len(new_table):
+                    new_tables = {"tables": new_table, "url": url}
+                    print(f"💎 Found table/s from {url}")
+                    self.tables.append(new_tables)
+
+            # If any tables at all are found then store them
+            if len(self.tables):
+                print("📝 Saving extracted tables")
+                self.save_tables()
+
+
+    ########################################################################################

@@ -1,23 +1,5 @@
 from datetime import datetime
 
-
-def generate_agent_role_prompt(agent) -> str:
-    """Generates the agent role prompt.
-    Args: agent (str): The type of the agent.
-    Returns: str: The agent role prompt.
-    """
-    prompts = {
-        "Finance Agent": "You are a seasoned finance analyst AI assistant. Your primary goal is to compose comprehensive, astute, impartial, and methodically arranged financial reports based on provided data and trends.",
-        "Travel Agent": "You are a world-travelled AI tour guide assistant. Your main purpose is to draft engaging, insightful, unbiased, and well-structured travel reports on given locations, including history, attractions, and cultural insights.",
-        "Academic Research Agent": "You are an AI academic research assistant. Your primary responsibility is to create thorough, academically rigorous, unbiased, and systematically organized reports on a given research topic, following the standards of scholarly work.",
-        "Business Analyst": "You are an experienced AI business analyst assistant. Your main objective is to produce comprehensive, insightful, impartial, and systematically structured business reports based on provided business data, market trends, and strategic analysis.",
-        "Computer Security Analyst Agent": "You are an AI specializing in computer security analysis. Your principal duty is to generate comprehensive, meticulously detailed, impartial, and systematically structured reports on computer security topics. This includes Exploits, Techniques, Threat Actors, and Advanced Persistent Threat (APT) Groups. All produced reports should adhere to the highest standards of scholarly work and provide in-depth insights into the complexities of computer security.",
-        "Default Agent": "You are an AI critical thinker research assistant. Your sole purpose is to write well written, critically acclaimed, objective and structured reports on given text.",
-    }
-
-    return prompts.get(agent, "No such agent")
-
-
 def generate_search_queries_prompt(question: str, num_queries: int = 3) -> str:
     """
     The function `generate_search_queries_prompt` generates a prompt asking the user to write a
@@ -40,224 +22,96 @@ def generate_search_queries_prompt(question: str, num_queries: int = 3) -> str:
     )
 
 
-def generate_report_prompt(question: str, research_summary: str = "") -> str:
-    """
-    The function `generate_report_prompt` generates a prompt for writing a detailed report on a given
-    question or topic, with optional research summary.
-
-    Args:
-      question (str): The question or topic that the report should focus on. This is a required
-    parameter and should be a string.
-      research_summary (str): The research summary is a brief summary of the research that has already
-    been conducted on the given question or topic. It provides a starting point for the report and helps
-    the writer understand the existing knowledge and findings related to the question.
-
-    Returns:
-      The function `generate_report_prompt` returns a string prompt that instructs the user to generate
-    a detailed report on a given question or topic.
-    """
-    prompt = f"""Answer the following
-        question or topic: "{question}" in a detailed report --
-        The report should focus on the answer to the question, should be well structured, informative,
-        in depth, with facts and numbers if available, a minimum of 1,200 words and with markdown syntax and apa format.
-        You MUST determine your own concrete and valid opinion based on the given information. Do NOT deter to general and meaningless conclusions.
-        Write all used source urls at the end of the report in apa format.
-        Assume that the current date is {datetime.now().strftime('%B %d, %Y')}
-    """
-
-    if research_summary:
-        prompt = f'"""{research_summary}""" Using the above information,' + prompt
-
-    return prompt
-
-
-def generate_resource_report_prompt(question: str, research_summary: str = "") -> str:
-    """
-    The function `generate_resource_report_prompt` generates a prompt for creating a bibliography
-    recommendation report based on a research question or topic.
-
-    Args:
-      question (str): The research question or topic for which you want to generate a bibliography
-    recommendation report.
-      research_summary (str): The `research_summary` parameter is an optional string that represents a
-    summary of the research that has already been conducted. It can be used to provide context or
-    background information for generating the resource report. If no research summary is provided, the
-    prompt will not include this information.
-
-    Returns:
-      The function `generate_resource_report_prompt` returns a string that represents a prompt for
-    generating a bibliography recommendation report.
-    """
-    prompt = f"""Generate a bibliography recommendation report for the following
-        question or topic: "{question}". The report should provide a detailed analysis of each recommended resource,
-        explaining how each source can contribute to finding answers to the research question.
-        Focus on the relevance, reliability, and significance of each source.
-        Ensure that the report is well-structured, informative, in-depth, and follows Markdown syntax.
-        Include relevant facts, figures, and numbers whenever available.
-        The report should have a minimum length of 1,200 words.
-    """
-
-    if research_summary:
-        prompt = f'"""{research_summary}""" Based on the above information,' + prompt
-
-    return prompt
-
-
-def generate_outline_report_prompt(question: str, research_summary: str = "") -> str:
-    """
-    The function `generate_outline_report_prompt` generates a prompt for creating an outline for a
-    research report in Markdown syntax.
-
-    Args:
-      question (str): The question or topic for which you want to generate an outline for a research
-    report in Markdown syntax.
-      research_summary (str): The `research_summary` parameter is an optional string that represents a
-    summary or background information related to the research question or topic. It can be used to
-    provide additional context for generating the outline.
-
-    Returns:
-      a string that serves as a prompt for generating an outline for a research report.
-    """
-    prompt = f"""Generate an outline for a research report in Markdown syntax
-            for the following question or topic: "{question}". The outline should provide a well-structured framework
-            for the research report, including the main sections, subsections, and key points to be covered.
-            The research report should be detailed, informative, in-depth, and a minimum of 1,200 words.
-            Use appropriate Markdown syntax to format the outline and ensure readability."""
-
-    if research_summary:
-        prompt = f'"""{research_summary}""" Using the above information,' + prompt
-
-    return prompt
-
-
-# DOCUMENTS REPORT GENERATION PROMPT
-def generate_document_report_prompt(question, research_summary):
+def generate_report_prompt(
+    question, context, report_format="apa", total_words=1000, source="external"
+):
     """Generates the report prompt for the given question and research summary.
     Args: question (str): The question to generate the report prompt for
             research_summary (str): The research summary to generate the report prompt for
     Returns: str: The report prompt for the given question and research summary
     """
+    
+    current_source = "urls" if source=="external" else "documents"
 
     return (
-        f'"""{research_summary}""" Using the above information, answer the following'
-        f' question or topic: "{question}" in a detailed report --'
-        " The report should focus on the answer to the question, should be well structured, informative,"
-        " in depth, with facts and numbers if available, a minimum of 1,200 words and with markdown syntax and apa format.\n "
+        f'Information: """{context}"""\n\n'
+        f"Using the above information, answer the following"
+        f' query or task: "{question}" in a detailed report --'
+        " The report should focus on the answer to the query, should be well structured, informative,"
+        f" in depth and comprehensive, with facts and numbers if available and a minimum of {total_words} words.\n"
+        "You should strive to write the report as long as you can using all relevant and necessary information provided.\n"
+        "You must write the report with markdown syntax.\n "
+        f"Use an unbiased and journalistic tone. \n"
         "You MUST determine your own concrete and valid opinion based on the given information. Do NOT deter to general and meaningless conclusions.\n"
-        f"Write all used source document names (along with their extensions) at the end of the report to form a references section in apa format.\n "
+        f"You MUST write all used source {current_source} at the end of the report as references, and make sure to not add duplicated sources, but only one reference for each.\n"
+        f"You MUST write the report in {report_format} format.\n "
+        f"Cite search results using inline notations. Only cite the most \
+            relevant results that answer the query accurately. Place these citations at the end \
+            of the sentence or paragraph that reference them.\n"
+        f"Please do your best, this is very important to my career. "
         f"Assume that the current date is {datetime.now().strftime('%B %d, %Y')}"
     )
 
 
-def generate_document_resource_report_prompt(question, research_summary):
+def generate_resource_report_prompt(
+    question, context, report_format="apa", total_words=1000, source="external"
+):
     """Generates the resource report prompt for the given question and research summary.
 
     Args:
         question (str): The question to generate the resource report prompt for.
-        research_summary (str): The research summary to generate the resource report prompt for.
+        context (str): The research summary to generate the resource report prompt for.
 
     Returns:
         str: The resource report prompt for the given question and research summary.
     """
+
+    current_source = "urls" if source=="external" else "documents"
+    
     return (
-        f'"""{research_summary}""" Based on the above information, generate a bibliography recommendation report for the following'
+        f'"""{context}"""\n\nBased on the above information, generate a bibliography recommendation report for the following'
         f' question or topic: "{question}". The report should provide a detailed analysis of each recommended resource,'
-        " explaining how each source can contribute to finding answers to the research question."
-        " Focus on the relevance, reliability, and significance of each source."
-        " Ensure that the report is well-structured, informative, in-depth, and follows Markdown syntax."
-        " Include relevant facts, figures, and numbers whenever available."
-        " The report should have a minimum length of 1,200 words."
+        " explaining how each source can contribute to finding answers to the research question.\n"
+        "Focus on the relevance, reliability, and significance of each source.\n"
+        "Ensure that the report is well-structured, informative, in-depth, and follows Markdown syntax.\n"
+        "Include relevant facts, figures, and numbers whenever available.\n"
+        "The report should have a minimum length of 700 words.\n"
+        f'You MUST include all relevant source {current_source}.'
     )
 
 
-def generate_document_outline_report_prompt(
-    question: str, research_summary: str = ""
-) -> str:
+def generate_custom_report_prompt(
+    query_prompt, context, report_format="apa", total_words=1000, source="external"
+):
+    return f'"{context}"\n\n{query_prompt}'
+
+
+def generate_outline_report_prompt(
+    question, context, report_format="apa", total_words=1000, source="external"
+):
     """Generates the outline report prompt for the given question and research summary.
     Args: question (str): The question to generate the outline report prompt for
             research_summary (str): The research summary to generate the outline report prompt for
     Returns: str: The outline report prompt for the given question and research summary
     """
 
-    if research_summary:
-        prompt = (
-            f'"""{research_summary}""" Using the above information, generate an outline for a research report in Markdown syntax'
-            f' for the following question or topic: "{question}". The outline should provide a well-structured framework'
-            " for the research report, including the main sections, subsections, and key points to be covered."
-            " The research report should be detailed, informative, in-depth, and a minimum of 1,200 words."
-            " Use appropriate Markdown syntax to format the outline and ensure readability."
-        )
-    else:
-        prompt = f"""Generate an outline for a research report in Markdown syntax
-            for the following question or topic: "{question}". The outline should provide a well-structured framework
-            for the research report, including the main sections, subsections, and key points to be covered.
-            The research report should be detailed, informative, in-depth, and a minimum of 1,200 words.
-            Use appropriate Markdown syntax to format the outline and ensure readability."""
-
-    return prompt
-
-
-# Other Prompts
-
-
-def generate_concepts_prompt(question, research_summary) -> str:
-    """Generates the concepts prompt for the given question.
-    Args: question (str): The question to generate the concepts prompt for
-            research_summary (str): The research summary to generate the concepts prompt for
-    Returns: str: The concepts prompt for the given question
-    """
-
     return (
-        f'"""{research_summary}""" Using the above information, generate a list of 5 main concepts to learn for a research report'
-        f' on the following question or topic: "{question}". The outline should provide a well-structured framework'
-        'You must respond with a list of strings in the following format: ["concepts 1", "concepts 2", "concepts 3", "concepts 4, concepts 5"]'
+        f'"""{context}""" Using the above information, generate an outline for a research report in Markdown syntax'
+        f' for the following question or topic: "{question}". The outline should provide a well-structured framework'
+        " for the research report, including the main sections, subsections, and key points to be covered."
+        " The research report should be detailed, informative, in-depth, and a minimum of 1,200 words."
+        " Use appropriate Markdown syntax to format the outline and ensure readability."
     )
 
 
-def generate_lesson_prompt(concept) -> str:
-    """
-    Generates the lesson prompt for the given question.
-    Args:
-        concept (str): The concept to generate the lesson prompt for.
-    Returns:
-        str: The lesson prompt for the given concept.
-    """
+def get_report_by_type(report_type):
+    report_type_mapping = {
+        "research_report": generate_report_prompt,
+        "resource_report": generate_resource_report_prompt,
+        "outline_report": generate_outline_report_prompt,
+        "custom_report": generate_custom_report_prompt,
+    }
 
-    prompt = (
-        f"generate a comprehensive lesson about {concept} in Markdown syntax. This should include the definition"
-        f"of {concept}, its historical background and development, its applications or uses in different"
-        f"fields, and notable events or facts related to {concept}."
-    )
-
-    return prompt
-
-
-def get_report_by_type(report_type, source):
-    """
-    The function `get_report_by_type` returns a specific report prompt based on the report type and
-    source.
-
-    Args:
-      report_type: The report_type parameter is a string that specifies the type of report to generate.
-    It can have one of the following values: "research_report", "resource_report", or "outline_report".
-      source: The source parameter is a string that indicates where the report is coming from. It can
-    have two possible values: "external" or any other value.
-
-    Returns:
-      the appropriate report prompt based on the report type and source.
-    """
-    if source == "external":
-        report_type_mapping = {
-            "research_report": generate_report_prompt,
-            "resource_report": generate_resource_report_prompt,
-            "outline_report": generate_outline_report_prompt,
-        }
-    else:
-        report_type_mapping = {
-            "research_report": generate_document_report_prompt,
-            "resource_report": generate_document_resource_report_prompt,
-            "outline_report": generate_document_outline_report_prompt,
-        }
     return report_type_mapping[report_type]
 
 
@@ -287,6 +141,20 @@ def auto_agent_instructions() -> str:
             "agent_role_prompt": "You are a world-travelled AI tour guide assistant. Your main purpose is to draft engaging, insightful, unbiased, and well-structured travel reports on given locations, including history, attractions, and cultural insights."
         }
     """
+
+
+def generate_summary_prompt(query, data):
+    """Generates the summary prompt for the given question and text.
+    Args: question (str): The question to generate the summary prompt for
+            text (str): The text to generate the summary prompt for
+    Returns: str: The summary prompt for the given question and text
+    """
+
+    return (
+        f'{data}\n Using the above text, summarize it based on the following task or query: "{query}".\n If the '
+        f"query cannot be answered using the text, YOU MUST summarize the text in short.\n Include all factual "
+        f"information such as numbers, stats, quotes, etc if available. "
+    )
 
 
 ################################################################################################
