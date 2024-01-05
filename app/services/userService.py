@@ -3,7 +3,7 @@ from datetime import datetime
 
 from bson import ObjectId
 from flask import request
-
+from typing import Union
 from app.config import Config
 from app.models.mongoClient import MongoClient
 from app.utils import constants as Constants
@@ -378,6 +378,7 @@ class UserService:
         """
 
         user_data["isActive"] = True
+        user_data["balance"] = 0.0
 
         m_db = MongoClient.connect()
 
@@ -508,6 +509,18 @@ class UserService:
             if response:
                 return str(response.modified_count)
 
+            return None
+
+    def update_user_balance(user_id: Union[ObjectId, str], amount: float):
+        try:
+            m_db = MongoClient.connect()
+            query = {"_id": ObjectId(user_id)}
+            response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(query, {"$inc": {"balance": amount}})
+
+            return response
+        
+        except Exception as e:
+            Common.exception_details("userService.update_user_balance : ", e)
             return None
 
     @staticmethod

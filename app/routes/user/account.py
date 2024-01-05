@@ -66,7 +66,7 @@ def account_signup():
         existing_user = UserService().get_user_by_email(user_data["email"])
 
         if existing_user:
-            return Response.custom_response([], Messages.DUPLICATE_USER, False, 400)
+            return Response.custom_response([], Messages.DUPLICATE_EMAIL, False, 400)
 
         response = UserService().create_user(user_data)
 

@@ -4,11 +4,13 @@
 
 import razorpay
 from flask import Blueprint, request
-
+from app.auth.userauthorization import authorized
 from app.config import Config
 from app.utils.common import Common
 from app.utils.messages import Messages
 from app.utils.response import Response
+from app.services import paymentGatewayService
+from app.services.userService import UserService
 
 payment_gateway = Blueprint("payment_gateway", __name__, url_prefix="/payment")
 
@@ -49,8 +51,10 @@ def create_order():
 
 
 @payment_gateway.route("/capture_payment", methods=["POST"])
-def capture_payment():
+@authorized
+def capture_payment(logged_in_user):
     try:
+        user_id = logged_in_user["_id"]
 
         # Get the payment data sent by Razorpay after payment completion
         request_params = request.get_json()
@@ -59,7 +63,8 @@ def capture_payment():
         required_params = [
             "razorpay_order_id",
             "razorpay_payment_id",
-            "razorpay_signature"
+            "razorpay_signature",
+            "amount"
         ]
 
         # Check if all required parameters are present in the request params
@@ -73,18 +78,12 @@ def capture_payment():
         razorpay_order_id = request_params.get("razorpay_order_id")
         razorpay_payment_id = request_params.get("razorpay_payment_id")
         razorpay_signature = request_params.get("razorpay_signature")
+        amount = float(request_params.get("amount"))
         
         # Verify payment signature
-        signature_verification = (
-            Config.razorpay_client.utility.verify_payment_signature(
-                {
-                    "razorpay_order_id": razorpay_order_id,
-                    "razorpay_payment_id": razorpay_payment_id,
-                    "razorpay_signature": razorpay_signature,
-                }
-            )
-        )
+        signature_verification = paymentGatewayService.verify_payment_signature(razorpay_order_id, razorpay_payment_id, razorpay_signature)
 
+        # If signature verification fails return failure response
         if not signature_verification:
             return Response.custom_response(
                 [],
@@ -92,6 +91,10 @@ def capture_payment():
                 False,
                 401
             )
+        
+        # If signature verification succeeds then update records in DB
+        paymentGatewayService.add_payment_history(user_id, request_params)
+        UserService.update_user_balance(user_id, amount)
         
         return Response.custom_response(
             [],
