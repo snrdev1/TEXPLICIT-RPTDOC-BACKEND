@@ -32,11 +32,10 @@ async def basic_report(
     if (websearch and source == "external") or (source == "my_documents"):
         print("🚦 Starting research")
         report_markdown = await assistant.conduct_research()
-
-    # if len(assistant.research_summary.strip()) == 0:
-    #     return "", "", []
+        
     report_markdown = report_markdown.strip()
-
+    if len(report_markdown) == 0:
+        return "", "", []
     print("Report markdown : \n", report_markdown)
 
     path = await assistant.save_report(report_markdown)
@@ -93,9 +92,9 @@ async def detailed_report(
                 num_queries=1, max_docs=10, score_threshold=1
             )
 
-        # if len(assistant.research_summary.strip()) == 0:
-        #     print(f"⚠️ Failed to gather data from research on subtopic : {task}")
-        #     return "", "", []
+        if len(report_markdown.strip()) == 0:
+            print(f"⚠️ Failed to gather data from research on subtopic : {task}")
+            return "", "", []
 
         report_markdown = report_markdown.strip()
         path = await assistant.save_report(report_markdown)
@@ -196,8 +195,8 @@ async def detailed_report(
         print("📝 Saving extracted tables")
         main_task_assistant.save_tables()
 
-    # if len(subtopics_reports_body.strip()) == 0:
-    #     return "", "", []
+    if len(subtopics_reports_body.strip()) == 0:
+        return "", "", []
 
     detailed_report, detailed_report_path = await generate_detailed_report(
         subtopics_reports_body
@@ -285,8 +284,8 @@ async def complete_report(
         outline_report_tables + resource_report_tables + detailed_reports_tables
     )
 
-    # if len(report_markdown.strip()) == 0:
-    #     return "", "", []
+    if len(report_markdown.strip()) == 0:
+        return "", "", []
 
     path = await assistant.save_report(report_markdown)
 

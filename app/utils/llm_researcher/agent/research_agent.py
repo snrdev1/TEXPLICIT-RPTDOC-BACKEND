@@ -158,6 +158,9 @@ class ResearchAgent:
         new_search_urls = await self.get_new_urls(
             [url.get("link") for url in search_results]
         )
+        
+        # Extract tables
+        await self.extract_tables(new_search_urls)
     
         # Scrape Urls
         await stream_output(
