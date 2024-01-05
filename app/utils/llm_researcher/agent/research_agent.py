@@ -108,13 +108,7 @@ class ResearchAgent:
             await self.extract_tables()
 
             if not self.research_summary:
-                
                 self.research_summary = await self.get_context_by_search(self.query)
-                
-                # search_queries = await self.create_search_queries(num_queries)
-                # for query in search_queries:
-                #     research_result = await self.run_search_summary(query)
-                #     self.research_summary += f"{research_result}\n\n"
 
             await self.stream_output(
                 f"Total research words: {len(self.research_summary.split(' '))}"
@@ -283,34 +277,6 @@ class ResearchAgent:
 
                     # Now, 'markdown_content' contains the content of the Markdown file
                     return markdown_content
-
-        return None
-
-    async def check_existing_report(self, report_type):
-        """
-        The function `check_existing_report` checks if a report of a given type already exists in a
-        directory or a Google Cloud Storage bucket.
-
-        Args:
-          report_type: The `report_type` parameter is a string that represents the type of report being
-        checked. It is used to construct the file name of the report.
-
-        Returns:
-          the report path if the report exists, otherwise it returns None.
-        """
-        if GlobalConfig.GCP_PROD_ENV:
-            report_path = f"{self.dir_path}/{report_type}.{self.format}"
-            user_bucket = Production.get_users_bucket()
-            blob = user_bucket.blob(report_path)
-            if blob.exists():
-                return report_path
-        else:
-            if os.path.isdir(self.dir_path):
-                report_path = os.path.join(
-                    self.dir_path, f"{report_type}.{self.format}"
-                )
-                if os.path.exists(report_path):
-                    return report_path
 
         return None
 

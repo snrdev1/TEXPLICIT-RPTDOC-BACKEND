@@ -71,29 +71,22 @@ async def basic_report(
         format=format,
         websocket=websocket,
     )
-    path = await assistant.check_existing_report(report_type)
-    if path:
-        await assistant.extract_tables()
-        report_markdown = await assistant.get_report_markdown(report_type)
-        report_markdown = report_markdown.strip()
+    # Research on given task will only take place if:
+    #     1. websearch=True and source is web('external')
+    #     2. source is 'my_documents'
+    if (websearch and source == "external") or (source == "my_documents"):
+        print("🚦 Starting research")
+        await assistant.conduct_research()
 
-    else:
-        # Research on given task will only take place if:
-        #     1. websearch=True and source is web('external')
-        #     2. source is 'my_documents'
-        if (websearch and source == "external") or (source == "my_documents"):
-            print("🚦 Starting research")
-            await assistant.conduct_research()
+    if len(assistant.research_summary.strip()) == 0:
+        return "", "", []
 
-        if len(assistant.research_summary.strip()) == 0:
-            return "", "", []
+    report_markdown = await assistant.write_report(report_type, source)
+    report_markdown = report_markdown.strip()
 
-        report_markdown = await assistant.write_report(report_type, source)
-        report_markdown = report_markdown.strip()
+    print("Report markdown : \n", report_markdown)
 
-        print("Report markdown : \n", report_markdown)
-
-        path = await assistant.save_report(report_type, report_markdown)
+    path = await assistant.save_report(report_type, report_markdown)
 
     return report_markdown, path, assistant.tables
 
@@ -185,32 +178,27 @@ async def detailed_report(
             websocket=websocket,
         )
 
-        path = await assistant.check_existing_report(subtopic_report_type)
-        if path:
-            await assistant.extract_tables()
-            report_markdown = await assistant.get_report_markdown(subtopic_report_type)
-            report_markdown = report_markdown.strip()
-        else:
-            # Research on given task will only take place if:
-            #     1. websearch=True and source is web('external')
-            #     2. source is 'my_documents'
-            if (subtopic_web_search and subtopic_source == "external") or (
-                subtopic_source == "my_documents"
-            ):
-                print("🚦 Starting subtopic research")
-                await assistant.conduct_research(
-                    num_queries=1, max_docs=10, score_threshold=1
-                )
-
-            if len(assistant.research_summary.strip()) == 0:
-                print(f"⚠️ Failed to gather data from research on subtopic : {task}")
-                return "", "", []
-
-            report_markdown = await assistant.write_subtopic_report(
-                subtopic_report_type, task, subtopic_tasks, subtopic_task, websocket
+        # Research on given task will only take place if:
+        #     1. websearch=True and source is web('external')
+        #     2. source is 'my_documents'
+        if (subtopic_web_search and subtopic_source == "external") or (
+            subtopic_source == "my_documents"
+        ):
+            print("🚦 Starting subtopic research")
+            await assistant.conduct_research(
+                num_queries=1, max_docs=10, score_threshold=1
             )
-            report_markdown = report_markdown.strip()
-            path = await assistant.save_report(subtopic_report_type, report_markdown)
+
+        if len(assistant.research_summary.strip()) == 0:
+            print(f"⚠️ Failed to gather data from research on subtopic : {task}")
+            return "", "", []
+
+        report_markdown = await assistant.write_subtopic_report(
+                subtopic_report_type, task, subtopic_tasks, subtopic_task, websocket
+        )
+        report_markdown = report_markdown.strip()
+        path = await assistant.save_report(subtopic_report_type, report_markdown)
+        
         return report_markdown, path, assistant.tables
 
     async def generate_subtopic_reports(subtopics):
@@ -295,13 +283,6 @@ async def detailed_report(
         print(f"💎 Processed Subtopics : {processed_subtopics}")
 
         return processed_subtopics
-
-    # Check if detailed report already exists. If it exists then return it
-    detailed_report_path = await main_task_assistant.check_existing_report(report_type)
-    if detailed_report_path:
-        await main_task_assistant.extract_tables()
-        detailed_report = await main_task_assistant.get_report_markdown(report_type)
-        return detailed_report, detailed_report_path, main_task_assistant.tables
 
     # Get all the processed subtopics on which the detailed report is to be generated
     processed_subtopics = await get_all_subtopics()
@@ -398,83 +379,76 @@ async def complete_report(
         format=format,
         websocket=websocket,
     )
-    path = await assistant.check_existing_report(report_type)
-    if path:
-        await assistant.extract_tables()
-        report_markdown = await assistant.get_report_markdown(report_type)
-        report_markdown = report_markdown.strip()
+    (
+        outline_report_markdown,
+        outline_report_path,
+        outline_report_tables,
+    ) = await basic_report(
+        user_id=user_id,
+        task=task,
+        websearch=websearch,
+        agent=agent,
+        agent_role_prompt=agent_role_prompt,
+        report_type="outline_report",
+        source=source,
+        format=format,
+        websocket=websocket,
+        report_generation_id=report_generation_id,
+    )
 
-    else:
-        (
-            outline_report_markdown,
-            outline_report_path,
-            outline_report_tables,
-        ) = await basic_report(
-            user_id=user_id,
-            task=task,
-            websearch=websearch,
-            agent=agent,
-            agent_role_prompt=agent_role_prompt,
-            report_type="outline_report",
-            source=source,
-            format=format,
-            websocket=websocket,
-            report_generation_id=report_generation_id,
-        )
+    (
+        resource_report_markdown,
+        resource_report_path,
+        resource_report_tables,
+    ) = await basic_report(
+        user_id=user_id,
+        task=task,
+        websearch=websearch,
+        agent=agent,
+        agent_role_prompt=agent_role_prompt,
+        report_type="resource_report",
+        source=source,
+        format=format,
+        websocket=websocket,
+        report_generation_id=report_generation_id,
+    )
 
-        (
-            resource_report_markdown,
-            resource_report_path,
-            resource_report_tables,
-        ) = await basic_report(
-            user_id=user_id,
-            task=task,
-            websearch=websearch,
-            agent=agent,
-            agent_role_prompt=agent_role_prompt,
-            report_type="resource_report",
-            source=source,
-            format=format,
-            websocket=websocket,
-            report_generation_id=report_generation_id,
-        )
+    (
+        detailed_report_markdown,
+        detailed_report_path,
+        detailed_reports_tables,
+    ) = await detailed_report(
+        user_id=user_id,
+        task=task,
+        websearch=websearch,
+        agent=agent,
+        agent_role_prompt=agent_role_prompt,
+        report_type=report_type,
+        source=source,
+        format=format,
+        websocket=websocket,
+        report_generation_id=report_generation_id,
+        subtopics=subtopics,
+    )
 
-        (
-            detailed_report_markdown,
-            detailed_report_path,
-            detailed_reports_tables,
-        ) = await detailed_report(
-            user_id=user_id,
-            task=task,
-            websearch=websearch,
-            agent=agent,
-            agent_role_prompt=agent_role_prompt,
-            report_type=report_type,
-            source=source,
-            format=format,
-            websocket=websocket,
-            report_generation_id=report_generation_id,
-            subtopics=subtopics,
-        )
+    report_markdown = (
+        outline_report_markdown
+        + "\n\n\n\n"
+        + resource_report_markdown
+        + "\n\n\n\n"
+        + detailed_report_markdown
+    )
+    report_markdown = report_markdown.strip()
 
-        report_markdown = (
-            outline_report_markdown
-            + "\n\n\n\n"
-            + resource_report_markdown
-            + "\n\n\n\n"
-            + detailed_report_markdown
-        )
-        report_markdown = report_markdown.strip()
+    print("Report markdown : \n", report_markdown)
+    assistant.tables = (
+        outline_report_tables + resource_report_tables + detailed_reports_tables
+    )
 
-        print("Report markdown : \n", report_markdown)
-        assistant.tables = (
-            outline_report_tables + resource_report_tables + detailed_reports_tables
-        )
+    if len(report_markdown.strip()) == 0:
+        return "", "", []
 
-        if len(report_markdown.strip()) == 0:
-            return "", "", []
-
-        path = await assistant.save_report(report_type, report_markdown)
+    path = await assistant.save_report(report_type, report_markdown)
 
     return report_markdown, path, assistant.tables
 
