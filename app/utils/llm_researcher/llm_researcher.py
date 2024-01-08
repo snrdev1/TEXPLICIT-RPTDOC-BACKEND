@@ -2,7 +2,7 @@ from typing import Union
 
 from bson import ObjectId
 
-from .agent.run import run_agent
+from .agent.run import AgentExecutor
 
 
 async def research(
@@ -16,7 +16,7 @@ async def research(
     subtopics: list = [],
 ):
     if task:
-        report, path = await run_agent(
+        agent_executor = AgentExecutor(
             user_id=user_id,
             task=task,
             websearch=websearch,
@@ -27,6 +27,7 @@ async def research(
             report_generation_id=report_generation_id,
             subtopics=subtopics,
         )
+        report, path = await agent_executor.run_agent()
         return report, path
     else:
         print("⚠️ Error! Not enough parameters provided.")
