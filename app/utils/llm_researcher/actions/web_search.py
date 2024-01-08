@@ -60,8 +60,9 @@ def serp_web_search(query: str, num_results: int = 4) -> str:
         }
 
         search = GoogleSearch(params)
-        results = search.get_dict()['organic_results']        # If there are no search results then return empty list
+        results = search.get_dict().get("organic_results", [])        # If there are no search results then return empty list
         if not results:
+            print("🚩 Serp API failed to get search results!")
             return json.dumps(search_results)
             
         # print(f"Web search results for query {query} : {results} ", file=sys.stdout)
@@ -69,7 +70,7 @@ def serp_web_search(query: str, num_results: int = 4) -> str:
 
         total_added = 0
         for i in results:
-            # print(i,file=sys.stdout)
+            # print(i, file=sys.stdout)
             sys.stdout.flush()
             search_results.append(i)
             total_added += 1

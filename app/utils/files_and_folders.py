@@ -6,6 +6,7 @@ import hashlib
 import urllib
 from typing import Union
 from bson import ObjectId
+from datetime import datetime
 
 def get_user_folder(user_id: Union[str, ObjectId]):
     """
@@ -50,8 +51,9 @@ def get_report_folder(question, source:str ="external"):
     
     print("Question : ", question)
     print("Source : ", source)
+    current_time = datetime.utcnow()
     
-    folder_name = f"{question.strip().lower()}_{source}"
+    folder_name = f"{question.strip().lower()}_{source}_{current_time}"
     hashed_folder = hashlib.sha1(folder_name.encode()).hexdigest()
     
     if Config.GCP_PROD_ENV:

@@ -18,7 +18,6 @@ from ..context.compression import ContextCompressor
 from ..memory import Memory
 from ..processing.text import (
     create_chat_completion,
-    create_message,
     read_txt_files,
     remove_roman_numerals,
     save_markdown,
@@ -41,15 +40,25 @@ class ResearchAgent:
         query: str,
         source: str,
         format: str,
-        report_type: str ="research_report",
-        websocket = None,
-    ):        
+        report_type: str = "research_report",
+        websocket=None,
+        parent_query="",
+        subtopics=[]
+    ):
         # Stores the user question (task)
         self.query = query
+
+        # Agent type and role of agent
         self.agent = None
         self.role = None
+
+        # Type of report
         self.report_type = report_type
+
+        # Set to store unique urls
         self.visited_urls = set()
+
+        # Store user_id
         self.user_id = user_id
 
         # Stores the entire research summary
@@ -57,46 +66,92 @@ class ResearchAgent:
 
         # Stores markdown format of any table if found
         self.tables = []
+
         # Source of report: external(web) or my_documents
         self.source = source
+
         # Format of expected report eg: pdf, word, ppt etc.
         self.format = format
+
         # Directory path of saved report
         self.dir_path = get_report_directory(user_id, self.query, self.source)
         print("📡 dir_path (report directory) : ", self.dir_path)
 
         self.websocket = websocket
-        self.role = None
+
+        # For simple retrieval of embeddings for contextual compression
         self.memory = Memory()
+
+        # Refernce to report config
         self.cfg = Config()
+        
+        
+        # Only relevant for DETAILED REPORTS
+        
+        # Stores the main query of the detailed report
+        self.parent_query = parent_query
+        
+        # Stores all the subtopics
+        self.subtopics = subtopics
 
     async def conduct_research(
-        self, max_docs: int = 15, score_threshold: float = 1.2
-    ):  
-        print(f"🔎 Running research for '{self.query}'...")
-        # Generate Agent
-        self.agent, self.role = await choose_agent(self.query, self.cfg)
-        await stream_output("logs", self.agent, self.websocket)
-        
-        if self.source == "external":
-            self.context = await self.get_context_by_search(self.query)
+        self,
+        max_docs: int = 15,
+        score_threshold: float = 1.2
+    ):
+        try:
+            report = ""
+            print(f"🔎 Running research for '{self.query}'...")
 
-        else:
-            self.context = retrieve_context_from_documents(
-                self.user_id, self.query, max_docs, score_threshold
-            )
-            
-        # Write Research Report
-        report = ""
-        if len("".join(self.context)) > 10:
-            if self.report_type == "custom_report":
-                self.role = self.cfg.agent_role if self.cfg.agent_role else self.role
-            await stream_output("logs", f"✍️ Writing {self.report_type} for research task: {self.query}...", self.websocket)
-            report = await generate_report(query=self.query, context=self.context,
-                                        agent_role_prompt=self.role, report_type=self.report_type,
-                                        websocket=self.websocket, cfg=self.cfg)
-            time.sleep(2)
-        return report
+            # Generate Agent for current task
+            self.agent, self.role = await choose_agent(self.query, self.cfg)
+            await stream_output("logs", self.agent, self.websocket)
+
+            if self.source == "external":
+                self.context = await self.get_context_by_search(self.query)
+
+            else:
+                self.context = retrieve_context_from_documents(
+                    self.user_id, self.query, max_docs, score_threshold
+                )
+
+            # Write Research Report
+            if len("".join(self.context)) > 10:
+                await stream_output(
+                    "logs",
+                    f"✍️ Writing {self.report_type} for research task: {self.query}...",
+                    self.websocket,
+                )
+
+                if self.report_type == "custom_report":
+                    self.role = self.cfg.agent_role if self.cfg.agent_role else self.role
+                elif self.report_type == "subtopic_report":
+                    report = await generate_report(
+                        query=self.query,
+                        context=self.context,
+                        agent_role_prompt=self.role,
+                        report_type=self.report_type,
+                        websocket=self.websocket,
+                        cfg=self.cfg,
+                        all_subtopics=self.subtopics,
+                        main_topic=self.parent_query
+                    )
+                else:
+                    report = await generate_report(
+                        query=self.query,
+                        context=self.context,
+                        agent_role_prompt=self.role,
+                        report_type=self.report_type,
+                        websocket=self.websocket,
+                        cfg=self.cfg
+                    )
+                
+                time.sleep(2)
+
+            return report
+        
+        except Exception as e:
+            return report
 
     async def get_context_by_search(self, query):
         """
@@ -105,8 +160,14 @@ class ResearchAgent:
             context: List of context
         """
         context = []
-        # Generate Sub-Queries including original query
-        sub_queries = await get_sub_queries(query, self.role, self.cfg) + [query]
+        
+        # Generate Sub-Queries including original query (if report type is not subtopic_report)
+        sub_queries = []
+        if self.report_type == "subtopic_report":
+            sub_queries = [f"{self.parent_query} - {query}"]
+        else:
+            sub_queries = await get_sub_queries(query, self.role, self.cfg) + [query]
+        
         await stream_output(
             "logs",
             f"🧠 I will conduct my research based on the following queries: {sub_queries}...",
@@ -119,17 +180,34 @@ class ResearchAgent:
                 "logs", f"\n🔎 Running research for '{sub_query}'...", self.websocket
             )
             scraped_sites = await self.scrape_sites_by_query(sub_query)
-                        
+
             content = await self.get_similar_content_by_query(sub_query, scraped_sites)
             if content:
                 await stream_output("logs", f"📃 {content}", self.websocket)
             else:
-                await stream_output("logs", f"Failed to gather content for for : {sub_query}", self.websocket)
+                await stream_output(
+                    "logs",
+                    f"Failed to gather content for for : {sub_query}",
+                    self.websocket,
+                )
             context.append(content)
 
         return context
 
     async def get_similar_content_by_query(self, query, pages):
+        """
+        The function `get_similar_content_by_query` retrieves relevant content based on a given query by
+        summarizing raw data and returning the context with a maximum of 8 results.
+
+        :param query: The query parameter is the search query or keyword that you want to use to find
+        similar content. It is the input that will be used to retrieve relevant content based on the
+        query
+        :param pages: The "pages" parameter is a list of documents or pages that you want to find
+        similar content for. Each document or page should be represented as a string
+        :return: the relevant content based on the given query. The content is obtained by compressing
+        the raw data using a ContextCompressor object and then getting the context for the query with a
+        maximum of 8 results.
+        """
         await stream_output(
             "logs",
             f"📃 Getting relevant content based on query: {query}...",
@@ -158,31 +236,16 @@ class ResearchAgent:
         new_search_urls = await self.get_new_urls(
             [url.get("link") for url in search_results]
         )
-        
+
         # Extract tables
         await self.extract_tables(new_search_urls)
-    
+
         # Scrape Urls
         await stream_output(
             "logs", f"🤔Researching for relevant information...\n", self.websocket
         )
         scraped_content_results = scrape_urls(new_search_urls, self.cfg)
         return scraped_content_results
-
-    async def summarize(self, text, topic):
-        """Summarizes the given text for the given topic.
-        Args: text (str): The text to summarize
-                topic (str): The topic to summarize the text for
-        Returns: str: The summarized text
-        """
-
-        messages = [create_message(text, topic)]
-        await stream_output("logs",f"📝 Summarizing text for query: {text}")
-
-        return create_chat_completion(
-            model=self.cfg.fast_llm_model,
-            messages=messages,
-        )
 
     async def get_new_urls(self, url_set_input):
         """Gets the new urls from the given url set.
@@ -193,7 +256,7 @@ class ResearchAgent:
         new_urls = []
         for url in url_set_input:
             if url not in self.visited_urls:
-                await stream_output("logs",f"✅ Adding source url to research: {url}\n")
+                await stream_output("logs", f"✅ Adding source url to research: {url}\n")
 
                 self.visited_urls.add(url)
                 new_urls.append(url)
@@ -201,6 +264,23 @@ class ResearchAgent:
         return new_urls
 
     async def call_agent(self, prompt, stream=False, websocket=None):
+        """
+        The function `call_agent` takes a prompt and returns a completion generated by a chatbot model.
+
+        :param prompt: The `prompt` parameter is a string that represents the user's input or query. It
+        is the content that the user wants to send to the chatbot agent for processing and generating a
+        response
+        :param stream: The `stream` parameter is a boolean value that determines whether the response
+        from the agent should be streamed or not. If `stream` is set to `True`, the response will be
+        streamed as it becomes available. If `stream` is set to `False`, the response will be returned
+        as a, defaults to False (optional)
+        :param websocket: The `websocket` parameter is an optional argument that represents a WebSocket
+        connection. It allows for real-time communication between the client and server. If provided,
+        the `call_agent` function can use the WebSocket connection to send and receive messages
+        asynchronously
+        :return: The `call_agent` function returns the `answer` variable, which is the result of calling
+        the `create_chat_completion` function.
+        """
         messages = [
             {"role": "system", "content": self.role},
             {
@@ -212,65 +292,6 @@ class ResearchAgent:
             model=self.cfg.smart_llm_model, messages=messages, stream=stream
         )
         return answer
-
-    async def async_search(self, query):
-        """Runs the async search for the given query.
-        Args: query (str): The query to run the async search for
-        Returns: list[str]: The async search for the given query
-        """
-
-        if GlobalConfig.REPORT_WEB_SCRAPER == "selenium":
-            search_results = json.loads(serp_web_search(query))
-            new_search_urls = await self.get_new_urls(
-                [url.get("href") for url in search_results]
-            )
-        else:
-            search_results = json.loads(serp_web_search(query))
-            new_search_urls = await self.get_new_urls(
-                [url.get("link") for url in search_results]
-            )
-
-        await self.extract_tables(new_search_urls)
-
-        await stream_output("logs",
-            f"🌐 Browsing the following sites for relevant information: {new_search_urls}..."
-        )
-
-        # Create a list to hold the coroutine objects
-        tasks = [async_browse(url, query, self.websocket) for url in new_search_urls]
-
-        # # Gather the results as they become available
-        responses = await asyncio.gather(*tasks, return_exceptions=True)
-
-        return responses
-
-    async def run_search_summary(self, query):
-        """
-        The function runs a research query, saves the results to a file, and returns the results as a
-        string.
-
-        :param query: The `query` parameter is a string that represents the search query for which the
-        research is being conducted
-        :return: the `result` variable, which is a string containing the responses from the search.
-        """
-
-        await stream_output("logs",f"🔎 Running research for '{query}'...")
-
-        responses = await self.async_search(query)
-
-        result = "\n".join(responses)
-        summary_path = os.path.join(f"{self.dir_path}", f"research-{query}.txt")
-
-        if len(result.strip()) != 0:
-            if GlobalConfig.GCP_PROD_ENV:
-                user_bucket = Production.get_users_bucket()
-                blob = user_bucket.blob(summary_path)
-                blob.upload_from_string(result)
-            else:
-                os.makedirs(os.path.dirname(summary_path), exist_ok=True)
-                write_to_file(summary_path, result)
-
-        return result
 
     async def save_report(self, markdown_report):
         # Save report mardown for future use
@@ -310,24 +331,6 @@ class ResearchAgent:
             )
 
         return subtopics
-
-    async def write_subtopic_report(
-        self, main_topic, subtopics, current_subtopic, websocket=None
-    ):
-        prompt = prompts.generate_subtopic_report_prompt(
-            main_topic, subtopics, current_subtopic, self.context
-        )
-        await stream_output("logs",
-            f"✍️ Writing {self.report_type} for subtopic research task: {self.query}..."
-        )
-
-        answer = await self.call_agent(
-            prompt, stream=websocket is not None, websocket=websocket
-        )
-        # if websocket is True than we are streaming gpt response, so we need to wait for the final response
-        final_report = await answer if websocket else answer
-
-        return final_report
 
     async def write_introduction_conclusion(self, websocket=None):
         # Construct Report Introduction from main topic research

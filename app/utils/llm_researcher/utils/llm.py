@@ -9,7 +9,7 @@ import openai
 from colorama import Fore, Style
 from langchain.adapters import openai as lc_openai
 from ..agent.prompts import auto_agent_instructions
-
+from ..config.config import Config
 
 async def create_chat_completion(
     messages: list,  # type: ignore
@@ -124,19 +124,6 @@ async def choose_agent(query, cfg):
 
 
 async def llm_process_subtopics(task: str, subtopics: list) -> list:
-    """
-    The function `llm_process_subtopics` takes a main task and a list of subtopics as input, processes
-    the subtopics according to certain rules, and returns the processed subtopics.
-
-    Args:
-      task (str): The `task` parameter represents the main topic or task that the subtopics are related
-    to.
-      subtopics (list): The `subtopics` parameter is a list of strings that represents the subtopics
-    related to a main task. Each string in the list represents a subtopic.
-
-    Returns:
-      The function llm_process_subtopics returns a list of processed subtopics.
-    """
     try:
         print(f"💎 Number of subtopics to be processed : {len(subtopics)}")
 
@@ -161,6 +148,7 @@ async def llm_process_subtopics(task: str, subtopics: list) -> list:
             - Finally order the subtopics by their tasks, in a relevant and meaningful order which is presentable in a detailed report
         """
 
+        CFG = Config()
         response = openai.ChatCompletion.create(
             model=CFG.fast_llm_model,
             response_format={"type": "json_object"},

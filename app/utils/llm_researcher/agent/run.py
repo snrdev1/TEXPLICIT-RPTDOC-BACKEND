@@ -26,12 +26,8 @@ async def basic_report(
         report_type=report_type,
         websocket=websocket,
     )
-    # Research on given task will only take place if:
-    #     1. websearch=True and source is web('external')
-    #     2. source is 'my_documents'
-    if (websearch and source == "external") or (source == "my_documents"):
-        print("🚦 Starting research")
-        report_markdown = await assistant.conduct_research()
+    print("🚦 Starting research")
+    report_markdown = await assistant.conduct_research()
         
     report_markdown = report_markdown.strip()
     if len(report_markdown) == 0:
@@ -63,43 +59,36 @@ async def detailed_report(
         websocket=websocket,
     )
 
-    async def get_subtopic_report(
-        subtopic: list, subtopic_report_type="subtopic_report"
-    ):
+    async def get_subtopic_report(subtopic: list):
         # Extract relevant information from subtopic dictionaries
-        subtopic_task = subtopic.get("task")
-        subtopic_web_search = subtopic.get("websearch", False)
+        current_subtopic_task = subtopic.get("task")
         subtopic_source = subtopic.get("source")
-        subtopic_tasks = [subtopic.get("task") for subtopic in subtopics]
 
-        assistant = ResearchAgent(
+        subtopic_assistant = ResearchAgent(
             user_id=user_id,
-            query=subtopic_task,
+            query=current_subtopic_task,
             source=subtopic_source,
             format=format,
-            report_type=report_type,
+            report_type="subtopic_report",
             websocket=websocket,
+            parent_query=task,
+            subtopics=subtopics
         )
 
-        # Research on given task will only take place if:
-        #     1. websearch=True and source is web('external')
-        #     2. source is 'my_documents'
-        if (subtopic_web_search and subtopic_source == "external") or (
-            subtopic_source == "my_documents"
-        ):
-            print("🚦 Starting subtopic research")
-            report_markdown = await assistant.conduct_research(
-                num_queries=1, max_docs=10, score_threshold=1
-            )
+        print("🚦 Starting subtopic research")
+        report_markdown = await subtopic_assistant.conduct_research(
+            max_docs=10, score_threshold=1
+        )
+        report_markdown = report_markdown.strip()
 
-        if len(report_markdown.strip()) == 0:
+        if len(report_markdown) == 0:
             print(f"⚠️ Failed to gather data from research on subtopic : {task}")
             return "", "", []
+        
+        # Not incredibly necessary to save the subtopic report (as of now)
+        # path = await subtopic_assistant.save_report(report_markdown)
 
-        report_markdown = report_markdown.strip()
-        path = await assistant.save_report(report_markdown)
-
-        return report_markdown, path, assistant.tables
+        return report_markdown, "", subtopic_assistant.tables
 
     async def generate_subtopic_reports(subtopics):
         reports = []
@@ -170,13 +159,13 @@ async def detailed_report(
             + base_subtopics
             + subtopics
         )
-        print(f"💎 All Subtopics : {all_subtopics}")
+        print(f"💎 Found total of {len(all_subtopics)} subtopics")
 
         # 4. Perform processing on subtopics:
         processed_subtopics = await llm_process_subtopics(
             task=task, subtopics=all_subtopics
         )
-        print(f"💎 Processed Subtopics : {processed_subtopics}")
+        print(f"💎 Found {len(processed_subtopics)} processed subtopics")
 
         return processed_subtopics
 
@@ -348,9 +337,9 @@ async def run_agent(
             report_generation_id=report_generation_id,
         )
 
-    print({"type": "path", "output": path})
-
     end_time = datetime.datetime.now()
+
+    print({"type": "path", "output": path})
     print({"type": "logs", "output": f"\nEnd time: {end_time}\n"})
     print({"type": "logs", "output": f"\nTotal run time: {end_time - start_time}\n"})
 

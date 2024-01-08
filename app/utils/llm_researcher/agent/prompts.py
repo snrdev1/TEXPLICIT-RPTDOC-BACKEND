@@ -97,6 +97,7 @@ def get_report_by_type(report_type):
         "resource_report": generate_resource_report_prompt,
         "outline_report": generate_outline_report_prompt,
         "custom_report": generate_custom_report_prompt,
+        "subtopic_report": generate_subtopic_report_prompt
     }
 
     return report_type_mapping[report_type]
@@ -150,58 +151,24 @@ def generate_summary_prompt(query, data):
 
 
 def generate_subtopic_report_prompt(
-    main_topic: str, subtopics: list, current_subtopic: str, research_summary: str = ""
+    current_subtopic, subtopics, main_topic, context, report_format="apa", total_words=1000, source="external"
 ) -> str:
-    """
-    The function `generate_subtopic_report_prompt` generates a prompt for creating a detailed report on
-    a subtopic under a main topic.
-
-    Args:
-      main_topic (str): The main topic of the report. It is a string that represents the main topic
-    under which the subtopic report will be generated.
-      subtopics (list): The `subtopics` parameter is a list of strings that represents the subtopics
-    related to the main topic. Each string in the list represents a specific subtopic.
-      current_subtopic (str): The current subtopic under the main topic.
-      research_summary (str): The `research_summary` parameter is an optional string that contains a
-    summary of the research conducted on the main topic. It provides a brief overview of the main
-    findings and key points related to the main topic. If no research summary is provided, the prompt
-    will be generated without including the research summary section.
-
-    Returns:
-      a string prompt for generating a subtopic report.
-    """
-    if research_summary:
-        prompt = (
-            f'"""{research_summary}""" Using the above latest information,'
-            f"""construct a detailed report on the subtopic: {current_subtopic} under the main topic: {main_topic}.
-            - The report should focus on the answer to the question, should be well structured, informative,
-            in-depth, with facts and numbers if available, a minimum of 1,200 words and with markdown syntax.
-            - As this report will be part of a bigger report, you must ONLY include the main body divided into suitable subtopics,
-            without any introduction, conclusion, or reference section.
-            - Include hyperlinked urls to relevant sources wherever possible in the text.
-            - All related numerical values (if any) should be bold.
-            - Also avoid including any details from these other subtopics: {[subtopic for subtopic in subtopics[1:] if subtopic!=current_subtopic]}
-            - Ensure that you use smaller Markdown headers (e.g., H2 or H3) to structure your content and avoid using the largest Markdown header (H1).
-            The H1 header will be used for the heading of the larger report later on.
-            - Do NOT include any details, urls or references where data is unavailable.
-            - Do NOT include any conclusion or summary section! - Do NOT include a conclusion or summary!
-            Assume that the current date is {datetime.now().strftime('%B %d, %Y')} if required."""
-        )
-    else:
-        prompt = f"""Construct a detailed report on the subtopic: {current_subtopic} under the main topic: {main_topic}.
-            - The report should focus on the answer to the question, should be well structured, informative,
-            in-depth, with facts and numbers if available, a minimum of 1,200 words and with markdown syntax.
-            - As this report will be part of a bigger report, you must ONLY include the main body divided into suitable subtopics,
-            without any introduction, conclusion, or reference section.
-            - Include hyperlinked urls to relevant sources wherever possible in the text.
-            - All related numerical values (if any) should be bold.
-            - Also avoid including any details from these other subtopics: {[subtopic for subtopic in subtopics[1:] if subtopic!=current_subtopic]}
-            - Ensure that you use smaller Markdown headers (e.g., H2 or H3) to structure your content and avoid using the largest Markdown header (H1).
-            The H1 header will be used for the heading of the larger report later on.
-            - Do NOT include any details, urls or references where data is unavailable.
-            - Do NOT include any conclusion or summary section! - Do NOT include a conclusion or summary!
-            Assume that the current date is {datetime.now().strftime('%B %d, %Y')} if required.
-        """
+    prompt = (
+        f'"""{context}""" Using the above latest information,'
+        f"""construct a detailed report on the subtopic: {current_subtopic} under the main topic: {main_topic}.
+        - The report should focus on the answer to the question, should be well structured, informative,
+        in-depth, with facts and numbers if available, a minimum of {total_words} words and with markdown syntax.
+        - As this report will be part of a bigger report, you must ONLY include the main body divided into suitable subtopics,
+        without any introduction, conclusion, or reference section.
+        - Include hyperlinked urls to relevant sources wherever possible in the text.
+        - All related numerical values (if any) should be bold.
+        - Also avoid including any details from these other subtopics: {[subtopic for subtopic in subtopics[1:] if subtopic!=current_subtopic]}
+        - Ensure that you use smaller Markdown headers (e.g., H2 or H3) to structure your content and avoid using the largest Markdown header (H1).
+        The H1 header will be used for the heading of the larger report later on.
+        - Do NOT include any details, urls or references where data is unavailable.
+        - Do NOT include any conclusion or summary section! - Do NOT include a conclusion or summary!
+        Assume that the current date is {datetime.now().strftime('%B %d, %Y')} if required."""
+    )
 
     return prompt
 
