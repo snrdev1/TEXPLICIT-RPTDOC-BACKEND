@@ -435,6 +435,8 @@ async def _write_md_to_pdf_dev(task: str, path: str, report: str, tables: list) 
     Returns:
       the encoded file path of the generated PDF file.
     """
+    print("Inside function to save pdf!")
+    
     # Ensure that this file path exists
     os.makedirs(path, exist_ok=True)
 

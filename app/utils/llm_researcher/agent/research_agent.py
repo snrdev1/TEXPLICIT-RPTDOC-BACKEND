@@ -294,19 +294,26 @@ class ResearchAgent:
         return answer
 
     async def save_report(self, markdown_report):
-        markdown_report = await add_source_urls(markdown_report, self.visited_urls)
+        print("ℹ️ Adding source urls to report!") 
         
+        markdown_report = add_source_urls(markdown_report, self.visited_urls)
+        
+        print("💾 Saving report!")
         # Save report mardown for future use
         report_markdown_path = await save_markdown(
             self.report_type, self.dir_path, markdown_report
         )
+        
+        print("💾 Saved markdown!")
         if self.format == "word":
+            print("💾 Saving report document!")
             path = await write_md_to_word(
                 self.report_type, self.dir_path, markdown_report, self.tables
             )
         # elif self.format == "ppt":
         #     path = await write_md_to_ppt(self.report_type, self.dir_path, markdown_report)
         else:
+            print("💾 Saving report pdf!")
             path = await write_md_to_pdf(
                 self.report_type, self.dir_path, markdown_report, self.tables
             )

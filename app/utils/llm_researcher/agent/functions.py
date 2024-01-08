@@ -120,14 +120,9 @@ async def generate_report(
         return ""
 
 
-async def add_source_urls(report_markdown: str, visited_urls: set):
+def add_source_urls(report_markdown: str, visited_urls: set):
     try:
-        url_markdown = """
-        
-        
-        ### Source URLs
-                
-        """
+        url_markdown = """\n\n\n\n### Source URLs\n"""
 
         for url in visited_urls:
             url_markdown += f"- {url} \n"
