@@ -13,13 +13,14 @@ class AgentExecutor:
         self,
         user_id: Union[ObjectId, str],
         task: str,
-        websearch=True,
+        websearch: bool = True,
         report_type: str = "research_report",
         source: str = "external",
         format: str = "pdf",
         report_generation_id: str = "",
         websocket=None,
         subtopics: list = [],
+        check_existing_report: bool = False,
     ):
         self.user_id = user_id
         self.task = task
@@ -30,6 +31,7 @@ class AgentExecutor:
         self.report_generation_id = report_generation_id
         self.websocket = websocket
         self.subtopics = subtopics
+        self.check_existing_report = check_existing_report
 
     async def basic_report(self) -> tuple:
         assistant = ResearchAgent(
@@ -41,22 +43,27 @@ class AgentExecutor:
             websocket=self.websocket,
         )
 
-        path = await assistant.check_existing_report(self.report_type)
+        # Check EXISTING report
+        path = (
+            await assistant.check_existing_report(self.report_type)
+            if self.check_existing_report
+            else None
+        )
         if path:
             await assistant.extract_tables()
             report_markdown = await assistant.get_report_markdown(self.report_type)
             report_markdown = report_markdown.strip()
 
-        else:
-            print("🚦 Starting research")
-            report_markdown = await assistant.conduct_research()
+            return report_markdown, path, assistant.tables
 
-            report_markdown = report_markdown.strip()
-            if len(report_markdown) == 0:
-                return "", "", []
-            print("Report markdown : \n", report_markdown)
+        print("🚦 Starting research")
+        report_markdown = await assistant.conduct_research()
 
-            path = await assistant.save_report(report_markdown)
+        report_markdown = report_markdown.strip()
+        if len(report_markdown) == 0:
+            return "", "", []
+
+        path = await assistant.save_report(report_markdown)
 
         return report_markdown, path, assistant.tables
 
@@ -99,8 +106,7 @@ class AgentExecutor:
                 return "", "", []
 
             # Append all visited_urls from subtopic report generation to the visited_urls set of the main assistant
-            main_task_assistant.visited_urls.update(
-                subtopic_assistant.visited_urls)
+            main_task_assistant.visited_urls.update(subtopic_assistant.visited_urls)
 
             # Not incredibly necessary to save the subtopic report (as of now)
             # path = await subtopic_assistant.save_report(report_markdown)
@@ -135,8 +141,7 @@ class AgentExecutor:
             for result in results:
                 if len(result["markdown_report"]):
                     reports.append(result)
-                    report_body = report_body + "\n\n\n" + \
-                        result["markdown_report"]
+                    report_body = report_body + "\n\n\n" + result["markdown_report"]
                     tables.extend(result["tables"])
 
             return reports, report_body, tables
@@ -200,6 +205,21 @@ class AgentExecutor:
 
             return processed_subtopics
 
+        # Check EXISTING report
+        detailed_report_path = (
+            await main_task_assistant.check_existing_report(self.report_type)
+            if self.check_existing_report
+            else None
+        )
+        if detailed_report_path:
+            await main_task_assistant.extract_tables()
+            report_markdown = await main_task_assistant.get_report_markdown(
+                self.report_type
+            )
+            detailed_report = report_markdown.strip()
+
+            return detailed_report, detailed_report_path, main_task_assistant.tables
+
         # Get all the processed subtopics on which the detailed report is to be generated
         processed_subtopics = await get_all_subtopics()
 
@@ -248,6 +268,19 @@ class AgentExecutor:
             websocket=self.websocket,
         )
 
+        # Check EXISTING report
+        complete_report_path = (
+            await assistant.check_existing_report(self.report_type)
+            if self.check_existing_report
+            else None
+        )
+        if complete_report_path:
+            await assistant.extract_tables()
+            report_markdown = await assistant.get_report_markdown(self.report_type)
+            complete_report = report_markdown.strip()
+
+            return complete_report, complete_report_path, assistant.tables
+
         (
             outline_report_markdown,
             outline_report_path,
@@ -273,9 +306,9 @@ class AgentExecutor:
             + resource_report_markdown
             + "\n\n\n\n"
             + detailed_report_markdown
-        ).strip()
+        )
+        report_markdown = report_markdown.strip()
 
-        print("Report markdown : \n", report_markdown)
         assistant.tables = (
             outline_report_tables + resource_report_tables + detailed_reports_tables
         )

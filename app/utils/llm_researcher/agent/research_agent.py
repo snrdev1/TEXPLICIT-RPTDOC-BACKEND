@@ -317,6 +317,32 @@ class ResearchAgent:
             )
 
         return path
+    
+    async def get_report_markdown(self, report_type):
+        if GlobalConfig.GCP_PROD_ENV:
+            markdown_report_path = f"{self.dir_path}/{report_type}.md"
+            user_bucket = Production.get_users_bucket()
+            blob = user_bucket.blob(markdown_report_path)
+            if blob.exists():
+                markdown_content = blob.download_as_text()
+                return markdown_content
+        else:
+            if os.path.isdir(self.dir_path):
+                markdown_report_path = os.path.join(self.dir_path, f"{report_type}.md")
+                if os.path.exists(markdown_report_path):
+                    # Initialize an empty string to store the content
+                    markdown_content = ""
+
+                    # Open and read the Markdown file
+                    with open(
+                        markdown_report_path, "r", encoding="cp437", errors="ignore"
+                    ) as file:
+                        markdown_content = file.read()
+
+                    # Now, 'markdown_content' contains the content of the Markdown file
+                    return markdown_content
+
+        return None
 
     async def check_existing_report(self, report_type):
         """
