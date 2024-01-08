@@ -113,7 +113,7 @@ class AgentExecutor:
 
             return report_markdown, "", subtopic_assistant.tables
 
-        async def generate_subtopic_reports(subtopics):
+        async def generate_subtopic_reports(subtopics: list):
             reports = []
             report_body = ""
             tables = []
@@ -146,7 +146,7 @@ class AgentExecutor:
 
             return reports, report_body, tables
 
-        async def generate_detailed_report(report_body):
+        async def generate_detailed_report(report_body: str):
             (
                 introduction,
                 conclusion,
@@ -332,15 +332,15 @@ class AgentExecutor:
 
         # In depth report generation
         if self.report_type == "detailed_report":
-            report_markdown, path, _ = await self.detailed_report()
+            report_markdown, path, tables = await self.detailed_report()
 
         # Complete report generation
         elif self.report_type == "complete_report":
-            report_markdown, path, _ = await self.complete_report()
+            report_markdown, path, tables = await self.complete_report()
 
         else:
             # Basic report generation
-            report_markdown, path, _ = await self.basic_report()
+            report_markdown, path, tables = await self.basic_report()
 
         end_time = datetime.datetime.now()
 
@@ -350,4 +350,4 @@ class AgentExecutor:
             {"type": "logs", "output": f"\nTotal run time: {end_time - start_time}\n"}
         )
 
-        return report_markdown, path
+        return report_markdown, path, tables

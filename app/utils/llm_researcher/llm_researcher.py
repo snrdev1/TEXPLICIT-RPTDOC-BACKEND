@@ -26,8 +26,9 @@ async def research(
             format=format,
             report_generation_id=report_generation_id,
             subtopics=subtopics,
+            check_existing_report=True
         )
-        report, path = await agent_executor.run_agent()
+        report, path, _ = await agent_executor.run_agent()
         return report, path
     else:
         print("⚠️ Error! Not enough parameters provided.")
