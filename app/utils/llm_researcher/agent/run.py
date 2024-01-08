@@ -98,6 +98,10 @@ class AgentExecutor:
                 )
                 return "", "", []
 
+            # Append all visited_urls from subtopic report generation to the visited_urls set of the main assistant
+            main_task_assistant.visited_urls.update(
+                subtopic_assistant.visited_urls)
+
             # Not incredibly necessary to save the subtopic report (as of now)
             # path = await subtopic_assistant.save_report(report_markdown)
 
@@ -131,7 +135,8 @@ class AgentExecutor:
             for result in results:
                 if len(result["markdown_report"]):
                     reports.append(result)
-                    report_body = report_body + "\n\n\n" + result["markdown_report"]
+                    report_body = report_body + "\n\n\n" + \
+                        result["markdown_report"]
                     tables.extend(result["tables"])
 
             return reports, report_body, tables
@@ -232,7 +237,7 @@ class AgentExecutor:
                 report_generation_id=self.report_generation_id,
             )
             markdown, path, tables = await report_executor.run_agent()
-            return markdown, path, tables
+            return markdown, path, tables, report_executor.visited_urls
 
         assistant = ResearchAgent(
             user_id=self.user_id,
@@ -247,16 +252,19 @@ class AgentExecutor:
             outline_report_markdown,
             outline_report_path,
             outline_report_tables,
+            outline_report_urls,
         ) = await create_report("outline_report")
         (
             resource_report_markdown,
             resource_report_path,
             resource_report_tables,
+            resource_report_urls,
         ) = await create_report("resource_report")
         (
             detailed_report_markdown,
             detailed_report_path,
             detailed_reports_tables,
+            detailed_report_urls,
         ) = await create_report("detailed_report")
 
         report_markdown = (
@@ -274,6 +282,11 @@ class AgentExecutor:
 
         if not report_markdown:
             return "", "", []
+
+        # Merge all the sources from all assistants
+        assistant.visited_urls.update(
+            outline_report_urls, resource_report_urls, detailed_report_urls
+        )
 
         path = await assistant.save_report(report_markdown)
 

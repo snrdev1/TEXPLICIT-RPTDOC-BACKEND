@@ -132,12 +132,16 @@ def add_source_urls(report_markdown: str, visited_urls: set):
     :return: the updated report markdown with the added source URLs.
     """
     try:
+        print("ℹ️ Adding source urls to report!") 
+
         url_markdown = """\n\n\n\n### Sources\n\n"""
 
         for url in visited_urls:
             url_markdown += f"- {url} \n"
+            
+        updated_markdown_report = report_markdown + url_markdown
 
-        return report_markdown + url_markdown
+        return updated_markdown_report
 
     except Exception as e:
         return report_markdown
