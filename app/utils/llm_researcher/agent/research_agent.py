@@ -320,6 +320,34 @@ class ResearchAgent:
 
         return path
 
+    async def check_existing_report(self, report_type):
+        """
+        The function `check_existing_report` checks if a report of a given type already exists in a
+        directory or a Google Cloud Storage bucket.
+
+        Args:
+          report_type: The `report_type` parameter is a string that represents the type of report being
+        checked. It is used to construct the file name of the report.
+
+        Returns:
+          the report path if the report exists, otherwise it returns None.
+        """
+        if GlobalConfig.GCP_PROD_ENV:
+            report_path = f"{self.dir_path}/{report_type}.{self.format}"
+            user_bucket = Production.get_users_bucket()
+            blob = user_bucket.blob(report_path)
+            if blob.exists():
+                return report_path
+        else:
+            if os.path.isdir(self.dir_path):
+                report_path = os.path.join(
+                    self.dir_path, f"{report_type}.{self.format}"
+                )
+                if os.path.exists(report_path):
+                    return report_path
+
+        return None
+
     ########################################################################################
 
     # DETAILED REPORT

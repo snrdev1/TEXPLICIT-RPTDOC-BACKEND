@@ -60,8 +60,8 @@ class Scraper:
                 url,
                 language="en",
                 memoize_articles=False,
-                fetch_images=True,
-                request_timeout=15,
+                fetch_images=False,
+                # request_timeout=15,
             )
             article.download()
             article.parse()

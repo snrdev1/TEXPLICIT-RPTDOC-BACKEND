@@ -26,15 +26,23 @@ async def basic_report(
         report_type=report_type,
         websocket=websocket,
     )
-    print("🚦 Starting research")
-    report_markdown = await assistant.conduct_research()
+    
+    path = await assistant.check_existing_report(report_type)
+    if path:
+        await assistant.extract_tables()
+        report_markdown = await assistant.get_report_markdown(report_type)
+        report_markdown = report_markdown.strip()
         
-    report_markdown = report_markdown.strip()
-    if len(report_markdown) == 0:
-        return "", "", []
-    print("Report markdown : \n", report_markdown)
+    else:        
+        print("🚦 Starting research")
+        report_markdown = await assistant.conduct_research()
+            
+        report_markdown = report_markdown.strip()
+        if len(report_markdown) == 0:
+            return "", "", []
+        print("Report markdown : \n", report_markdown)
 
-    path = await assistant.save_report(report_markdown)
+        path = await assistant.save_report(report_markdown)
 
     return report_markdown, path, assistant.tables
 

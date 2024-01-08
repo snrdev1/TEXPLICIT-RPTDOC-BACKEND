@@ -149,51 +149,19 @@ def tables_to_html(list_of_tables: list, url: str) -> str:
 
 
 def add_table_to_doc(document: Document, table_title: str, table_values: list, url: str):
-    """
-    The function `add_table_to_doc` adds a table with a title, values, and a URL to a document.
-    
-    Args:
-      document (Document): The `document` parameter is an instance of the `Document` class, which
-    represents the Word document you want to add the table to.
-      table_title (str): The title of the table that will be added to the document.
-      table_values (list): The `table_values` parameter is a list of dictionaries. Each dictionary
-    represents a row in the table, where the keys are the column names and the values are the
-    corresponding cell values. The first dictionary in the list represents the header row, and the
-    remaining dictionaries represent the data rows.
-      url (str): The `url` parameter is a string that represents the URL of the table. It is used to add
-    a hyperlink to the document after the table.
-    """
-    document.add_heading(table_title, level=2)
-    table = document.add_table(rows=1, cols=len(table_values[0]))
-    table.style = "Table Grid"  # Applying table grid style to have borders
+    try:
+        document_clone = Document()
+        document_clone.add_heading(table_title, level=2)
+        table = document_clone.add_table(rows=1, cols=len(table_values[0]))
+        table.style = "Table Grid"  # Applying table grid style to have borders
 
-    # Set header rows as bold and add borders
-    hdr_cells = table.rows[0].cells
-    for i, key in enumerate(table_values[0].keys()):
-        cell = hdr_cells[i]
-        cell.text = table_values[0][key]
-        cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-        cell.paragraphs[0].runs[0].font.bold = True
-        for paragraph in cell.paragraphs:
-            for run in paragraph.runs:
-                run.font.size = Pt(10)
-        for border in cell._element.xpath(".//*"):
-            border_val = border.attrib.get("val")
-            if border_val is not None:
-                border.attrib.clear()
-                border.attrib["val"] = border_val
-            else:
-                border.attrib["val"] = "single"
-
-    for row_data in table_values[1:]:
-        row = table.add_row().cells
-        for i, key in enumerate(row_data.keys()):
-            cell = row[i]
-            cell.text = row_data[key]
-            if is_numerical(row_data[key]):
-                cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
-            else:
-                cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+        # Set header rows as bold and add borders
+        hdr_cells = table.rows[0].cells
+        for i, key in enumerate(table_values[0].keys()):
+            cell = hdr_cells[i]
+            cell.text = table_values[0][key]
+            cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+            cell.paragraphs[0].runs[0].font.bold = True
             for paragraph in cell.paragraphs:
                 for run in paragraph.runs:
                     run.font.size = Pt(10)
@@ -204,8 +172,36 @@ def add_table_to_doc(document: Document, table_title: str, table_values: list, u
                     border.attrib["val"] = border_val
                 else:
                     border.attrib["val"] = "single"
-                    
-    # Adding the table URL after the table with right alignment and as a hyperlink
-    p = document.add_paragraph()
-    p.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
-    add_hyperlink(p, url, url)
+
+        for row_data in table_values[1:]:
+            row = table.add_row().cells
+            for i, key in enumerate(row_data.keys()):
+                cell = row[i]
+                cell.text = row_data[key]
+                if is_numerical(row_data[key]):
+                    cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+                else:
+                    cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+                for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.font.size = Pt(10)
+                for border in cell._element.xpath(".//*"):
+                    border_val = border.attrib.get("val")
+                    if border_val is not None:
+                        border.attrib.clear()
+                        border.attrib["val"] = border_val
+                    else:
+                        border.attrib["val"] = "single"
+
+        # Adding the table URL after the table with right alignment and as a hyperlink
+        p = document_clone.add_paragraph()
+        p.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+        add_hyperlink(p, url, url)
+
+        # Append the modified content to the original document
+        for element in document_clone.element.body:
+            document.element.body.append(element)
+
+    except Exception as e:
+        # Revert changes on any exception
+        pass

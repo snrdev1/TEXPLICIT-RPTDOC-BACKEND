@@ -335,10 +335,11 @@ async def _write_md_to_word_dev(task: str, path: str, report: str, tables: list)
     #     fp.write(buf.getvalue())
 
     doc = Document(buf)
-    # Add "Data Tables" as a title before the tables section
-    doc.add_heading("Data Tables", level=1)
 
     if len(tables):
+        # Add "Data Tables" as a title before the tables section
+        doc.add_heading("Data Tables", level=1)
+      
         # Adding tables to the Word document
         for tables_set in tables:
             tables_in_url = tables_set["tables"]
@@ -443,14 +444,16 @@ async def _write_md_to_pdf_dev(task: str, path: str, report: str, tables: list) 
     # Get the complete file path based reports folder, type of report
     file_path = os.path.join(path, task)
 
-    # print("📡 path : ", path)
-    # print("📡 file_path : ", file_path)
+    print("📡 path : ", path)
+    print("📡 file_path : ", file_path)
 
     # Combined html
     html = get_combined_html(report, tables)
+    print("Obtained report html!")
 
     # Create a WeasyPrint HTML object
     html_obj = HTML(string=html)
+    print("Created html object!")
 
     # Generate the PDF file
     html_obj.write_pdf(f"{file_path}.pdf")
