@@ -121,8 +121,18 @@ async def generate_report(
 
 
 def add_source_urls(report_markdown: str, visited_urls: set):
+    """
+    The function `add_source_urls` takes a markdown report and a set of visited URLs, and appends the
+    visited URLs as a list of sources at the end of the report.
+    
+    :param report_markdown: A string containing the markdown content of a report
+    :type report_markdown: str
+    :param visited_urls: A set containing the URLs that have been visited
+    :type visited_urls: set
+    :return: the updated report markdown with the added source URLs.
+    """
     try:
-        url_markdown = """\n\n\n\n### Source URLs\n"""
+        url_markdown = """\n\n\n\n### Sources\n\n"""
 
         for url in visited_urls:
             url_markdown += f"- {url} \n"
