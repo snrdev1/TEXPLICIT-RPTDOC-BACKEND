@@ -294,6 +294,8 @@ class ResearchAgent:
         return answer
 
     async def save_report(self, markdown_report):
+        markdown_report = await add_source_urls(markdown_report, self.visited_urls)
+        
         # Save report mardown for future use
         report_markdown_path = await save_markdown(
             self.report_type, self.dir_path, markdown_report

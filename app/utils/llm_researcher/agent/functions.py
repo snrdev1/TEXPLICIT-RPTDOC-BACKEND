@@ -20,7 +20,7 @@ async def get_sub_queries(query, agent_role_prompt, cfg):
     """
 
     max_research_iterations = cfg.max_iterations if cfg.max_iterations else 1
-    
+
     response = await create_chat_completion(
         model=cfg.smart_llm_model,
         messages=[
@@ -109,7 +109,7 @@ async def generate_report(
             ],
             temperature=0,
             llm_provider=cfg.llm_provider,
-            stream=True,
+            # stream=True,
             websocket=websocket,
             max_tokens=cfg.smart_token_limit,
         )
@@ -118,3 +118,21 @@ async def generate_report(
     except Exception as e:
         print(f"{Fore.RED}Error in generate_report: {e}{Style.RESET_ALL}")
         return ""
+
+
+async def add_source_urls(report_markdown: str, visited_urls: set):
+    try:
+        url_markdown = """
+        
+        
+        ### Source URLs
+                
+        """
+
+        for url in visited_urls:
+            url_markdown += f"- {url} \n"
+
+        return report_markdown + url_markdown
+
+    except Exception as e:
+        return report_markdown
