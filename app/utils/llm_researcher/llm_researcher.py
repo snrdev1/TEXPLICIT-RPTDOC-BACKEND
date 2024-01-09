@@ -2,7 +2,7 @@ from typing import Union
 
 from bson import ObjectId
 
-from .agent.run import AgentExecutor
+from .master.run import AgentExecutor
 
 
 async def research(

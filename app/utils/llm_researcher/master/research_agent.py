@@ -5,29 +5,27 @@ import asyncio
 import json
 import os
 import re
-from typing import Union
 import time
+from typing import Union
+from app.utils.common import Common
 import markdown
 from bson import ObjectId
-from ..scraper import *
-from ..agent.functions import *
-from ..config import Config
-from ..context.compression import ContextCompressor
-from ..memory import Memory
-from ..processing.text import (
-    create_chat_completion,
-    read_txt_files,
-    remove_roman_numerals,
-    save_markdown,
-    write_md_to_pdf,
-    write_md_to_word,
-    write_to_file,
-)
 
 from app.config import Config as GlobalConfig
 from app.utils.files_and_folders import get_report_directory
 from app.utils.production import Production
 
+from ..master.functions import *
+from ..config import Config
+from ..context.compression import ContextCompressor
+from ..memory import Memory
+from ..utils.text import (
+    remove_roman_numerals,
+    save_markdown,
+    write_md_to_pdf,
+    write_md_to_word,
+)
+from ..scraper import *
 from . import prompts
 
 
@@ -41,7 +39,7 @@ class ResearchAgent:
         report_type: str = "research_report",
         websocket=None,
         parent_query="",
-        subtopics=[]
+        subtopics=[],
     ):
         # Stores the user question (task)
         self.query = query
@@ -49,7 +47,7 @@ class ResearchAgent:
         # Agent type and role of agent
         self.agent = None
         self.role = None
-        
+
         # Refernce to report config
         self.cfg = Config()
 
@@ -64,12 +62,9 @@ class ResearchAgent:
 
         # Stores the entire research summary
         self.context = []
-        
+
         # Get research retriever
         self.retriever = get_retriever(self.cfg.retriever)
-
-        # Stores markdown format of any table if found
-        self.tables = []
 
         # Source of report: external(web) or my_documents
         self.source = source
@@ -80,24 +75,23 @@ class ResearchAgent:
         # Directory path of saved report
         self.dir_path = get_report_directory(user_id, self.query, self.source)
 
+        # Table extractor object
+        self.tables_extractor = TableExtractor(self.dir_path)
+
         self.websocket = websocket
 
         # For simple retrieval of embeddings for contextual compression
         self.memory = Memory()
-        
+
         # Only relevant for DETAILED REPORTS
-        
+
         # Stores the main query of the detailed report
         self.parent_query = parent_query
-        
+
         # Stores all the subtopics
         self.subtopics = subtopics
 
-    async def conduct_research(
-        self,
-        max_docs: int = 15,
-        score_threshold: float = 1.2
-    ):
+    async def conduct_research(self, max_docs: int = 15, score_threshold: float = 1.2):
         try:
             report = ""
             print(f"🔎 Running research for '{self.query}'...")
@@ -123,7 +117,9 @@ class ResearchAgent:
                 )
 
                 if self.report_type == "custom_report":
-                    self.role = self.cfg.agent_role if self.cfg.agent_role else self.role
+                    self.role = (
+                        self.cfg.agent_role if self.cfg.agent_role else self.role
+                    )
                 elif self.report_type == "subtopic_report":
                     report = await generate_report(
                         query=self.query,
@@ -133,7 +129,7 @@ class ResearchAgent:
                         websocket=self.websocket,
                         cfg=self.cfg,
                         all_subtopics=self.subtopics,
-                        main_topic=self.parent_query
+                        main_topic=self.parent_query,
                     )
                 else:
                     report = await generate_report(
@@ -142,13 +138,13 @@ class ResearchAgent:
                         agent_role_prompt=self.role,
                         report_type=self.report_type,
                         websocket=self.websocket,
-                        cfg=self.cfg
+                        cfg=self.cfg,
                     )
-                    
+
             time.sleep(2)
 
             return report
-        
+
         except Exception as e:
             return report
 
@@ -159,14 +155,14 @@ class ResearchAgent:
             context: List of context
         """
         context = []
-        
+
         # Generate Sub-Queries including original query (if report type is not subtopic_report)
         sub_queries = []
         if self.report_type == "subtopic_report":
             sub_queries = [f"{self.parent_query} - {query}"]
         else:
             sub_queries = await get_sub_queries(query, self.role, self.cfg) + [query]
-        
+
         await stream_output(
             "logs",
             f"🧠 I will conduct my research based on the following queries: {sub_queries}...",
@@ -190,7 +186,7 @@ class ResearchAgent:
                     self.websocket,
                 )
             context.append(content)
-            
+
         return context
 
     async def get_similar_content_by_query(self, query, pages):
@@ -228,23 +224,29 @@ class ResearchAgent:
         Returns:
             Summary
         """
-        # Get Urls
-        retriever = self.retriever(sub_query)
-        search_results = retriever.search(max_results=self.cfg.max_search_results_per_query)
-        
-        new_search_urls = await self.get_new_urls(
-            [url.get("href") or url.get("link") or "" for url in search_results]
-        )
+        try:
+            # Get Urls
+            retriever = self.retriever(sub_query)
+            search_results = retriever.search(
+                max_results=self.cfg.max_search_results_per_query
+            )
 
-        # Extract tables
-        await self.extract_tables(new_search_urls)
+            new_search_urls = await self.get_new_urls(
+                [url.get("href") or url.get("link") or "" for url in search_results]
+            )
 
-        # Scrape Urls
-        await stream_output(
-            "logs", f"🤔Researching for relevant information...\n", self.websocket
-        )
-        scraped_content_results = scrape_urls(new_search_urls, self.cfg)
-        return scraped_content_results
+            # Extract tables
+            await self.extract_tables(new_search_urls)
+
+            # Scrape Urls
+            await stream_output(
+                "logs", f"🤔Researching for relevant information...\n", self.websocket
+            )
+            scraped_content_results = scrape_urls(new_search_urls, self.cfg)
+            return scraped_content_results
+
+        except Exception as e:
+            Common.exception_details("scrape_sites_by_query", e)
 
     async def get_new_urls(self, url_set_input):
         """Gets the new urls from the given url set.
@@ -262,9 +264,9 @@ class ResearchAgent:
 
         return new_urls
 
-    async def save_report(self, markdown_report):       
+    async def save_report(self, markdown_report):
         print("💾 Saving report!")
-        
+
         # Add all source urls at the end of report markdown as a list with a separate header
         updated_markdown_report = add_source_urls(markdown_report, self.visited_urls)
 
@@ -273,20 +275,26 @@ class ResearchAgent:
             self.report_type, self.dir_path, updated_markdown_report
         )
         print("💾 Saved markdown!")
-        
+
         if self.format == "word":
             print("💾 Saving report document format!")
             path = await write_md_to_word(
-                self.report_type, self.dir_path, updated_markdown_report, self.tables
+                self.report_type,
+                self.dir_path,
+                updated_markdown_report,
+                self.tables_extractor
             )
         else:
             print("💾 Saving report pdf format!")
             path = await write_md_to_pdf(
-                self.report_type, self.dir_path, updated_markdown_report, self.tables
+                self.report_type,
+                self.dir_path,
+                updated_markdown_report,
+                self.tables_extractor
             )
 
         return path
-    
+
     async def get_report_markdown(self, report_type):
         if GlobalConfig.GCP_PROD_ENV:
             markdown_report_path = f"{self.dir_path}/{report_type}.md"
@@ -403,32 +411,11 @@ class ResearchAgent:
 
     # TABLES
 
-    def read_tables(self):
-        if GlobalConfig.GCP_PROD_ENV:
-            return read_txt_files(self.dir_path, tables=True) or ""
-        else:
-            if os.path.isdir(self.dir_path):
-                return read_txt_files(self.dir_path, tables=True)
-            else:
-                return ""
-
-    def save_tables(self):
-        tables_path = os.path.join(self.dir_path, "tables.txt")
-
-        # save tables
-        if GlobalConfig.GCP_PROD_ENV:
-            user_bucket = Production.get_users_bucket()
-            blob = user_bucket.blob(tables_path)
-            blob.upload_from_string(str(self.tables))
-        else:
-            os.makedirs(os.path.dirname(tables_path), exist_ok=True)
-            write_to_file(tables_path, str(self.tables))
-
-    async def extract_tables(self, urls: list = []):        
+    async def extract_tables(self, urls: list = []):
         # Else extract tables from the urls and save them
-        existing_tables = self.read_tables()
+        existing_tables = self.tables_extractor.read_tables()
         if len(existing_tables):
-            self.tables = eval(existing_tables)
+            self.tables_extractor.tables = eval(existing_tables)
             print("💎 Found EXISTING table/s")
         elif len(urls):
             # Extract all tables from search urls
@@ -437,18 +424,20 @@ class ResearchAgent:
                     continue
 
                 await stream_output(
-                    "logs", f"🌐 Looking for tables to extract from {url}...\n", self.websocket
-                ) 
-                
-                new_table = extract_tables(url)
+                    "logs",
+                    f"🌐 Looking for tables to extract from {url}...\n",
+                    self.websocket,
+                )
+
+                new_table = self.tables_extractor.extract_tables(url)
                 if len(new_table):
                     new_tables = {"tables": new_table, "url": url}
                     print(f"💎 Found table/s from {url}")
-                    self.tables.append(new_tables)
+                    self.tables_extractor.tables.append(new_tables)
 
             # If any tables at all are found then store them
-            if len(self.tables):
+            if len(self.tables_extractor.tables):
                 print("📝 Saving extracted tables")
-                self.save_tables()
+                self.tables_extractor.save_tables()
 
     ########################################################################################

@@ -1,145 +1,19 @@
 """Text processing functions"""
 import io
-import json
 import os
 import re
-import string
 import urllib
-from typing import Dict, Generator, Optional
 
 import markdown
 from docx import Document
 from html2docx import html2docx
 from md2pdf.core import md2pdf
-from selenium.webdriver.remote.webdriver import WebDriver
 from weasyprint import HTML
 
 from app.config import Config as GlobalConfig
 from app.utils.production import Production
 
 from ..scraper import *
-from ..utils.llm import create_chat_completion
-from ..config import Config
-
-CFG = Config()
-
-
-def split_text(text: str, max_length: int = 8192) -> Generator[str, None, None]:
-    """Split text into chunks of a maximum length
-
-    Args:
-        text (str): The text to split
-        max_length (int, optional): The maximum length of each chunk. Defaults to 8192.
-
-    Yields:
-        str: The next chunk of text
-
-    Raises:
-        ValueError: If the text is longer than the maximum length
-    """
-    paragraphs = text.split("\n")
-    current_length = 0
-    current_chunk = []
-
-    for paragraph in paragraphs:
-        if current_length + len(paragraph) + 1 <= max_length:
-            current_chunk.append(paragraph)
-            current_length += len(paragraph) + 1
-        else:
-            yield "\n".join(current_chunk)
-            current_chunk = [paragraph]
-            current_length = len(paragraph) + 1
-
-    if current_chunk:
-        yield "\n".join(current_chunk)
-
-
-def summarize_text(
-    url: str, text: str, question: str, driver: Optional[WebDriver] = None
-) -> str:
-    """Summarize text using the OpenAI API
-
-    Args:
-        url (str): The url of the text
-        text (str): The text to summarize
-        question (str): The question to ask the model
-        driver (WebDriver): The webdriver to use to scroll the page
-
-    Returns:
-        str: The summary of the text
-    """
-    if not text:
-        return "Error: No text to summarize"
-
-    summaries = []
-    chunks = list(split_text(text))
-    scroll_ratio = 1 / len(chunks)
-
-    print(f"Summarizing url: {url} with total chunks: {len(chunks)}")
-    for i, chunk in enumerate(chunks):
-        if driver:
-            scroll_to_percentage(driver, scroll_ratio * i)
-
-        # memory_to_add = f"Source: {url}\n" f"Raw content part#{i + 1}: {chunk}"
-
-        # MEMORY.add_documents([Document(page_content=memory_to_add)])
-
-        messages = [create_message(chunk, question)]
-
-        summary = create_chat_completion(
-            model=CFG.fast_llm_model,
-            messages=messages,
-            max_tokens=CFG.summary_token_limit,
-        )
-        summaries.append(summary)
-        # memory_to_add = f"Source: {url}\n" f"Content summary part#{i + 1}: {summary}"
-
-        # MEMORY.add_documents([Document(page_content=memory_to_add)])
-
-    combined_summary = "\n".join(summaries)
-    messages = [create_message(combined_summary, question)]
-
-    final_summary = create_chat_completion(
-        model=CFG.fast_llm_model, messages=messages, max_tokens=CFG.summary_token_limit
-    )
-    print("Final summary length: ", len(combined_summary))
-    print(final_summary)
-
-    return final_summary
-
-
-def scroll_to_percentage(driver: WebDriver, ratio: float) -> None:
-    """Scroll to a percentage of the page
-
-    Args:
-        driver (WebDriver): The webdriver to use
-        ratio (float): The percentage to scroll to
-
-    Raises:
-        ValueError: If the ratio is not between 0 and 1
-    """
-    if ratio < 0 or ratio > 1:
-        raise ValueError("Percentage should be between 0 and 1")
-    driver.execute_script(f"window.scrollTo(0, document.body.scrollHeight * {ratio});")
-
-
-def create_message(chunk: str, question: str) -> Dict[str, str]:
-    """Create a message for the chat completion
-
-    Args:
-        chunk (str): The chunk of text to summarize
-        question (str): The question to answer
-
-    Returns:
-        Dict[str, str]: The message to send to the chat completion
-    """
-    return {
-        "role": "user",
-        "content": f'"""{chunk}""" Using the above text, answer in short the following'
-        f' question: "{question}" -- if the question cannot be answered using the text,'
-        " simply summarize the text. "
-        "Include all factual information, numbers, stats etc if available.",
-    }
 
 
 def write_to_file(filename: str, text: str) -> None:
@@ -233,7 +107,7 @@ async def _save_markdown_dev(task: str, path: str, text: str) -> str:
     return encoded_file_path
 
 
-async def write_md_to_word(task: str, path: str, report: str, tables: list):
+async def write_md_to_word(task: str, path: str, report: str, table_extractor):
     """
     The function `write_md_to_word` writes markdown text to a Word document and returns the encoded file
     path.
@@ -249,15 +123,19 @@ async def write_md_to_word(task: str, path: str, report: str, tables: list):
       the encoded file path.
     """
     if GlobalConfig.GCP_PROD_ENV:
-        encoded_file_path = await _write_md_to_word_prod(task, path, report, tables)
+        encoded_file_path = await _write_md_to_word_prod(
+            task, path, report, table_extractor
+        )
     else:
-        encoded_file_path = await _write_md_to_word_dev(task, path, report, tables)
+        encoded_file_path = await _write_md_to_word_dev(
+            task, path, report, table_extractor
+        )
 
     return encoded_file_path
 
 
 async def _write_md_to_word_prod(
-    task: str, path: str, report: str, tables: list
+    task: str, path: str, report: str, table_extractor
 ) -> str:
     file_path = f"{path}/{task}"
     user_bucket = Production.get_users_bucket()
@@ -273,18 +151,8 @@ async def _write_md_to_word_prod(
 
     doc = Document(doc_bytes)
 
-    if len(tables):
-        # Add "Data Tables" as a title before the tables section
-        doc.add_heading("Data Tables", level=1)
-
-        # Adding tables to the Word document
-        for tables_set in tables:
-            tables_in_url = tables_set["tables"]
-            url = tables_set["url"]
-            for table_data in tables_in_url:
-                print("Table title : ", table_data["title"])
-                add_table_to_doc(doc, table_data["title"], table_data["values"], url)
-                doc.add_paragraph()  # Adding an extra paragraph between tables
+    # Append Tables
+    table_extractor.add_tables_to_doc(doc)
 
     # Create a temporary file-like object to save the updated document
     temp_doc_io = io.BytesIO()
@@ -305,24 +173,9 @@ async def _write_md_to_word_prod(
     return encoded_file_path
 
 
-async def _write_md_to_word_dev(task: str, path: str, report: str, tables: list) -> str:
-    """
-    The function `_write_md_to_word_dev` takes a task, path, report, and tables as input, converts the
-    markdown report to HTML, converts the HTML to a Word document, adds tables to the Word document, and
-    saves the document to the specified path. It then returns the encoded file path.
-
-    Args:
-      task (str): The name of the task or report.
-      path (str): The `path` parameter is a string that represents the directory path where the Word
-    document will be saved.
-      report (str): The `report` parameter is a string that contains the markdown content that needs to
-    be converted to a Word document.
-      tables (list): The `tables` parameter is a list of dictionaries. Each dictionary represents a set
-    of tables related to a specific URL. Each dictionary has two keys:
-
-    Returns:
-      the encoded file path of the generated Word document.
-    """
+async def _write_md_to_word_dev(
+    task: str, path: str, report: str, table_extractor
+) -> str:
     # Ensure that this file path exists
     os.makedirs(path, exist_ok=True)
 
@@ -334,23 +187,10 @@ async def _write_md_to_word_dev(task: str, path: str, report: str, tables: list)
     # html2docx() returns an io.BytesIO() object. The HTML must be valid.
     buf = html2docx(html, title=f"{task}.docx")
 
-    # with open(f"{file_path}.docx", "wb") as fp:
-    #     fp.write(buf.getvalue())
-
     doc = Document(buf)
 
-    if len(tables):
-        # Add "Data Tables" as a title before the tables section
-        doc.add_heading("Data Tables", level=1)
-
-        # Adding tables to the Word document
-        for tables_set in tables:
-            tables_in_url = tables_set["tables"]
-            url = tables_set["url"]
-            for table_data in tables_in_url:
-                print("Table title : ", table_data["title"])
-                add_table_to_doc(doc, table_data["title"], table_data["values"], url)
-                doc.add_paragraph()  # Adding an extra paragraph between tables
+    # Append Tables
+    table_extractor.add_tables_to_doc(doc)
 
     doc.save(f"{file_path}.docx")
 
@@ -361,7 +201,7 @@ async def _write_md_to_word_dev(task: str, path: str, report: str, tables: list)
     return encoded_file_path
 
 
-async def write_md_to_pdf(task: str, path: str, report: str, tables: list) -> str:
+async def write_md_to_pdf(task: str, path: str, report: str, table_extractor) -> str:
     """
     The function `write_md_to_pdf` writes markdown text to a PDF file and returns the encoded file path.
 
@@ -376,15 +216,21 @@ async def write_md_to_pdf(task: str, path: str, report: str, tables: list) -> st
       the encoded file path as a string.
     """
     if GlobalConfig.GCP_PROD_ENV:
-        encoded_file_path = await _write_md_to_pdf_prod(task, path, report, tables)
+        encoded_file_path = await _write_md_to_pdf_prod(
+            task, path, report, table_extractor
+        )
 
     else:
-        encoded_file_path = await _write_md_to_pdf_dev(task, path, report, tables)
+        encoded_file_path = await _write_md_to_pdf_dev(
+            task, path, report, table_extractor
+        )
 
     return encoded_file_path
 
 
-async def _write_md_to_pdf_prod(task: str, path: str, report: str, tables: list) -> str:
+async def _write_md_to_pdf_prod(
+    task: str, path: str, report: str, table_extractor
+) -> str:
     """
     The function `_write_md_to_pdf_prod` takes a task, path, and text as input, uploads the text as a
     Markdown file to a user's bucket, converts the Markdown to HTML, generates a PDF file from the HTML
@@ -406,7 +252,7 @@ async def _write_md_to_pdf_prod(task: str, path: str, report: str, tables: list)
     user_bucket = Production.get_users_bucket()
 
     # Combined html
-    html = get_combined_html(report, tables)
+    html = table_extractor.get_combined_html(report)
 
     # Create a WeasyPrint HTML object
     html_obj = HTML(string=html)
@@ -423,7 +269,9 @@ async def _write_md_to_pdf_prod(task: str, path: str, report: str, tables: list)
     return encoded_file_path
 
 
-async def _write_md_to_pdf_dev(task: str, path: str, report: str, tables: list) -> str:
+async def _write_md_to_pdf_dev(
+    task: str, path: str, report: str, table_extractor
+) -> str:
     """
     The function `_write_md_to_pdf_dev` takes a task, path, and text as input, writes the text to a
     markdown file, converts the markdown to HTML, generates a PDF file using WeasyPrint, and returns the
@@ -439,24 +287,17 @@ async def _write_md_to_pdf_dev(task: str, path: str, report: str, tables: list) 
     Returns:
       the encoded file path of the generated PDF file.
     """
-    print("Inside function to save pdf!")
-
     # Ensure that this file path exists
     os.makedirs(path, exist_ok=True)
 
     # Get the complete file path based reports folder, type of report
     file_path = os.path.join(path, task)
 
-    print("📡 path : ", path)
-    print("📡 file_path : ", file_path)
-
     # Combined html
-    html = get_combined_html(report, tables)
-    print("Obtained report html!")
+    html = table_extractor.get_combined_html(report)
 
     # Create a WeasyPrint HTML object
     html_obj = HTML(string=html)
-    print("Created html object!")
 
     # Generate the PDF file
     html_obj.write_pdf(f"{file_path}.pdf")
@@ -466,24 +307,6 @@ async def _write_md_to_pdf_dev(task: str, path: str, report: str, tables: list) 
     encoded_file_path = urllib.parse.quote(f"{file_path}.pdf")
 
     return encoded_file_path
-
-
-def get_combined_html(report: str, tables: list):
-    # Convert Markdown to HTML
-    report_html = markdown.markdown(report)
-
-    # Get the html of the tables
-    tables_html = ""
-    for tables_in_url in tables:
-        current_tables = tables_in_url.get("tables", [])
-        current_url = tables_in_url.get("url", "")
-        tables_html += tables_to_html(current_tables, current_url)
-
-    combined_html = report_html
-    if len(tables_html):
-        combined_html += "<br><h1>Data Tables</h1><br>" + tables_html
-
-    return combined_html
 
 
 def read_txt_files(directory, tables=False):

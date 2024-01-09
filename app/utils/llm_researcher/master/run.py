@@ -54,7 +54,7 @@ class AgentExecutor:
             report_markdown = await assistant.get_report_markdown(self.report_type)
             report_markdown = report_markdown.strip()
 
-            return report_markdown, path, assistant.tables
+            return report_markdown, path, assistant.tables_extractor.tables
 
         print("🚦 Starting research")
         report_markdown = await assistant.conduct_research()
@@ -65,7 +65,7 @@ class AgentExecutor:
 
         path = await assistant.save_report(report_markdown)
 
-        return report_markdown, path, assistant.tables
+        return report_markdown, path, assistant.tables_extractor.tables
 
     async def detailed_report(self) -> tuple:
         main_task_assistant = ResearchAgent(
@@ -111,7 +111,7 @@ class AgentExecutor:
             # Not incredibly necessary to save the subtopic report (as of now)
             # path = await subtopic_assistant.save_report(report_markdown)
 
-            return report_markdown, "", subtopic_assistant.tables
+            return report_markdown, "", subtopic_assistant.tables_extractor.tables
 
         async def generate_subtopic_reports(subtopics: list):
             reports = []
@@ -215,7 +215,7 @@ class AgentExecutor:
             )
             detailed_report = report_markdown.strip()
 
-            return detailed_report, detailed_report_path, main_task_assistant.tables
+            return detailed_report, detailed_report_path, main_task_assistant.tables_extractor.tables
 
         # Get all the processed subtopics on which the detailed report is to be generated
         processed_subtopics = await get_all_subtopics()
@@ -227,10 +227,10 @@ class AgentExecutor:
         ) = await generate_subtopic_reports(processed_subtopics)
 
         # If any tables at all are found then store them
-        main_task_assistant.tables = subtopics_tables
-        if len(main_task_assistant.tables):
+        main_task_assistant.tables_extractor.tables = subtopics_tables
+        if len(main_task_assistant.tables_extractor.tables):
             print("📝 Saving extracted tables")
-            main_task_assistant.save_tables()
+            main_task_assistant.tables_extractor.save_tables()
 
         if len(subtopics_reports_body.strip()) == 0:
             return "", "", []
@@ -239,7 +239,7 @@ class AgentExecutor:
             subtopics_reports_body
         )
 
-        return detailed_report, detailed_report_path, main_task_assistant.tables
+        return detailed_report, detailed_report_path, main_task_assistant.tables_extractor.tables
 
     async def complete_report(self) -> tuple:
         async def create_report(report_type: str) -> tuple:
@@ -276,7 +276,7 @@ class AgentExecutor:
             report_markdown = await assistant.get_report_markdown(self.report_type)
             complete_report = report_markdown.strip()
 
-            return complete_report, complete_report_path, assistant.tables
+            return complete_report, complete_report_path, assistant.tables_extractor.tables
 
         (
             outline_report_markdown,
@@ -306,7 +306,7 @@ class AgentExecutor:
         )
         report_markdown = report_markdown.strip()
 
-        assistant.tables = (
+        assistant.tables_extractor.tables = (
             outline_report_tables + resource_report_tables + detailed_reports_tables
         )
 
@@ -320,7 +320,7 @@ class AgentExecutor:
 
         path = await assistant.save_report(report_markdown)
 
-        return report_markdown, path, assistant.tables
+        return report_markdown, path, assistant.tables_extractor.tables
 
     async def run_agent(self) -> tuple:
         start_time = datetime.datetime.now()

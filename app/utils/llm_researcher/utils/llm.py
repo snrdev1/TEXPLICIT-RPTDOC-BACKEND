@@ -8,7 +8,7 @@ from typing import List, Optional
 import openai
 from colorama import Fore, Style
 from langchain.adapters import openai as lc_openai
-from ..agent.prompts import auto_agent_instructions
+from ..master.prompts import auto_agent_instructions
 from ..config.config import Config
 
 async def create_chat_completion(
