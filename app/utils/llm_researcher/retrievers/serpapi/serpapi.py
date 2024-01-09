@@ -32,7 +32,7 @@ class SerpApiSearch():
                             "You can get a key at https://serpapi.com/")
         return api_key
 
-    def search(self, max_results=4):
+    def search(self, max_results=5):
         """
         Searches the query
         Returns:

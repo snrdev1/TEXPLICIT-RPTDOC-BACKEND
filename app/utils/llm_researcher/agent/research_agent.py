@@ -233,12 +233,8 @@ class ResearchAgent:
         retriever = self.retriever(sub_query)
         search_results = retriever.search(max_results=self.cfg.max_search_results_per_query)
         
-        await stream_output(
-            "logs", f"Search results : {search_results}\n", self.websocket
-        )
-        
         new_search_urls = await self.get_new_urls(
-            [url.get("link") for url in search_results]
+            [url.get("href") or url.get("link") or "" for url in search_results]
         )
 
         # Extract tables
