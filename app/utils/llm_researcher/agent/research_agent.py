@@ -9,8 +9,7 @@ from typing import Union
 import time
 import markdown
 from bson import ObjectId
-from ..actions import retrieve_context_from_documents
-from ..actions.tables import extract_tables
+from ..scraper import *
 from ..agent.functions import *
 from ..config import Config
 from ..context.compression import ContextCompressor

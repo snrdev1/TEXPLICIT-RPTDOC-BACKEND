@@ -17,7 +17,7 @@ from weasyprint import HTML
 from app.config import Config as GlobalConfig
 from app.utils.production import Production
 
-from ..actions.tables import add_table_to_doc, tables_to_html
+from ..scraper import *
 from ..utils.llm import create_chat_completion
 from ..config import Config
 
@@ -293,7 +293,10 @@ async def _write_md_to_word_prod(
 
     # Upload the Docx file to the bucket
     blob = user_bucket.blob(f"{file_path}.docx")
-    blob.upload_from_file(temp_doc_io, content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    blob.upload_from_file(
+        temp_doc_io,
+        content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
 
     print(f"🎉 {task} written to {file_path}.docx")
 
@@ -339,7 +342,7 @@ async def _write_md_to_word_dev(task: str, path: str, report: str, tables: list)
     if len(tables):
         # Add "Data Tables" as a title before the tables section
         doc.add_heading("Data Tables", level=1)
-      
+
         # Adding tables to the Word document
         for tables_set in tables:
             tables_in_url = tables_set["tables"]
@@ -437,7 +440,7 @@ async def _write_md_to_pdf_dev(task: str, path: str, report: str, tables: list) 
       the encoded file path of the generated PDF file.
     """
     print("Inside function to save pdf!")
-    
+
     # Ensure that this file path exists
     os.makedirs(path, exist_ok=True)
 
