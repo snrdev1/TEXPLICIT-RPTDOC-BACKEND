@@ -4,7 +4,48 @@ from ..utils.llm import *
 from ..scraper import Scraper
 from ..agent.prompts import *
 import json
+from ..scraper import Scraper
 
+def get_retriever(retriever):
+    """
+    Gets the retriever
+    Args:
+        retriever: retriever name
+
+    Returns:
+        retriever: Retriever class
+
+    """
+    match retriever:
+        case "tavily":
+            from ..retrievers import TavilySearch
+            retriever = TavilySearch
+        case "tavily_news":
+            from ..retrievers import TavilyNews
+            retriever = TavilyNews
+        case "google":
+            from ..retrievers import GoogleSearch
+            retriever = GoogleSearch
+        case "searx":
+            from ..retrievers import SearxSearch
+            retriever = SearxSearch
+        case "serpapi":
+            from ..retrievers import SerpApiSearch
+            retriever = SerpApiSearch
+        case "googleSerp":
+            from ..retrievers import SerperSearch
+            retriever = SerperSearch
+        case "duckduckgo":
+            from ..retrievers import Duckduckgo
+            retriever = Duckduckgo
+        case "BingSearch":
+            from ..retrievers import BingSearch
+            retriever = BingSearch
+
+        case _:
+            raise Exception("Retriever not found.")
+
+    return retriever
 
 async def get_sub_queries(query, agent_role_prompt, cfg):
     """

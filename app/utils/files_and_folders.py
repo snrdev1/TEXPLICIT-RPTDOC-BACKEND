@@ -48,13 +48,9 @@ def get_report_folder(question, source:str ="external"):
       the directory path for the report folder.
     """
     # Create a hashed folder path using os.path.join
-    
-    print("Question : ", question)
-    print("Source : ", source)
     current_time = datetime.utcnow()
     
     folder_name = f"{question.strip().lower()}_{source}_{current_time}"
-    # folder_name = f"{question.strip().lower()}_{source}"
     hashed_folder = hashlib.sha1(folder_name.encode()).hexdigest()
     
     if Config.GCP_PROD_ENV:
@@ -62,8 +58,6 @@ def get_report_folder(question, source:str ="external"):
     else:
       directory_folder = os.path.join('report_outputs', hashed_folder)
     
-    print("📡 report folder : ", directory_folder)
-
     return directory_folder
 
         
@@ -92,9 +86,7 @@ def get_report_directory(user_id: Union[str, ObjectId], question:str ="", source
     else:
       user_folder = get_user_folder(user_id)
       directory_path = os.path.join(user_folder, directory_folder)
-      
-    print("📡 directory path : ", directory_path)
-      
+            
     return directory_path
   
 

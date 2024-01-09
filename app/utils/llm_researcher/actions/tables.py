@@ -8,16 +8,42 @@ from docx.shared import Pt
 
 from ...document import add_hyperlink
 
-
-def extract_tables(url: str) -> list:
+def extract_tables(url: str) -> list:    
     try:
+        def filter_tables(tables):
+            to_remove = [
+                "email", "username", "daily newsletter", "promo mailers", "password", "optout",
+                "Provider", "Ibeat", "accessCode", "iBeat Analytics", "pfuuid", "Times Internet",
+                "phpsessid", "fpid", "google analytics", "cookie", "cookies", "consent", "screen readers"
+            ]
+
+            filtered_tables = []
+            for table in tables:
+                table_title = table.find_previous(["h1", "h2", "h3", "h4", "h5", "h6", "p"])
+
+                # Check table title and headers for exclusion substrings
+                exclude_table = False
+                if table_title and any(remove_word.lower() in table_title.text.lower() for remove_word in to_remove):
+                    exclude_table = True
+                else:
+                    headers = [th.text.strip() for th in table.find_all("th")]
+                    if any(remove_word.lower() in ' '.join(headers).lower() for remove_word in to_remove):
+                        exclude_table = True
+
+                if not exclude_table:
+                    filtered_tables.append(table)
+
+            return filtered_tables
+        
         response = requests.get(url)
         soup = BeautifulSoup(response.content, "html.parser")
 
         tables = soup.find_all("table")
+        filtered_tables = filter_tables(tables)
+
         extracted_tables = []
 
-        for table in tables:
+        for table in filtered_tables:
             table_data = []
             table_title = table.find_previous(["h1", "h2", "h3", "h4", "h5", "h6", "p"])
 
@@ -114,6 +140,10 @@ def tables_to_html(list_of_tables: list, url: str) -> str:
                     row_values = list(row.values())
                     row_str = "<tr>"
                     for val in row_values:
+                        # Check if the value is empty, add an empty space character to maintain border
+                        if val == '':
+                            val = '&nbsp;'
+                            
                         # Check if the value is numerical
                         if is_numerical(str(val)):
                             align_style = "text-align: right;"

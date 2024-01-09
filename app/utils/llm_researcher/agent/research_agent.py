@@ -11,7 +11,6 @@ import markdown
 from bson import ObjectId
 from ..actions import retrieve_context_from_documents
 from ..actions.tables import extract_tables
-from ..actions.web_search import serp_web_search
 from ..agent.functions import *
 from ..config import Config
 from ..context.compression import ContextCompressor
@@ -51,6 +50,9 @@ class ResearchAgent:
         # Agent type and role of agent
         self.agent = None
         self.role = None
+        
+        # Refernce to report config
+        self.cfg = Config()
 
         # Type of report
         self.report_type = report_type
@@ -63,6 +65,9 @@ class ResearchAgent:
 
         # Stores the entire research summary
         self.context = []
+        
+        # Get research retriever
+        self.retriever = get_retriever(self.cfg.retriever)
 
         # Stores markdown format of any table if found
         self.tables = []
@@ -75,16 +80,11 @@ class ResearchAgent:
 
         # Directory path of saved report
         self.dir_path = get_report_directory(user_id, self.query, self.source)
-        print("📡 dir_path (report directory) : ", self.dir_path)
 
         self.websocket = websocket
 
         # For simple retrieval of embeddings for contextual compression
         self.memory = Memory()
-
-        # Refernce to report config
-        self.cfg = Config()
-        
         
         # Only relevant for DETAILED REPORTS
         
@@ -116,7 +116,7 @@ class ResearchAgent:
                 )
 
             # Write Research Report
-            if len("".join(self.context)) > 10:
+            if len("".join(self.context)) > 50:
                 await stream_output(
                     "logs",
                     f"✍️ Writing {self.report_type} for research task: {self.query}...",
@@ -145,8 +145,8 @@ class ResearchAgent:
                         websocket=self.websocket,
                         cfg=self.cfg
                     )
-                
-                time.sleep(2)
+                    
+            time.sleep(2)
 
             return report
         
@@ -191,7 +191,7 @@ class ResearchAgent:
                     self.websocket,
                 )
             context.append(content)
-
+            
         return context
 
     async def get_similar_content_by_query(self, query, pages):
@@ -230,9 +230,13 @@ class ResearchAgent:
             Summary
         """
         # Get Urls
-        search_results = json.loads(
-            serp_web_search(sub_query, self.cfg.max_search_results_per_query)
+        retriever = self.retriever(sub_query)
+        search_results = retriever.search(max_results=self.cfg.max_search_results_per_query)
+        
+        await stream_output(
+            "logs", f"Search results : {search_results}\n", self.websocket
         )
+        
         new_search_urls = await self.get_new_urls(
             [url.get("link") for url in search_results]
         )
@@ -425,7 +429,7 @@ class ResearchAgent:
             os.makedirs(os.path.dirname(tables_path), exist_ok=True)
             write_to_file(tables_path, str(self.tables))
 
-    async def extract_tables(self, urls: list = []):
+    async def extract_tables(self, urls: list = []):        
         # Else extract tables from the urls and save them
         existing_tables = self.read_tables()
         if len(existing_tables):
@@ -434,6 +438,13 @@ class ResearchAgent:
         elif len(urls):
             # Extract all tables from search urls
             for url in urls:
+                if url.endswith(".pdf"):
+                    continue
+
+                await stream_output(
+                    "logs", f"🌐 Looking for tables to extract from {url}...\n", self.websocket
+                ) 
+                
                 new_table = extract_tables(url)
                 if len(new_table):
                     new_tables = {"tables": new_table, "url": url}
