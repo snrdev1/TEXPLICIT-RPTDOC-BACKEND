@@ -146,11 +146,8 @@ class AgentExecutor:
 
             return reports, report_body, tables
 
-        async def generate_detailed_report(report_body: str):
-            (
-                introduction,
-                conclusion,
-            ) = await main_task_assistant.write_introduction_conclusion()
+        async def construct_detailed_report(report_body: str):
+            introduction, conclusion = await main_task_assistant.write_introduction_conclusion()
             detailed_report = introduction + "\n\n" + report_body + "\n\n" + conclusion
             detailed_report_path = await main_task_assistant.save_report(
                 detailed_report
@@ -238,7 +235,7 @@ class AgentExecutor:
         if len(subtopics_reports_body.strip()) == 0:
             return "", "", []
 
-        detailed_report, detailed_report_path = await generate_detailed_report(
+        detailed_report, detailed_report_path = await construct_detailed_report(
             subtopics_reports_body
         )
 
