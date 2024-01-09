@@ -53,8 +53,8 @@ def get_report_folder(question, source:str ="external"):
     print("Source : ", source)
     current_time = datetime.utcnow()
     
-    # folder_name = f"{question.strip().lower()}_{source}_{current_time}"
-    folder_name = f"{question.strip().lower()}_{source}"
+    folder_name = f"{question.strip().lower()}_{source}_{current_time}"
+    # folder_name = f"{question.strip().lower()}_{source}"
     hashed_folder = hashlib.sha1(folder_name.encode()).hexdigest()
     
     if Config.GCP_PROD_ENV:
