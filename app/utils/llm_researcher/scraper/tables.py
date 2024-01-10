@@ -1,5 +1,6 @@
 import os
-from docx import Document
+import re
+
 import requests
 from bs4 import BeautifulSoup
 from docx import Document
@@ -10,7 +11,6 @@ from app.config import Config as GlobalConfig
 from app.utils.production import Production
 
 from ...document import add_hyperlink
-from ..master.functions import *
 from ..utils.text import *
 
 
@@ -41,80 +41,29 @@ class TableExtractor:
 
     def extract_tables(self, url: str) -> list:
         try:
-
-            def filter_tables(tables):
-                to_remove = [
-                    "email",
-                    "username",
-                    "daily newsletter",
-                    "promo mailers",
-                    "password",
-                    "optout",
-                    "Provider",
-                    "Ibeat",
-                    "accessCode",
-                    "iBeat Analytics",
-                    "pfuuid",
-                    "Times Internet",
-                    "phpsessid",
-                    "fpid",
-                    "google analytics",
-                    "cookie",
-                    "cookies",
-                    "consent",
-                    "screen readers",
-                ]
-
-                filtered_tables = []
-                for table in tables:
-                    table_title = table.find_previous(
-                        ["h1", "h2", "h3", "h4", "h5", "h6", "p"]
-                    )
-
-                    # Check table title and headers for exclusion substrings
-                    exclude_table = False
-                    if table_title and any(
-                        remove_word.lower() in table_title.text.lower()
-                        for remove_word in to_remove
-                    ):
-                        exclude_table = True
-                    else:
-                        headers = [th.text.strip() for th in table.find_all("th")]
-                        if any(
-                            remove_word.lower() in " ".join(headers).lower()
-                            for remove_word in to_remove
-                        ):
-                            exclude_table = True
-
-                    if not exclude_table:
-                        filtered_tables.append(table)
-
-                return filtered_tables
-
             response = requests.get(url)
             soup = BeautifulSoup(response.content, "html.parser")
 
             tables = soup.find_all("table")
-            filtered_tables = filter_tables(tables)
-
             extracted_tables = []
 
-            for table in filtered_tables:
+            for table in tables:
                 table_data = []
-                table_title = table.find_previous(
-                    ["h1", "h2", "h3", "h4", "h5", "h6", "p"]
-                )
-
-                if table_title:
-                    title = table_title.text.strip()
+                
+                # Extract table title
+                table_caption = table.find("caption")
+                if table_caption:
+                    title = table_caption.get_text(strip=True)
+                    
                 else:
-                    title = "Table"  # Default title if no specific title found
+                    previous_tag = table.find_previous(["h1", "h2", "h3", "h4", "h5", "h6", "p"])
+                    if previous_tag:
+                        title = previous_tag.get_text(strip=True)
+                    else:
+                        title = "Table"  # Default title if no specific title found
 
-                headers = [th.text.strip() for th in table.find_all("th")]
                 rows = table.find_all("tr")
-
-                # Check if the table has headers and at least one non-header row
-                if len(headers) > 0 and len(rows) > 1:
+                if len(rows) > 1:
                     for row in rows[1:]:
                         row_data = {}
                         cells = row.find_all(["td", "th"])
@@ -123,23 +72,13 @@ class TableExtractor:
                         for idx, cell in enumerate(cells):
                             cell_text = cell.text.strip()
 
-                            # Check for NA, blank, "-", or other null values
-                            if cell_text and cell_text not in [
-                                "NA",
-                                "n/a",
-                                "na",
-                                "-",
-                                "",
-                                "NaN",
-                            ]:
+                            if cell_text and cell_text not in ["NA", "n/a", "na", "-", "", "NaN"]:
                                 row_data[str(idx)] = cell_text
-                                valid_row = True  # Set the flag to True for a valid row
+                                valid_row = True
 
-                        # Append the row only if it contains valid data
                         if valid_row:
                             table_data.append(row_data)
 
-                    # Append the table if it has valid rows
                     if len(table_data) > 0:
                         extracted_table = {"title": title, "values": table_data}
                         extracted_tables.append(extracted_table)
@@ -147,6 +86,7 @@ class TableExtractor:
             return extracted_tables
 
         except Exception as e:
+            print(f"🚩 Exception in scraping tables : {e}")
             return []
 
     def tables_to_html(self, list_of_tables: list, url: str) -> str:
@@ -194,7 +134,7 @@ class TableExtractor:
                                 val = "&nbsp;"
 
                             # Check if the value is numerical
-                            if is_numerical(str(val)):
+                            if self.is_numerical(str(val)):
                                 align_style = "text-align: right;"
                             else:
                                 align_style = "text-align: left;"
@@ -224,6 +164,7 @@ class TableExtractor:
             return "<br><br><br>".join(html_tables)
 
         except Exception as e:
+            print(f"🚩 Exception in converting tables to html : {e}")
             return ""
 
     def add_tables_to_doc(self, document: Document):
@@ -276,7 +217,7 @@ class TableExtractor:
                 for i, key in enumerate(row_data.keys()):
                     cell = row[i]
                     cell.text = row_data[key]
-                    if is_numerical(row_data[key]):
+                    if self.is_numerical(row_data[key]):
                         cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
                     else:
                         cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
@@ -301,6 +242,7 @@ class TableExtractor:
                 document.element.body.append(element)
 
         except Exception as e:
+            print(f"🚩 Exception in adding tables to word document : {e}")
             # Revert changes on any exception
             pass
 
@@ -310,6 +252,7 @@ class TableExtractor:
 
         # Get the html of the tables
         tables_html = ""
+        print(f"➕ Appending {len(self.tables)} tables to report...\n")
         for tables_in_url in self.tables:
             current_tables = tables_in_url.get("tables", [])
             current_url = tables_in_url.get("url", "")
@@ -320,3 +263,19 @@ class TableExtractor:
             combined_html += "<br><h1>Data Tables</h1><br>" + tables_html
 
         return combined_html
+    
+    
+    @staticmethod
+    def is_numerical(value: str) -> bool:
+        """
+        The function `is_numerical` checks if a given value is numerical, allowing for optional commas and a
+        percentage sign at the end.
+
+        Args:
+        value (str): The value parameter is a string that represents a numerical value.
+
+        Returns:
+        The function is_numerical is returning a boolean value.
+        """
+        numerical_pattern = re.compile(r"^-?(\d{1,3}(,\d{3})*|\d+)?(\.\d+)?%?$")
+        return bool(numerical_pattern.match(str(value).replace(",", "")))
