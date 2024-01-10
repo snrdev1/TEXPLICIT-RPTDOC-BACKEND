@@ -5,21 +5,6 @@ from ..scraper import Scraper
 from ..master.prompts import *
 import json
 from ..scraper import Scraper
-import re
-
-def is_numerical(value: str) -> bool:
-    """
-    The function `is_numerical` checks if a given value is numerical, allowing for optional commas and a
-    percentage sign at the end.
-
-    Args:
-    value (str): The value parameter is a string that represents a numerical value.
-
-    Returns:
-    The function is_numerical is returning a boolean value.
-    """
-    numerical_pattern = re.compile(r"^-?(\d{1,3}(,\d{3})*|\d+)?(\.\d+)?%?$")
-    return bool(numerical_pattern.match(str(value).replace(",", "")))
 
 def get_retriever(retriever):
     """
