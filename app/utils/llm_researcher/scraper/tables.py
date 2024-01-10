@@ -40,6 +40,55 @@ class TableExtractor:
             write_to_file(self.tables_path, str(self.tables))
 
     def extract_tables(self, url: str) -> list:
+        def extract_table_title(table):
+            def process_table_title(title):
+                # Removing Table numberings like "Table 1:", "Table1-", etc.
+                cleaned_title = re.sub(r'^\s*Table\s*\d+\s*[:\-]\s*', '', title, flags=re.IGNORECASE)
+                return cleaned_title.strip()
+
+            # Extract table title
+            title = ""  # Default title if no specific title found
+            table_caption = table.find("caption")
+            if table_caption:
+                title = table_caption.get_text(strip=True)
+            else:
+                previous_tag = table.find_previous(["h1", "h2", "h3", "h4", "h5", "h6", "p"])
+                if previous_tag:
+                    title = previous_tag.get_text(strip=True)
+
+            return process_table_title(title)
+
+        def extract_table_data(table, title):
+            table_data = []
+            rows = table.find_all("tr")
+
+            # Extract headers from thead if available
+            thead = table.find("thead")
+            if thead:
+                header_row = thead.find("tr")
+                if header_row:
+                    header_cells = header_row.find_all(["th", "td"])
+                    header_row_data = [cell.text.strip() for cell in header_cells if cell.text.strip()]
+                    if header_row_data:
+                        table_data.append(header_row_data)
+
+            for row in rows[1:]:
+                row_data = {}
+                cells = row.find_all(["td", "th"])
+                valid_row = False
+
+                for idx, cell in enumerate(cells):
+                    cell_text = cell.text.strip()
+                    row_data[str(idx)] = cell_text
+
+                    if cell_text and cell_text not in ["NA", "n/a", "na", "-", "", "NaN"]:
+                        valid_row = True
+
+                if valid_row:
+                    table_data.append(row_data)
+
+            return {"title": title, "values": table_data}
+
         try:
             response = requests.get(url)
             soup = BeautifulSoup(response.content, "html.parser")
@@ -48,45 +97,22 @@ class TableExtractor:
             extracted_tables = []
 
             for table in tables:
-                table_data = []
-                
-                # Extract table title
-                table_caption = table.find("caption")
-                if table_caption:
-                    title = table_caption.get_text(strip=True)
-                    
-                else:
-                    previous_tag = table.find_previous(["h1", "h2", "h3", "h4", "h5", "h6", "p"])
-                    if previous_tag:
-                        title = previous_tag.get_text(strip=True)
-                    else:
-                        title = "Table"  # Default title if no specific title found
+                # Check if the table contains any nested tables
+                nested_tables = table.find_all("table")
+                if not nested_tables:  # If no nested tables, extract the main table
+                    title = extract_table_title(table)
 
-                rows = table.find_all("tr")
-                if len(rows) > 1:
-                    for row in rows[1:]:
-                        row_data = {}
-                        cells = row.find_all(["td", "th"])
-                        valid_row = False  # Flag to check if the row has valid data
+                    # Extract table data
+                    table_data = extract_table_data(table, title)
 
-                        for idx, cell in enumerate(cells):
-                            cell_text = cell.text.strip()
-
-                            if cell_text and cell_text not in ["NA", "n/a", "na", "-", "", "NaN"]:
-                                row_data[str(idx)] = cell_text
-                                valid_row = True
-
-                        if valid_row:
-                            table_data.append(row_data)
-
-                    if len(table_data) > 0:
-                        extracted_table = {"title": title, "values": table_data}
-                        extracted_tables.append(extracted_table)
+                    # Exclude tables with a single row and a single data value
+                    if table_data.get('values') and (len(table_data['values']) > 1 or (len(table_data['values']) == 1 and len(table_data['values'][0]) > 1)):
+                        extracted_tables.append(table_data)
 
             return extracted_tables
 
         except Exception as e:
-            print(f"🚩 Exception in scraping tables : {e}")
+            print(f"🚩 Exception when scraping tables : {e}") 
             return []
 
     def tables_to_html(self, list_of_tables: list, url: str) -> str:
@@ -170,7 +196,7 @@ class TableExtractor:
     def add_tables_to_doc(self, document: Document):
         if not len(self.tables):
             return
-        
+
         # Add "Data Tables" as a title before the tables section
         document.add_heading("Data Tables", level=1)
 
@@ -263,8 +289,7 @@ class TableExtractor:
             combined_html += "<br><h1>Data Tables</h1><br>" + tables_html
 
         return combined_html
-    
-    
+
     @staticmethod
     def is_numerical(value: str) -> bool:
         """
