@@ -30,6 +30,7 @@ def generate_report_prompt(
         "You must write the report with markdown syntax.\n "
         f"Use an unbiased and journalistic tone. \n"
         "You MUST determine your own concrete and valid opinion based on the given information. Do NOT deter to general and meaningless conclusions.\n"
+        "All related numerical values (if any) should be bold.\n"
         f"You MUST write all used source {current_source} at the end of the report as references, and make sure to not add duplicated sources, but only one reference for each.\n"
         f"You MUST write the report in {report_format} format.\n "
         f"Cite search results using inline notations. Only cite the most \
