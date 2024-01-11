@@ -137,8 +137,7 @@ class TableExtractor:
             print(f"Received {len(list_of_tables)} tables...")
 
             for table_data in list_of_tables:
-                if "tables" in table_data:
-                    tables = table_data["tables"]
+                tables = table_data.get("tables", [])
 
                 for table in tables:
                     title = table.get("title", "")
@@ -220,10 +219,12 @@ class TableExtractor:
                 )
                 document.add_paragraph()  # Adding an extra paragraph between tables
 
-    def add_table_to_doc(
-        self, document: Document, table_title: str, table_values: list, url: str
-    ):
+    def add_table_to_doc(self, document: Document, table_title: str, table_values: list, url: str):
         try:
+            def clean_text(text):
+                """Remove spaces, new lines, and tabs from the text."""
+                return text.replace("\n", " ").replace("\t", " ")
+            
             document_clone = Document()
             document_clone.add_heading(table_title, level=2)
             table = document_clone.add_table(rows=1, cols=len(table_values[0]))
@@ -233,7 +234,7 @@ class TableExtractor:
             hdr_cells = table.rows[0].cells
             for i, key in enumerate(table_values[0].keys()):
                 cell = hdr_cells[i]
-                cell.text = table_values[0][key]
+                cell.text = clean_text(table_values[0][key])
                 cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
                 cell.paragraphs[0].runs[0].font.bold = True
                 for paragraph in cell.paragraphs:
@@ -251,8 +252,8 @@ class TableExtractor:
                 row = table.add_row().cells
                 for i, key in enumerate(row_data.keys()):
                     cell = row[i]
-                    cell.text = row_data[key]
-                    if self.is_numerical(row_data[key]):
+                    cell.text = clean_text(row_data[key])
+                    if is_numerical(row_data[key]):
                         cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
                     else:
                         cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.LEFT

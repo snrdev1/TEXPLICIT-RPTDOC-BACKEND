@@ -282,7 +282,7 @@ class ResearchAgent:
                 self.report_type,
                 self.dir_path,
                 updated_markdown_report,
-                self.tables_extractor
+                self.tables_extractor,
             )
         else:
             print("💾 Saving report pdf format!")
@@ -290,7 +290,7 @@ class ResearchAgent:
                 self.report_type,
                 self.dir_path,
                 updated_markdown_report,
-                self.tables_extractor
+                self.tables_extractor,
             )
 
         return path
@@ -416,7 +416,9 @@ class ResearchAgent:
         existing_tables = self.tables_extractor.read_tables()
         if len(existing_tables):
             self.tables_extractor.tables = eval(existing_tables)
-            print("💎 Found EXISTING table/s")
+            await stream_output(
+                "logs", f"💎 Found {len(self.tables_extractor.tables)} EXISTING table/s\n"
+            )
         elif len(urls):
             # Extract all tables from search urls
             for url in urls:

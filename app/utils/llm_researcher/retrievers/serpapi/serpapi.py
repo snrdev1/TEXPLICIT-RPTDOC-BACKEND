@@ -39,6 +39,7 @@ class SerpApiSearch():
 
         """
         try:
+            print(f"\n🧲 Calling SERPAPI...\n")
 
             print("Searching with query {0}...".format(self.query))
             """Useful for general internet search queries using SerpApi."""
