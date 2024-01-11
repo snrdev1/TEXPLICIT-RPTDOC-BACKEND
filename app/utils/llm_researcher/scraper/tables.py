@@ -62,23 +62,39 @@ class TableExtractor:
             table_data = []
             rows = table.find_all("tr")
 
+            # Initialize an empty dictionary to store header row data
+            header_dict = {}
+
             # Extract headers from thead if available
             thead = table.find("thead")
             if thead:
                 header_row = thead.find("tr")
                 if header_row:
                     header_cells = header_row.find_all(["th", "td"])
-                    header_row_data = [cell.text.strip() for cell in header_cells if cell.text.strip()]
-                    if header_row_data:
-                        table_data.append(header_row_data)
+                    # Extracting header names
+                    header_names = [cell.text.strip() for cell in header_cells if cell.text.strip()]
+                    if header_names:
+                        # Assuming the header row contains unique names for keys
+                        for index, name in enumerate(header_names or list(rows[0].values())):
+                            # Assigning each header name as a key with an empty list as its value
+                            header_dict[index] = name
+
+            # Append the dictionary containing header row data to the table_data list
+            if header_dict:
+                table_data.append(header_dict)
 
             for row in rows[1:]:
                 row_data = {}
                 cells = row.find_all(["td", "th"])
                 valid_row = False
 
-                for idx, cell in enumerate(cells):
-                    cell_text = cell.text.strip()
+                for idx in range(len(header_dict.keys())):
+                    try:
+                        cell = cells[idx]
+                        cell_text = cell.text.strip()
+                    except IndexError:
+                        cell_text = ""
+
                     row_data[str(idx)] = cell_text
 
                     if cell_text and cell_text not in ["NA", "n/a", "na", "-", "", "NaN"]:
@@ -116,27 +132,18 @@ class TableExtractor:
             return []
 
     def tables_to_html(self, list_of_tables: list, url: str) -> str:
-        """
-        The function `tables_to_html` takes a list of tables and a URL as input, and returns an HTML string
-        containing the tables formatted with headers, rows, and a title, along with a clickable URL.
-
-        Args:
-        list_of_tables (list): A list of dictionaries, where each dictionary represents a table. Each
-        dictionary should have two keys: "title" and "values". "title" represents the title of the table,
-        and "values" represents the data in the table.
-        url (str): The `url` parameter is a string that represents the URL of the table. It is used to
-        create a hyperlink to the table in the generated HTML output.
-
-        Returns:
-        a string that contains HTML code representing tables.
-        """
         try:
             html_tables = []
+            print(f"Received {len(list_of_tables)} tables...")
 
-            for table in list_of_tables:
-                if "title" in table and "values" in table:
-                    title = table["title"]
-                    values = table["values"]
+            for table_data in list_of_tables:
+                tables = table_data.get("tables", [])
+
+                for table in tables:
+                    title = table.get("title", "")
+                    values = table.get("values", [])
+
+                    print(f"Title : {title}")
 
                     # Create the table header row
                     headers = list(values[0].values())
@@ -150,20 +157,21 @@ class TableExtractor:
                     html_table = [header_row]
 
                     # Create rows with data
-                    for i in range(1, len(values)):
-                        row = values[i]
+                    for row in values[1:]:
                         row_values = list(row.values())
                         row_str = "<tr>"
                         for val in row_values:
-                            # Check if the value is empty, add an empty space character to maintain border
-                            if val == "":
-                                val = "&nbsp;"
+                            # Check if the value is missing or empty key
+                            if val == "" or val is None:
+                                val = "&nbsp;"  # Replace with a non-breaking space
 
                             # Check if the value is numerical
                             if self.is_numerical(str(val)):
                                 align_style = "text-align: right;"
                             else:
                                 align_style = "text-align: left;"
+
+                            # Add border style to always have a border around the cell
                             row_str += f"<td style='font-size: 14px; border: 1px solid black; padding: 10px; {align_style}'>{str(val)}</td>"
                         row_str += "</tr>"
                         html_table.append(row_str)
@@ -190,9 +198,9 @@ class TableExtractor:
             return "<br><br><br>".join(html_tables)
 
         except Exception as e:
-            print(f"🚩 Exception in converting tables to html : {e}")
+            print(f"🚩 Exception in converting tables to html: {e}")
             return ""
-
+    
     def add_tables_to_doc(self, document: Document):
         if not len(self.tables):
             return
@@ -211,10 +219,12 @@ class TableExtractor:
                 )
                 document.add_paragraph()  # Adding an extra paragraph between tables
 
-    def add_table_to_doc(
-        self, document: Document, table_title: str, table_values: list, url: str
-    ):
+    def add_table_to_doc(self, document: Document, table_title: str, table_values: list, url: str):
         try:
+            def clean_text(text):
+                """Remove spaces, new lines, and tabs from the text."""
+                return text.replace("\n", " ").replace("\t", " ")
+            
             document_clone = Document()
             document_clone.add_heading(table_title, level=2)
             table = document_clone.add_table(rows=1, cols=len(table_values[0]))
@@ -224,7 +234,7 @@ class TableExtractor:
             hdr_cells = table.rows[0].cells
             for i, key in enumerate(table_values[0].keys()):
                 cell = hdr_cells[i]
-                cell.text = table_values[0][key]
+                cell.text = clean_text(table_values[0][key])
                 cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
                 cell.paragraphs[0].runs[0].font.bold = True
                 for paragraph in cell.paragraphs:
@@ -242,8 +252,8 @@ class TableExtractor:
                 row = table.add_row().cells
                 for i, key in enumerate(row_data.keys()):
                     cell = row[i]
-                    cell.text = row_data[key]
-                    if self.is_numerical(row_data[key]):
+                    cell.text = clean_text(row_data[key])
+                    if is_numerical(row_data[key]):
                         cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
                     else:
                         cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.LEFT

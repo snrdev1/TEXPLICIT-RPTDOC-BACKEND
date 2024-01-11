@@ -11,6 +11,8 @@ from langchain.adapters import openai as lc_openai
 from ..master.prompts import auto_agent_instructions
 from ..config.config import Config
 
+CFG = Config()
+
 async def create_chat_completion(
     messages: list,  # type: ignore
     model: Optional[str] = None,
@@ -53,6 +55,8 @@ async def create_chat_completion(
 async def send_chat_completion_request(
     messages, model, temperature, max_tokens, stream, llm_provider, websocket=None
 ):
+    print(f"🤖 Calling {model}...")
+    
     if not stream:
         result = lc_openai.ChatCompletion.create(
             model=model,  # Change model here to use different models
@@ -71,6 +75,8 @@ async def send_chat_completion_request(
 async def stream_response(
     model, messages, temperature, max_tokens, llm_provider, websocket=None
 ):
+    print(f"\n🤖 Calling {model}...\n")
+    
     paragraph = ""
     response = ""
 
@@ -148,7 +154,7 @@ async def llm_process_subtopics(task: str, subtopics: list) -> list:
             - Finally order the subtopics by their tasks, in a relevant and meaningful order which is presentable in a detailed report
         """
 
-        CFG = Config()
+        print(f"\n🤖 Calling {CFG.fast_llm_model}...\n")
         response = openai.ChatCompletion.create(
             model=CFG.fast_llm_model,
             response_format={"type": "json_object"},
