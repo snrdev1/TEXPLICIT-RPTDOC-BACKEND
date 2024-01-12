@@ -1,6 +1,7 @@
 import os
 import re
 
+import mistune
 import requests
 from bs4 import BeautifulSoup
 from docx import Document
@@ -189,7 +190,7 @@ class TableExtractor:
                     )
 
                     # Add the url of the table
-                    url_html = f"<br><a href='{url}' style='float: right; font-size: 12px;'>{url}</a>"
+                    url_html = f"<br><a href='{url}' style='float: right; font-size: 12px;'>source</a>"
 
                     # Combine title and table HTML
                     final_table_html = title_html + table_html + url_html
@@ -283,7 +284,7 @@ class TableExtractor:
 
     def get_combined_html(self, report: str):
         # Convert Markdown to HTML
-        report_html = markdown.markdown(report)
+        report_html = mistune.html(report)
 
         # Get the html of the tables
         tables_html = ""

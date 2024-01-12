@@ -1,16 +1,12 @@
 # Description: Research assistant class that handles the research process for a given question.
 
-# libraries
-import asyncio
-import json
 import os
 import re
 import time
 from typing import Union
 from app.utils.common import Common
-import markdown
 from bson import ObjectId
-
+import mistune
 from app.config import Config as GlobalConfig
 from app.utils.files_and_folders import get_report_directory
 from app.utils.production import Production
@@ -358,7 +354,7 @@ class ResearchAgent:
 
     def extract_subtopics(self, report, search, source):
         # Convert the Markdown to HTML
-        html_content = markdown.markdown(report)
+        html_content = mistune.html(report)
 
         # Use regular expressions to extract only the heading names and remove index and HTML tags
         h2_headings = re.findall(r"<h2[^>]*>(.*?)<\/h2>", html_content)
