@@ -3,7 +3,9 @@ import io
 import os
 import re
 import urllib
-
+from docx import Document
+from htmldocx import HtmlToDocx
+import mistune
 import markdown
 from docx import Document
 from html2docx import html2docx
@@ -139,17 +141,10 @@ async def _write_md_to_word_prod(
 ) -> str:
     file_path = f"{path}/{task}"
     user_bucket = Production.get_users_bucket()
-
-    # Convert Markdown to HTML
-    html = markdown.markdown(report)
-
-    # html2docx() returns an io.BytesIO() object. The HTML must be valid.
-    doc_bytes = html2docx(html, title=f"{task}.docx")
-    # print("doc_bytes : ", doc_bytes)
-    # blob = user_bucket.blob(f"{file_path}.docx")
-    # blob.upload_from_string(doc_bytes.getvalue())
-
-    doc = Document(doc_bytes)
+    
+    html = mistune.html(report)
+    doc = Document()
+    HtmlToDocx().add_html_to_document(html, doc)
 
     # Append Tables
     table_extractor.add_tables_to_doc(doc)
@@ -182,12 +177,9 @@ async def _write_md_to_word_dev(
     # Get the complete file path based reports folder, type of report
     file_path = os.path.join(path, task)
 
-    html = markdown.markdown(report)
-
-    # html2docx() returns an io.BytesIO() object. The HTML must be valid.
-    buf = html2docx(html, title=f"{task}.docx")
-
-    doc = Document(buf)
+    html = mistune.html(report)
+    doc = Document()
+    HtmlToDocx().add_html_to_document(html, doc)
 
     # Append Tables
     table_extractor.add_tables_to_doc(doc)

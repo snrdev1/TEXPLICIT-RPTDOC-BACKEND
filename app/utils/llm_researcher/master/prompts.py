@@ -18,10 +18,12 @@ def generate_report_prompt(
     Returns: str: The report prompt for the given question and research summary
     """
 
-    current_source = "urls" if source == "external" else "documents"
-
+    current_source = "documents"
     source_hyperlinks = ""
+    source_url = ""
     if source == "external":
+        current_source = "urls"
+        
         source_hyperlinks = """
         Additionally, you MUST include hyperlinks to the relevant URLs wherever they are referenced in the report : 
         
@@ -30,6 +32,8 @@ def generate_report_prompt(
             
             This is a sample text. ([url website](url))
         """
+        
+        source_url = "(Each url in hyperlinked form : [url website](url))"
 
     return (
         f'Information: """{context}"""\n\n'
@@ -42,7 +46,7 @@ def generate_report_prompt(
         f"Use an unbiased and journalistic tone. \n"
         "You MUST determine your own concrete and valid opinion based on the given information. Do NOT deter to general and meaningless conclusions.\n"
         "All related numerical values (if any) should be bold.\n"
-        f"You MUST write all used source {current_source} at the end of the report as references, and make sure to not add duplicated sources, but only one reference for each."
+        f"You MUST write all used source {current_source}{source_url} at the end of the report as references, and make sure to not add duplicated sources, but only one reference for each."
         f"{source_hyperlinks}"
         f"You MUST write the report in {report_format} format.\n "
         f"Cite search results using inline notations. Only cite the most \
