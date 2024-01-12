@@ -213,11 +213,9 @@ class TableExtractor:
             tables_in_url = tables_set["tables"]
             url = tables_set["url"]
             for table_data in tables_in_url:
-                print("Table title : ", table_data["title"])
                 self.add_table_to_doc(
                     document, table_data["title"], table_data["values"], url
                 )
-                document.add_paragraph()  # Adding an extra paragraph between tables
 
     def add_table_to_doc(self, document: Document, table_title: str, table_values: list, url: str):
         try:
@@ -253,7 +251,7 @@ class TableExtractor:
                 for i, key in enumerate(row_data.keys()):
                     cell = row[i]
                     cell.text = clean_text(row_data[key])
-                    if is_numerical(row_data[key]):
+                    if self.is_numerical(row_data[key]):
                         cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
                     else:
                         cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
@@ -272,6 +270,7 @@ class TableExtractor:
             p = document_clone.add_paragraph()
             p.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
             add_hyperlink(p, url, url)
+            document_clone.add_paragraph()
 
             # Append the modified content to the original document
             for element in document_clone.element.body:
