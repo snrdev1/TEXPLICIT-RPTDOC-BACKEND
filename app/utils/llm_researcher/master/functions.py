@@ -175,7 +175,7 @@ def add_source_urls(report_markdown: str, visited_urls: set):
     try:
         print("ℹ️ Adding source urls to report!") 
 
-        url_markdown = """\n\n\n\n### Sources\n\n"""
+        url_markdown = """\n\n\n## References\n\n"""
 
         for url in visited_urls:
             url_markdown += f"- [{url}]({url})\n"

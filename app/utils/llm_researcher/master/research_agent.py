@@ -267,9 +267,11 @@ class ResearchAgent:
     async def save_report(self, markdown_report):
         print("💾 Saving report...")
 
-        if self.report_type in ["detailed_report", "complete_report"]:
-            # Add all source urls at the end of report markdown as a list with a separate header
-            updated_markdown_report = add_source_urls(markdown_report, self.visited_urls)
+        updated_markdown_report = (
+            add_source_urls(markdown_report, self.visited_urls)
+            if self.report_type in ["detailed_report", "complete_report"]
+            else markdown_report
+        )
 
         # Save report mardown for future use
         _ = await save_markdown(
@@ -418,7 +420,8 @@ class ResearchAgent:
         if len(existing_tables):
             self.tables_extractor.tables = eval(existing_tables)
             await stream_output(
-                "logs", f"💎 Found {len(self.tables_extractor.tables)} EXISTING table/s\n"
+                "logs",
+                f"💎 Found {len(self.tables_extractor.tables)} EXISTING table/s\n,"
             )
         elif len(urls):
             # Extract all tables from search urls
