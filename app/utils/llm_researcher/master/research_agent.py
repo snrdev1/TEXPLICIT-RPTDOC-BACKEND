@@ -265,10 +265,11 @@ class ResearchAgent:
         return new_urls
 
     async def save_report(self, markdown_report):
-        print("💾 Saving report!")
+        print("💾 Saving report...")
 
-        # Add all source urls at the end of report markdown as a list with a separate header
-        updated_markdown_report = add_source_urls(markdown_report, self.visited_urls)
+        if self.report_type in ["detailed_report", "complete_report"]:
+            # Add all source urls at the end of report markdown as a list with a separate header
+            updated_markdown_report = add_source_urls(markdown_report, self.visited_urls)
 
         # Save report mardown for future use
         _ = await save_markdown(

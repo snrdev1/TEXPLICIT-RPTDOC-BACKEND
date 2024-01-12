@@ -20,6 +20,17 @@ def generate_report_prompt(
 
     current_source = "urls" if source == "external" else "documents"
 
+    source_hyperlinks = ""
+    if source == "external":
+        source_hyperlinks = """
+        Additionally, you MUST include hyperlinks to the relevant URLs wherever they are referenced in the report : 
+        
+        eg:    
+            # Report Header
+            
+            This is a sample text. ([url website](url))
+        """
+
     return (
         f'Information: """{context}"""\n\n'
         f"Using the above information, answer the following"
@@ -31,7 +42,8 @@ def generate_report_prompt(
         f"Use an unbiased and journalistic tone. \n"
         "You MUST determine your own concrete and valid opinion based on the given information. Do NOT deter to general and meaningless conclusions.\n"
         "All related numerical values (if any) should be bold.\n"
-        f"You MUST write all used source {current_source} at the end of the report as references, and make sure to not add duplicated sources, but only one reference for each.\n"
+        f"You MUST write all used source {current_source} at the end of the report as references, and make sure to not add duplicated sources, but only one reference for each."
+        f"{source_hyperlinks}"
         f"You MUST write the report in {report_format} format.\n "
         f"Cite search results using inline notations. Only cite the most \
             relevant results that answer the query accurately. Place these citations at the end \
@@ -98,7 +110,7 @@ def get_report_by_type(report_type):
         "resource_report": generate_resource_report_prompt,
         "outline_report": generate_outline_report_prompt,
         "custom_report": generate_custom_report_prompt,
-        "subtopic_report": generate_subtopic_report_prompt
+        "subtopic_report": generate_subtopic_report_prompt,
     }
 
     return report_type_mapping[report_type]
@@ -152,8 +164,25 @@ def generate_summary_prompt(query, data):
 
 
 def generate_subtopic_report_prompt(
-    current_subtopic, subtopics, main_topic, context, report_format="apa", total_words=1000, source="external"
+    current_subtopic,
+    subtopics,
+    main_topic,
+    context,
+    report_format="apa",
+    total_words=1000,
+    source="external",
 ) -> str:
+    source_hyperlinks = ""
+    if source == "external":
+        source_hyperlinks = """
+        You MUST include hyperlinks to the relevant URLs wherever they are referenced in the report : 
+        
+        eg:    
+            # Report Header
+            
+            This is a sample text. ([url website](url))
+        """
+    
     prompt = (
         f'"""{context}""" Using the above latest information,'
         f"""construct a detailed report on the subtopic: {current_subtopic} under the main topic: {main_topic}.
@@ -161,7 +190,7 @@ def generate_subtopic_report_prompt(
         in-depth, with facts and numbers if available, a minimum of {total_words} words and with markdown syntax.
         - As this report will be part of a bigger report, you must ONLY include the main body divided into suitable subtopics,
         without any introduction, conclusion, or reference section.
-        - Include hyperlinked urls to relevant sources wherever possible in the text.
+        {source_hyperlinks}
         - All related numerical values (if any) should be bold.
         - Also avoid including any details from these other subtopics: {[subtopic for subtopic in subtopics[1:] if subtopic!=current_subtopic]}
         - Ensure that you use smaller Markdown headers (e.g., H2 or H3) to structure your content and avoid using the largest Markdown header (H1).
