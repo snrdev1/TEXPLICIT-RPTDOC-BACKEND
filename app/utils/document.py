@@ -1,7 +1,7 @@
 import docx
 
 
-def add_hyperlink(paragraph, text, url):
+def add_hyperlink(paragraph, text, url, custom_style=False):
     # This gets access to the document.xml.rels file and gets a new relation id value
     part = paragraph.part
     r_id = part.relate_to(
@@ -19,11 +19,13 @@ def add_hyperlink(paragraph, text, url):
     new_run = docx.text.run.Run(docx.oxml.shared.OxmlElement("w:r"), paragraph)
     new_run.text = text
 
-    # Set the run's style to the builtin hyperlink style, defining it if necessary
-    new_run.style = get_or_create_hyperlink_style(part.document)
-    # Alternatively, set the run's formatting explicitly
-    # new_run.font.color.rgb = docx.shared.RGBColor(0, 0, 255)
-    # new_run.font.underline = True
+    if not custom_style:
+        # Set the run's style to the builtin hyperlink style, defining it if necessary
+        new_run.style = get_or_create_hyperlink_style(part.document)
+    else:
+        # Alternatively, set the run's formatting explicitly
+        new_run.font.color.rgb = docx.shared.RGBColor(0, 0, 255)
+        new_run.font.underline = True
 
     # Join all the xml elements together
     hyperlink.append(new_run._element)

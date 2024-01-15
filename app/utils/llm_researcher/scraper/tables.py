@@ -220,10 +220,11 @@ class TableExtractor:
             def clean_text(text):
                 """Remove spaces, new lines, and tabs from the text."""
                 return text.replace("\n", " ").replace("\t", " ")
+
+            document.add_heading(table_title, level=2)
+
+            table = document.add_table(rows=1, cols=len(table_values[0]))
             
-            document_clone = Document()
-            document_clone.add_heading(table_title, level=2)
-            table = document_clone.add_table(rows=1, cols=len(table_values[0]))
             table.style = "Table Grid"  # Applying table grid style to have borders
 
             # Set header rows as bold and add borders
@@ -265,14 +266,9 @@ class TableExtractor:
                             border.attrib["val"] = "single"
 
             # Adding the table URL after the table with right alignment and as a hyperlink
-            p = document_clone.add_paragraph()
+            p = document.add_paragraph()
             p.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
-            add_hyperlink(p, "source", url)
-            document_clone.add_paragraph()
-
-            # Append the modified content to the original document
-            for element in document_clone.element.body:
-                document.element.body.append(element)
+            add_hyperlink(p, "source", url, True)
 
         except Exception as e:
             print(f"🚩 Exception in adding tables to word document : {e}")

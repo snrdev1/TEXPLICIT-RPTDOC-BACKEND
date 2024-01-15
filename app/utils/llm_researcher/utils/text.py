@@ -140,9 +140,12 @@ async def _write_md_to_word_prod(
     file_path = f"{path}/{task}"
     user_bucket = Production.get_users_bucket()
 
-    combined_html = table_extractor.get_combined_html(report)
+    # combined_html = table_extractor.get_combined_html(report)
+    html = mistune.html(report)
     doc = Document()
-    HtmlToDocx().add_html_to_document(combined_html, doc)
+    HtmlToDocx().add_html_to_document(html, doc)
+
+    table_extractor.add_tables_to_doc(doc)
 
     # Create a temporary file-like object to save the updated document
     temp_doc_io = io.BytesIO()
@@ -172,10 +175,12 @@ async def _write_md_to_word_dev(
     # Get the complete file path based reports folder, type of report
     file_path = os.path.join(path, task)
 
-    combined_html = table_extractor.get_combined_html(report)
-    html = mistune.html(combined_html)
+    # combined_html = table_extractor.get_combined_html(report)
+    html = mistune.html(report)
     doc = Document()
     HtmlToDocx().add_html_to_document(html, doc)
+
+    table_extractor.add_tables_to_doc(doc)
 
     doc.save(f"{file_path}.docx")
 
