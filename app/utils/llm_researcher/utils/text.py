@@ -3,12 +3,10 @@ import io
 import os
 import re
 import urllib
+
+import mistune
 from docx import Document
 from htmldocx import HtmlToDocx
-import mistune
-import markdown
-from docx import Document
-from html2docx import html2docx
 from md2pdf.core import md2pdf
 from weasyprint import HTML
 
@@ -141,13 +139,10 @@ async def _write_md_to_word_prod(
 ) -> str:
     file_path = f"{path}/{task}"
     user_bucket = Production.get_users_bucket()
-    
-    html = mistune.html(report)
-    doc = Document()
-    HtmlToDocx().add_html_to_document(html, doc)
 
-    # Append Tables
-    table_extractor.add_tables_to_doc(doc)
+    combined_html = table_extractor.get_combined_html(report)
+    doc = Document()
+    HtmlToDocx().add_html_to_document(combined_html, doc)
 
     # Create a temporary file-like object to save the updated document
     temp_doc_io = io.BytesIO()
@@ -177,12 +172,10 @@ async def _write_md_to_word_dev(
     # Get the complete file path based reports folder, type of report
     file_path = os.path.join(path, task)
 
-    html = mistune.html(report)
+    combined_html = table_extractor.get_combined_html(report)
+    html = mistune.html(combined_html)
     doc = Document()
     HtmlToDocx().add_html_to_document(html, doc)
-
-    # Append Tables
-    table_extractor.add_tables_to_doc(doc)
 
     doc.save(f"{file_path}.docx")
 
@@ -287,7 +280,7 @@ async def _write_md_to_pdf_dev(
 
     # Combined html
     html = table_extractor.get_combined_html(report)
-
+    
     # Create a WeasyPrint HTML object
     html_obj = HTML(string=html)
 

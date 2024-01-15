@@ -276,7 +276,7 @@ class ResearchAgent:
         print("💾 Saved markdown!")
 
         if self.format == "word":
-            print("💾 Saving report document format!")
+            print("💾 Saving report document format...")
             path = await write_md_to_word(
                 self.report_type,
                 self.dir_path,
@@ -284,7 +284,7 @@ class ResearchAgent:
                 self.tables_extractor,
             )
         else:
-            print("💾 Saving report pdf format!")
+            print("💾 Saving report pdf format...")
             path = await write_md_to_pdf(
                 self.report_type,
                 self.dir_path,

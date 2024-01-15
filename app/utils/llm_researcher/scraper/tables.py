@@ -137,64 +137,61 @@ class TableExtractor:
             html_tables = []
             print(f"Received {len(list_of_tables)} tables...")
 
-            for table_data in list_of_tables:
-                tables = table_data.get("tables", [])
+            for table in list_of_tables:
+                title = table.get("title", "")
+                values = table.get("values", [])
 
-                for table in tables:
-                    title = table.get("title", "")
-                    values = table.get("values", [])
+                print(f"Title : {title}")
 
-                    print(f"Title : {title}")
-
-                    # Create the table header row
-                    headers = list(values[0].values())
-                    header_row = (
-                        "<tr><th style='font-size: 16px; border: 1px solid black; padding: 10px; text-align: center;'>"
-                        + "</th><th style='border: 1px solid black; padding: 10px; text-align: center;'>".join(
-                            headers
-                        )
-                        + "</th></tr>"
+                # Create the table header row
+                headers = list(values[0].values())
+                header_row = (
+                    "<tr><th style='font-size: 16px; border: 1px solid black; padding: 10px; text-align: center;'>"
+                    + "</th><th style='border: 1px solid black; padding: 10px; text-align: center;'>".join(
+                        headers
                     )
-                    html_table = [header_row]
+                    + "</th></tr>"
+                )
+                html_table = [header_row]
 
-                    # Create rows with data
-                    for row in values[1:]:
-                        row_values = list(row.values())
-                        row_str = "<tr>"
-                        for val in row_values:
-                            # Check if the value is missing or empty key
-                            if val == "" or val is None:
-                                val = "&nbsp;"  # Replace with a non-breaking space
+                # Create rows with data
+                for row in values[1:]:
+                    row_values = list(row.values())
+                    row_str = "<tr>"
+                    for val in row_values:
+                        # Check if the value is missing or empty key
+                        if val == "" or val is None:
+                            val = "&nbsp;"  # Replace with a non-breaking space
 
-                            # Check if the value is numerical
-                            if self.is_numerical(str(val)):
-                                align_style = "text-align: right;"
-                            else:
-                                align_style = "text-align: left;"
+                        # Check if the value is numerical
+                        if self.is_numerical(str(val)):
+                            align_style = "text-align: right;"
+                        else:
+                            align_style = "text-align: left;"
 
-                            # Add border style to always have a border around the cell
-                            row_str += f"<td style='font-size: 14px; border: 1px solid black; padding: 10px; {align_style}'>{str(val)}</td>"
-                        row_str += "</tr>"
-                        html_table.append(row_str)
+                        # Add border style to always have a border around the cell
+                        row_str += f"<td style='font-size: 14px; border: 1px solid black; padding: 10px; {align_style}'>{str(val)}</td>"
+                    row_str += "</tr>"
+                    html_table.append(row_str)
 
-                    # Create the table HTML structure
-                    table_html = (
-                        "<table style='border-collapse: collapse;'><tbody>"
-                        + "\n".join(html_table)
-                        + "</tbody></table>"
-                    )
+                # Create the table HTML structure
+                table_html = (
+                    "<table style='border-collapse: collapse;'><tbody>"
+                    + "\n".join(html_table)
+                    + "</tbody></table>"
+                )
 
-                    # Create the title with proper heading
-                    title_html = (
-                        f"<p style='font-weight: bold; font-size: 18px;'>{title}</p>"
-                    )
+                # Create the title with proper heading
+                title_html = (
+                    f"<p style='font-weight: bold; font-size: 18px;'>{title}</p>"
+                )
 
-                    # Add the url of the table
-                    url_html = f"<br><a href='{url}' style='float: right; font-size: 12px;'>source</a>"
+                # Add the url of the table
+                url_html = f"<br><a href='{url}' style='float: right; font-size: 12px;'>source</a>"
 
-                    # Combine title and table HTML
-                    final_table_html = title_html + table_html + url_html
-                    html_tables.append(final_table_html)
+                # Combine title and table HTML
+                final_table_html = title_html + table_html + url_html
+                html_tables.append(final_table_html)
 
             return "<br><br><br>".join(html_tables)
 
@@ -270,7 +267,7 @@ class TableExtractor:
             # Adding the table URL after the table with right alignment and as a hyperlink
             p = document_clone.add_paragraph()
             p.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
-            add_hyperlink(p, url, url)
+            add_hyperlink(p, "source", url)
             document_clone.add_paragraph()
 
             # Append the modified content to the original document
@@ -288,7 +285,6 @@ class TableExtractor:
 
         # Get the html of the tables
         tables_html = ""
-        print(f"➕ Appending {len(self.tables)} tables to report...\n")
         for tables_in_url in self.tables:
             current_tables = tables_in_url.get("tables", [])
             current_url = tables_in_url.get("url", "")
@@ -296,6 +292,7 @@ class TableExtractor:
 
         combined_html = report_html
         if len(tables_html):
+            print(f"➕ Appending {len(self.tables)} tables to report...\n")
             combined_html += "<br><h1>Data Tables</h1><br>" + tables_html
 
         return combined_html
