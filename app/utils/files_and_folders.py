@@ -78,7 +78,7 @@ def get_report_directory(user_id: Union[str, ObjectId], question:str ="", source
     if not report_folder:
         directory_folder = get_report_folder(question=question, source=source)
     else:
-        directory_folder = report_folder
+        directory_folder = urllib.parse.unquote(report_folder)
         
     if Config.GCP_PROD_ENV:
       user_folder_path = f"{user_id}"

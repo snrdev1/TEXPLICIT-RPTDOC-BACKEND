@@ -1,23 +1,36 @@
 import asyncio
+import os
+import re
 import urllib
 from datetime import datetime
 from typing import Union
+from urllib.parse import unquote, urlparse, urlunparse
 
 from bson import ObjectId
 
 from app.config import Config
 from app.models.mongoClient import MongoClient
+from app.utils.audio import tts
 from app.utils.common import Common
-from app.utils.files_and_folders import get_report_folder
+from app.utils.files_and_folders import get_report_directory, get_report_folder
 from app.utils.llm_researcher.llm_researcher import research
 from app.utils.response import Response
 
 
-def report_generate(user_id: Union[str, ObjectId],task: str,websearch: bool,report_type: str,source: str,format: str,report_generation_id: Union[int, None],subtopics: list) -> None:
+def report_generate(
+    user_id: Union[str, ObjectId],
+    task: str,
+    websearch: bool,
+    report_type: str,
+    source: str,
+    format: str,
+    report_generation_id: Union[int, None],
+    subtopics: list,
+) -> None:
     """
     The function `report_generate` generates a report based on user inputs and emits it using a socket,
     or returns an error message if the report generation fails.
-    
+
     :param user_id: The user_id parameter is the unique identifier of the user for whom the report is
     being generated. It can be either a string or an ObjectId
     :type user_id: Union[str, ObjectId]
@@ -66,15 +79,28 @@ def report_generate(user_id: Union[str, ObjectId],task: str,websearch: bool,repo
 
         # Once report is ready emit it using socket and store it in the db
         if len(report):
-            report_folder = urllib.parse.quote(get_report_folder(task, source))
+            report_folder = get_report_directory(report_path)
             print(f"🖫 Saved report to {report_folder}")
+
+            # Now generate the audio for the report
+            if report_type in ["research_report", "detailed_report"]:
+                print("🎵 Generating report audio...")
+                
+                audio_text = extract_text_before_h2(report)
+                audio_path = tts(report_folder, audio_text)
+                report_audio = {
+                    "exists": False,
+                    "text": audio_text,
+                    "path": urllib.parse.quote(audio_path),
+                }
+                if len(audio_path):
+                    report_audio["exists"] = True
 
             _save_and_emit(
                 task=task,
                 websearch=websearch,
                 subtopics=subtopics,
                 user_id=user_id,
-                report_folder=report_folder,
                 report_path=report_path,
                 report=report,
                 report_type=report_type,
@@ -82,6 +108,7 @@ def report_generate(user_id: Union[str, ObjectId],task: str,websearch: bool,repo
                 format=format,
                 report_generation_id=report_generation_id,
                 report_generation_time=report_generation_time,
+                report_audio=report_audio,
             )
             print(f"📢 Emitted report!")
 
@@ -103,6 +130,31 @@ def report_generate(user_id: Union[str, ObjectId],task: str,websearch: bool,repo
             success=False,
             status=500,
         )
+
+
+def get_report_directory(url):
+    # Parse the URL
+    parsed_url = urlparse(url)
+
+    # Decode the path component
+    decoded_path = unquote(parsed_url.path)
+
+    # Extract the directory part without the file at the end using os.path
+    directory_part = os.path.dirname(decoded_path)
+
+    # Reconstruct the URL with the decoded directory part
+    reconstructed_url = urlunparse(
+        (
+            parsed_url.scheme,
+            parsed_url.netloc,
+            directory_part,
+            parsed_url.params,
+            parsed_url.query,
+            parsed_url.fragment,
+        )
+    )
+
+    return reconstructed_url
 
 
 def get_reports_from_db(
@@ -204,7 +256,6 @@ def _save_and_emit(
     websearch: bool,
     subtopics: list,
     user_id: Union[str, ObjectId],
-    report_folder: str,
     report_path: str,
     report: str,
     report_type: str,
@@ -212,13 +263,13 @@ def _save_and_emit(
     format: str,
     report_generation_id: Union[str, None],
     report_generation_time: float,
+    report_audio: dict,
 ) -> None:
     try:
         report_document = {
             "task": task,
             "websearch": websearch,
             "subtopics": subtopics,
-            "report_folder": report_folder,
             "report_path": report_path,
             "report": report,
             "report_type": report_type,
@@ -228,6 +279,7 @@ def _save_and_emit(
             "format": format,
             "report_generation_id": report_generation_id,
             "report_generation_time": report_generation_time,
+            "report_audio": report_audio,
         }
 
         insert_response = _insert_document_into_db(report_document)
@@ -245,6 +297,18 @@ def _save_and_emit(
 
     except Exception as e:
         Common.exception_details("_save_and_emit", e)
+
+
+def extract_text_before_h2(markdown_text):
+    # Use regular expression to find the content before the first H2 heading
+    match = re.match(r"^(.*?)(?=\n## )", markdown_text, re.DOTALL)
+
+    if match:
+        # Return the content before the first H2 heading
+        return match.group(1)
+    else:
+        # If no H2 heading found, return the entire text
+        return markdown_text
 
 
 def _insert_document_into_db(report_document: dict) -> dict:
