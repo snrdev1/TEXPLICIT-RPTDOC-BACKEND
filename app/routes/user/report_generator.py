@@ -12,7 +12,7 @@ from app.auth.userauthorization import authorized
 from app.config import Config
 from app.services.reportGeneratorService import report_generate, get_reports_from_db, get_report_from_db
 from app.utils.common import Common
-from app.utils.files_and_folders import get_report_path
+from app.utils.files_and_folders import get_report_path, get_report_audio_path
 from app.utils.messages import Messages
 from app.utils.production import Production
 from app.utils.response import Response
@@ -125,4 +125,44 @@ def download_report(logged_in_user, reportid):
 
     except Exception as e:
         Common.exception_details("mydocuments.py : download_report", e)
+        return Response.server_error()
+    
+@report_generator.route("/audio/download/<reportid>", methods=["GET"])
+@authorized
+def download_report_audio(logged_in_user, reportid):
+    try:
+        user_id = str(logged_in_user["_id"])
+
+        report_document = get_report_from_db(reportid)
+        if not report_document:
+            return Response.custom_response([], Messages.MISSING_REPORT, False, 400)
+        
+        if user_id != str(report_document["createdBy"]["_id"]):
+            return Response.custom_response([], Messages.UNAUTHORIZED, False, 401)
+
+        file_path = get_report_audio_path(report_document)
+
+        if Config.GCP_PROD_ENV:
+            user_bucket = Production.get_users_bucket()
+            blob = user_bucket.blob(file_path)
+            bytes = blob.download_as_bytes()
+            download_file = io.BytesIO(bytes)
+
+            return send_file(
+                download_file,
+                as_attachment=True,
+                download_name=f"{report_document['task'][:10]}_audio",
+            )
+        else:
+            if len(file_path) and os.path.exists(file_path):
+                return send_file(
+                    file_path,
+                    as_attachment=True,
+                    download_name=f"{report_document['task'][:10]}_audio",
+                )
+
+        return Response.custom_response([], Messages.MISSING_REPORT, False, 400)
+
+    except Exception as e:
+        Common.exception_details("mydocuments.py : download_report_audio", e)
         return Response.server_error()

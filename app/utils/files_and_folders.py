@@ -95,3 +95,14 @@ def get_report_path(report_document):
     print("📡 file_path : ", file_path)
     
     return file_path
+  
+def get_report_audio_path(report_document):
+    try:
+      report_audio_path_quoted = report_document["report_audio"]["path"]
+      report_audio_path = urllib.parse.unquote(report_audio_path_quoted)
+      print("🎵 audio path : ", report_audio_path)
+      
+      return report_audio_path
+
+    except Exception as e:
+      return ""
