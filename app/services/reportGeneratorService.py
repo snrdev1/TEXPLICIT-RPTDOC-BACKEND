@@ -310,6 +310,23 @@ def extract_text_before_h2(markdown_text):
         # If no H2 heading found, return the entire text
         return markdown_text
 
+def get_report_download_filename(report_type: str, report_task: str, report_created):
+    try:
+        processed_report_type = " ".join(word.capitalize() for word in report_type.split("_"))
+        processed_report_task = report_task[:10]
+        return f"{processed_report_type} - {processed_report_task}_{report_created}"
+    
+    except Exception as e:
+      return ""
+
+def get_report_audio_download_filename(report_type: str, report_task: str, report_created):
+    try:
+        processed_report_type = " ".join(word.capitalize() for word in report_type.split("_"))
+        processed_report_task = report_task[:10]
+        return f"{processed_report_type} - {processed_report_task}_AUDIO_{report_created}"
+    
+    except Exception as e:
+      return ""
 
 def _insert_document_into_db(report_document: dict) -> dict:
     """
