@@ -19,6 +19,9 @@ def tts(dir: str, text: str):
         # List to store audio segments
         audio_segments = []
 
+        # Ensure that the output folder exists
+        os.makedirs(dir, exist_ok=True)
+
         # Generate audio responses for each chunk
         for i, chunk in enumerate(text_chunks):
             response = client.audio.speech.create(
@@ -30,8 +33,8 @@ def tts(dir: str, text: str):
             audio_chunk_path = os.path.join("audio_chunks", f"report_audio_{i}.wav")
             file_path = os.path.join(dir, audio_chunk_path)
             
-            # Ensure that the output folder exists
-            os.makedirs(file_path, exist_ok=True)
+            # Ensure that the directory structure exists
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
         
             response.stream_to_file(file_path)
 
