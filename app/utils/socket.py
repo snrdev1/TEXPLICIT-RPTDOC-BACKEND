@@ -3,6 +3,7 @@ from typing import Union
 from bson import ObjectId
 
 from app import socketio
+from app.utils.response import Response
 
 # On connection
 
@@ -62,3 +63,13 @@ def socket_success(userid: Union[str, ObjectId], msg: str) -> None:
 def socket_info(userid: Union[str, ObjectId], msg: str) -> None:
     print(f"🔌 socket_info: {msg}")
     socketio.emit(f"{userid}_info", msg)
+
+
+def emit_report_status(
+    user_id: Union[str, ObjectId], report_generation_id: str, message: str
+) -> None:
+    Response.socket_reponse(
+        event=f"{user_id}_report_status",
+        data={"report_generation_id": report_generation_id},
+        message=message,
+    )

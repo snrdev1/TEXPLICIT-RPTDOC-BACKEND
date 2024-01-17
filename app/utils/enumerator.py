@@ -74,3 +74,8 @@ class Enumerator:
         Reports = 2
         UserManagement = 3
         Admin = 4
+
+    class ReportStep(enum.Enum):
+        Pending = 0
+        Success = 1
+        Failure = 2

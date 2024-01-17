@@ -16,6 +16,7 @@ from app.services.reportGeneratorService import (
     get_report_from_db,
     get_report_download_filename,
     get_report_audio_download_filename,
+    get_pending_reports_from_db
 )
 from app.utils.common import Common
 from app.utils.files_and_folders import get_report_path, get_report_audio_path
@@ -94,6 +95,28 @@ def retrieve_reports(logged_in_user):
 
     except Exception as e:
         Common.exception_details("report-generator.py : retrieve_reports", e)
+        return Response.server_error()
+    
+@report_generator.route("/pending", methods=["GET"])
+@authorized
+def retrieve_pending_reports(logged_in_user):
+    try:
+        user_id = str(logged_in_user["_id"])
+        request_params = request.args.to_dict()
+        limit = int(request_params.get("limit", 10))
+        offset = int(request_params.get("offset", 0))
+        source = request_params.get("source", "")
+        format = request_params.get("format", "")
+        report_type = request_params.get("report_type", "")
+
+        reports = get_pending_reports_from_db(
+            user_id, limit, offset, source, format, report_type
+        )
+
+        return Response.custom_response(reports, Messages.OK_REPORTS_FOUND, True, 200)
+
+    except Exception as e:
+        Common.exception_details("report-generator.py : retrieve_pending_reports", e)
         return Response.server_error()
 
 

@@ -6,7 +6,7 @@ from bson import ObjectId
 
 from ..utils.llm import llm_process_subtopics
 from .research_agent import ResearchAgent
-
+from app.utils.socket import emit_report_status
 
 class AgentExecutor:
     def __init__(
@@ -329,14 +329,21 @@ class AgentExecutor:
 
         # In depth report generation
         if self.report_type == "detailed_report":
+            emit_report_status(self.user_id, self.report_generation_id, "Generating Detailed Report...")
             report_markdown, path, tables = await self.detailed_report()
 
         # Complete report generation
         elif self.report_type == "complete_report":
+            emit_report_status(self.user_id, self.report_generation_id, "Generating Combined Report...")
             report_markdown, path, tables = await self.complete_report()
 
         else:
             # Basic report generation
+            emit_report_status(
+                self.user_id,
+                self.report_generation_id,
+                f"Generating {' '.join(word.title() for word in self.report_type.split('_'))} Report..."
+            )
             report_markdown, path, tables = await self.basic_report()
 
         end_time = datetime.datetime.now()
