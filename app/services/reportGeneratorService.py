@@ -62,8 +62,9 @@ def report_generate(
     def generate_report_audio(
         report_text: str, report_folder: str
     ) -> dict[str, Union[bool, str]]:
-        if report_type in ["research_report", "detailed_report"]:
+        if len(report_text) and report_type in ["research_report", "detailed_report"]:
             print("🎵 Generating report audio...")
+            emit_report_status(user_id, report_generation_id, "🎵 Generating report audio...")
 
             audio_text = extract_text_before_h2(report_text)
             audio_path = tts(report_folder, audio_text)
@@ -171,11 +172,11 @@ def report_generate(
         report, report_path = run_research()
         end_time = datetime.now()
         report_generation_time = (end_time - start_time).total_seconds()
+        report_audio = generate_report_audio(report, report_folder)
 
         if len(report):
             print(f"🖫 Saved report to {report_folder}")
             report_folder = get_report_directory(report_path)
-            report_audio = generate_report_audio(report, report_folder)
             emit_and_save_report(
                 report_id,
                 report,
