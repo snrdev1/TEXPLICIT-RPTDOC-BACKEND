@@ -23,6 +23,7 @@ from ..utils.text import (
 )
 from ..scraper import *
 from . import prompts
+from app.utils.socket import emit_report_status
 
 
 class ResearchAgent:
@@ -91,21 +92,27 @@ class ResearchAgent:
         try:
             report = ""
             print(f"🔎 Running research for '{self.query}'...")
+            emit_report_status(self.user_id, self.report_generation_id, f"🔎 Running research for '{self.query}'...")
 
             # Generate Agent for current task
             self.agent, self.role = await choose_agent(self.query, self.cfg)
             await stream_output("logs", self.agent, self.websocket)
 
             if self.source == "external":
+                emit_report_status(self.user_id, self.report_generation_id,  "📂 Retrieving context from external search...")
+
                 self.context = await self.get_context_by_search(self.query)
 
             else:
+                emit_report_status(self.user_id, self.report_generation_id,  "📂 Retrieving context from documents...")
+
                 self.context = retrieve_context_from_documents(
                     self.user_id, self.query, max_docs, score_threshold
                 )
 
             # Write Research Report
             if len("".join(self.context)) > 50:
+                emit_report_status(self.user_id, self.report_generation_id,  f"✍️ Writing {self.report_type} for research task: {self.query}...")
                 await stream_output(
                     "logs",
                     f"✍️ Writing {self.report_type} for research task: {self.query}...",
@@ -167,6 +174,7 @@ class ResearchAgent:
 
         # Run Sub-Queries
         for sub_query in sub_queries:
+            emit_report_status(self.user_id, self.report_generation_id,  f"🔎 Running research for '{sub_query}'...")
             await stream_output(
                 "logs", f"\n🔎 Running research for '{sub_query}'...", self.websocket
             )
@@ -178,7 +186,7 @@ class ResearchAgent:
             else:
                 await stream_output(
                     "logs",
-                    f"Failed to gather content for for : {sub_query}",
+                    f"Failed to gather content for : {sub_query}",
                     self.websocket,
                 )
             context.append(content)
@@ -232,6 +240,7 @@ class ResearchAgent:
             )
 
             # Extract tables
+            emit_report_status(self.user_id, self.report_generation_id, "📊 Trying to extracting tables...")
             await self.extract_tables(new_search_urls)
 
             # Scrape Urls
@@ -253,6 +262,7 @@ class ResearchAgent:
         new_urls = []
         for url in url_set_input:
             if url not in self.visited_urls:
+                emit_report_status(self.user_id, self.report_generation_id,  f"✅ Adding source url to research: {url}...")
                 await stream_output("logs", f"✅ Adding source url to research: {url}\n")
 
                 self.visited_urls.add(url)
@@ -262,6 +272,7 @@ class ResearchAgent:
 
     async def save_report(self, markdown_report):
         print("💾 Saving report...")
+        emit_report_status(self.user_id, self.report_generation_id, "💾 Saving report...")
 
         updated_markdown_report = (
             add_source_urls(markdown_report, self.visited_urls)

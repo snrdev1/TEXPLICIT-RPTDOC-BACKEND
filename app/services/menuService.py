@@ -5,7 +5,7 @@ from app.models.mongoClient import MongoClient
 from app.utils.common import Common
 from app.utils.pipelines import PipelineStages
 from app.utils.enumerator import Enumerator
-
+from app.utils.formatter import cursor_to_dict
 
 class MenuService:
     def get_menu_items(self, menu_ids=[]):
@@ -30,7 +30,7 @@ class MenuService:
             m_db = MongoClient.connect()
             menu = m_db[Config.MONGO_MENU_MASTER_COLLECTION].aggregate(pipeline)
 
-            return Common.cursor_to_dict(menu)
+            return cursor_to_dict(menu)
 
         except Exception as e:
             Common.exception_details("MenuService.get_all_menu_items : ", e)

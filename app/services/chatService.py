@@ -14,6 +14,7 @@ from app import socketio
 from app.config import Config
 from app.models.mongoClient import MongoClient
 from app.utils.common import Common
+from app.utils.formatter import cursor_to_dict
 from app.utils.enumerator import Enumerator
 from app.utils.pipelines import PipelineStages
 from app.utils.vectorstore.base import VectorStore
@@ -138,7 +139,7 @@ class ChatService:
             response = []
             if result:
                 print("Found result!")
-                response = Common.cursor_to_dict(result)
+                response = cursor_to_dict(result)
 
             if len(response) > 0:
                 return response[0]

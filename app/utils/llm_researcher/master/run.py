@@ -7,6 +7,7 @@ from bson import ObjectId
 from ..utils.llm import llm_process_subtopics
 from .research_agent import ResearchAgent
 from app.utils.socket import emit_report_status
+from app.utils.formatter import get_formatted_report_type
 
 class AgentExecutor:
     def __init__(
@@ -50,6 +51,7 @@ class AgentExecutor:
             else None
         )
         if path:
+            emit_report_status(self.user_id, self.report_generation_id, "💎 Found existing report...")
             await assistant.extract_tables()
             report_markdown = await assistant.get_report_markdown(self.report_type)
             report_markdown = report_markdown.strip()
@@ -57,6 +59,7 @@ class AgentExecutor:
             return report_markdown, path, assistant.tables_extractor.tables
 
         print("🚦 Starting research")
+        emit_report_status(self.user_id, self.report_generation_id, "🚦 Starting research...")
         report_markdown = await assistant.conduct_research()
 
         report_markdown = report_markdown.strip()
@@ -120,6 +123,7 @@ class AgentExecutor:
 
             # Function to fetch subtopic reports asynchronously
             async def fetch_report(subtopic):
+                emit_report_status(self.user_id, self.report_generation_id, f"🚦 Conducting research on subtopic : {subtopic}...")
                 (
                     subtopic_report_markdown,
                     subtopic_path,
@@ -199,6 +203,7 @@ class AgentExecutor:
                 task=self.task, subtopics=all_subtopics
             )
             print(f"💎 Found {len(processed_subtopics)} processed subtopics")
+            emit_report_status(self.user_id, self.report_generation_id, f"💎 Found {len(processed_subtopics)} subtopics to process...")
 
             return processed_subtopics
 
@@ -209,6 +214,7 @@ class AgentExecutor:
             else None
         )
         if detailed_report_path:
+            emit_report_status(self.user_id, self.report_generation_id, "💎 Found existing report...")
             await main_task_assistant.extract_tables()
             report_markdown = await main_task_assistant.get_report_markdown(
                 self.report_type
@@ -220,6 +226,7 @@ class AgentExecutor:
         # Get all the processed subtopics on which the detailed report is to be generated
         processed_subtopics = await get_all_subtopics()
 
+        emit_report_status(self.user_id, self.report_generation_id, "🚦 Initiating subtopics research...")
         (
             subtopics_reports,
             subtopics_reports_body,
@@ -230,11 +237,13 @@ class AgentExecutor:
         main_task_assistant.tables_extractor.tables = subtopics_tables
         if len(main_task_assistant.tables_extractor.tables):
             print("📝 Saving extracted tables")
+            emit_report_status(self.user_id, self.report_generation_id, f"📝 Saving extracted tables...")
             main_task_assistant.tables_extractor.save_tables()
 
         if len(subtopics_reports_body.strip()) == 0:
             return "", "", []
 
+        emit_report_status(self.user_id, self.report_generation_id, f"📝 Constructing detailed report from subtopics...")
         detailed_report, detailed_report_path = await construct_detailed_report(
             subtopics_reports_body
         )
@@ -278,18 +287,23 @@ class AgentExecutor:
 
             return complete_report, complete_report_path, assistant.tables_extractor.tables
 
+        emit_report_status(self.user_id, self.report_generation_id, f"📝 Generating Outline Report...")
         (
             outline_report_markdown,
             outline_report_path,
             outline_report_tables,
             outline_report_urls,
         ) = await create_report("outline_report")
+        
+        emit_report_status(self.user_id, self.report_generation_id, f"📝 Generating Resource Report...")
         (
             resource_report_markdown,
             resource_report_path,
             resource_report_tables,
             resource_report_urls,
         ) = await create_report("resource_report")
+        
+        emit_report_status(self.user_id, self.report_generation_id, f"📝 Generating Detailed Report...")
         (
             detailed_report_markdown,
             detailed_report_path,
@@ -329,21 +343,17 @@ class AgentExecutor:
 
         # In depth report generation
         if self.report_type == "detailed_report":
-            emit_report_status(self.user_id, self.report_generation_id, "Generating Detailed Report...")
+            emit_report_status(self.user_id, self.report_generation_id, "📝 Generating Detailed Report...")
             report_markdown, path, tables = await self.detailed_report()
 
         # Complete report generation
         elif self.report_type == "complete_report":
-            emit_report_status(self.user_id, self.report_generation_id, "Generating Combined Report...")
+            emit_report_status(self.user_id, self.report_generation_id, "📝 Generating Combined Report...")
             report_markdown, path, tables = await self.complete_report()
 
         else:
             # Basic report generation
-            emit_report_status(
-                self.user_id,
-                self.report_generation_id,
-                f"Generating {' '.join(word.title() for word in self.report_type.split('_'))} Report..."
-            )
+            emit_report_status(self.user_id, self.report_generation_id, f"📝 Generating {get_formatted_report_type(self.report_type)} Report...")
             report_markdown, path, tables = await self.basic_report()
 
         end_time = datetime.datetime.now()

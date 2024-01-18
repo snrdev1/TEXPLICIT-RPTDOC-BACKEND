@@ -22,7 +22,7 @@ def retrieve_context_from_documents(user_id, query: str, max_docs: int = 15, sco
     Returns:
       The function `retrieve_context_from_documents` returns the context, which is a string containing
     the formatted excerpts from relevant documents.
-    """
+    """    
     # Retrieve embeddings
     embeddings = get_embeddings()
 

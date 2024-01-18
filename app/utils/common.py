@@ -1,18 +1,13 @@
 """
     Common functions accessible throughout the application
 """
-import json
 import re
 import traceback
 from typing import Any
 from urllib.parse import urlsplit
-
-from bson import json_util
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app.config import Config
-from app.models.mongoClient import MongoClient
-from app.utils.pipelines import PipelineStages
 
 
 class Common:
@@ -52,47 +47,6 @@ class Common:
             # Handle the specific exception that may be raised by check_password_hash function
             return False
 
-    @staticmethod
-    def cursor_to_dict(cursor):
-        """Converts a cursor to python dictionary
-
-        Args:
-            cursor (Cursor): Cursor Object
-
-        Returns:
-            dict: Python dictionary representation of input Cursor
-        """
-
-        try:
-
-            # iterate over cursor to get a list of dicts
-            cursor_dict = [doc for doc in cursor]
-
-            # serialize to json string
-            cursor_dict_string = json.dumps(cursor_dict, default=json_util.default)
-
-            # json from json string
-            cursor_dict = json.loads(cursor_dict_string)
-
-            return cursor_dict
-
-        except Exception as e:
-            Common.exception_details("common.py : cursor_to_dict", e)
-
-    @staticmethod
-    def process_response(response):
-        """Converts a response object to python dictionary and avoid type errors
-
-            Args:
-                response (dict): Response object
-
-            Returns:
-                dict: Python dictionary representation of input Response
-        """
-
-        processed_response = json.loads(json_util.dumps(response, default=str))
-
-        return processed_response
 
     @staticmethod
     def get_field_value_or_default(dictionary: dict, field_name: str, default_value: Any) -> Any:

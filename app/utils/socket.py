@@ -68,6 +68,8 @@ def socket_info(userid: Union[str, ObjectId], msg: str) -> None:
 def emit_report_status(
     user_id: Union[str, ObjectId], report_generation_id: str, message: str
 ) -> None:
+    print(f"🔌 Emitting report status : {message}\n")
+
     Response.socket_reponse(
         event=f"{user_id}_report_status",
         data={"report_generation_id": report_generation_id},

@@ -13,7 +13,7 @@ from app.utils.enumerator import Enumerator
 from app.utils.parser import Parser
 from app.utils.pipelines import PipelineStages
 from app.utils.production import Production
-
+from app.utils.formatter import cursor_to_dict
 
 class UserService:
     @staticmethod
@@ -241,7 +241,7 @@ class UserService:
         ] + UserService._common_user_pipeline()
         response = m_db[Config.MONGO_USER_MASTER_COLLECTION].aggregate(pipeline)
 
-        return Common.cursor_to_dict(response)
+        return cursor_to_dict(response)
 
     def get_base_users(self):
         try:
@@ -263,7 +263,7 @@ class UserService:
             ] + UserService._common_user_pipeline()
             response = m_db[Config.MONGO_USER_MASTER_COLLECTION].aggregate(pipeline)
 
-            return Common.cursor_to_dict(response)
+            return cursor_to_dict(response)
 
         except Exception as e:
             Common.exception_details("UserService.get_base_users : ", e)
@@ -293,7 +293,7 @@ class UserService:
         ] + UserService._common_user_pipeline()
         response = m_db[Config.MONGO_USER_MASTER_COLLECTION].aggregate(pipeline)
 
-        return Common.cursor_to_dict(response)
+        return cursor_to_dict(response)
 
     def get_user_by_id(self, user_id):
         """
@@ -314,7 +314,7 @@ class UserService:
 
         response = m_db[Config.MONGO_USER_MASTER_COLLECTION].aggregate(pipeline)
 
-        return Common.cursor_to_dict(response)[0]
+        return cursor_to_dict(response)[0]
 
     def get_user_by_ids(self, ids):
         m_db = MongoClient.connect()
@@ -325,7 +325,7 @@ class UserService:
 
         response = m_db[Config.MONGO_USER_MASTER_COLLECTION].aggregate(pipeline)
 
-        return Common.cursor_to_dict(response)
+        return cursor_to_dict(response)
 
     def get_password(self, user_id):
         """

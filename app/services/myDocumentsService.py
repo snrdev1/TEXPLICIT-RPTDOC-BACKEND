@@ -16,7 +16,7 @@ from pptx.util import Inches, Pt
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.summarizers.text_rank import TextRankSummarizer
-
+from app.utils.formatter import cursor_to_dict
 from app.config import Config
 from app.models.mongoClient import MongoClient
 from app.services.summaryService import key_phrases
@@ -317,7 +317,7 @@ class MyDocumentsService:
         ]
 
         documents = m_db[Config.MONGO_DOCUMENT_MASTER_COLLECTION].aggregate(pipeline)
-        return Common.cursor_to_dict(documents)
+        return cursor_to_dict(documents)
 
     def get_file(self, file_id):
         """
@@ -338,7 +338,7 @@ class MyDocumentsService:
 
         response = m_db[Config.MONGO_DOCUMENT_MASTER_COLLECTION].aggregate(pipeline)
 
-        return Common.cursor_to_dict(response)[0]
+        return cursor_to_dict(response)[0]
 
     def rename_document(self, _id, rename_value, user_id):
         """
@@ -478,7 +478,7 @@ class MyDocumentsService:
             }
         )
 
-        return Common.cursor_to_dict(documents)
+        return cursor_to_dict(documents)
 
     def get_file_by_virtual_name(self, virtual_name):
         """
@@ -1008,7 +1008,7 @@ class MyDocumentsService:
 
         documents = m_db[Config.MONGO_DOCUMENT_MASTER_COLLECTION].aggregate(pipeline)
 
-        return Common.cursor_to_dict(documents)
+        return cursor_to_dict(documents)
 
     # def get_all_folders(self, user_id):
     #     folders = []

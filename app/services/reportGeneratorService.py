@@ -7,7 +7,7 @@ from typing import Tuple, Union
 from urllib.parse import unquote, urlparse, urlunparse
 
 from bson import ObjectId
-
+from app.utils.formatter import cursor_to_dict
 from app.config import Config
 from app.models.mongoClient import MongoClient
 from app.utils.audio import tts
@@ -17,6 +17,7 @@ from app.utils.files_and_folders import get_report_directory
 from app.utils.llm_researcher.llm_researcher import research
 from app.utils.response import Response
 from app.utils.socket import emit_report_status
+
 
 def report_generate(
     user_id: Union[str, ObjectId],
@@ -161,9 +162,11 @@ def report_generate(
 
     try:
         start_time = datetime.now()
-        
-        emit_report_status(user_id, report_generation_id, "Initiaing report generation...")
-        
+
+        emit_report_status(
+            user_id, report_generation_id, "✈️ Initiaing report generation..."
+        )
+
         report_id = create_and_insert_report_document()
         report, report_path = run_research()
         end_time = datetime.now()
@@ -171,7 +174,6 @@ def report_generate(
 
         if len(report):
             print(f"🖫 Saved report to {report_folder}")
-            emit_report_status(user_id, report_generation_id, f"Saved report to {report_folder}...")
             report_folder = get_report_directory(report_path)
             report_audio = generate_report_audio(report, report_folder)
             emit_and_save_report(
@@ -183,7 +185,6 @@ def report_generate(
                 int(Enumerator.ReportStep.Success.value),
             )
         else:
-            emit_report_status(user_id, report_generation_id, f"Report generation")
             emit_and_save_report(
                 report_id,
                 report,
@@ -204,6 +205,7 @@ def report_generate(
             success=False,
             status=500,
         )
+
 
 def get_report_directory(url):
     # Parse the URL
@@ -264,7 +266,15 @@ def get_reports_from_db(
     m_db = MongoClient.connect()
 
     # Filter stage to filter out the reports based on various criteria
-    filter_stage = {"createdBy._id": ObjectId(user_id)}
+    filter_stage = {
+        "createdBy._id": ObjectId(user_id),
+        "status.value": {
+            "$nin": [
+                int(Enumerator.ReportStep.Pending.value),
+                int(Enumerator.ReportStep.Failure.value),
+            ]
+        },
+    }
     if source not in [None, ""]:
         filter_stage["source"] = source
     if format not in [None, ""]:
@@ -288,7 +298,7 @@ def get_reports_from_db(
         ]
     )
 
-    return Common.cursor_to_dict(response)
+    return cursor_to_dict(response)
 
 
 def get_report_from_db(reportid):
@@ -317,7 +327,7 @@ def get_report_from_db(reportid):
         ]
     )
 
-    response = Common.cursor_to_dict(response)
+    response = cursor_to_dict(response)
     if len(response) > 0:
         return response[0]
     else:
@@ -402,7 +412,7 @@ def get_pending_reports_from_db(
         ]
     )
 
-    return Common.cursor_to_dict(response)
+    return cursor_to_dict(response)
 
 
 def _insert_document_into_db(report_document: dict) -> dict:

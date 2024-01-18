@@ -3,8 +3,7 @@ from datetime import datetime
 
 from app.config import Config
 from app.models.mongoClient import MongoClient
-from app.utils.common import Common
-import app.utils.constants as Constants
+from app.utils.formatter import get_formatted_response
 
 
 class FeedbackService:
@@ -28,21 +27,7 @@ class FeedbackService:
 
         insert_response = m_db[self.FEEDBACK_COLLECTION].insert_one(feedback_object)
 
-        # mailBody = Constants..format(
-        #     receiver=creator["name"],
-        #     ki_title=ki["title"],
-        #     reason=reason_text,
-        #     sender=Config.MAIL_SENDER_NAME,
-        # )
-
-        # receivers = []
-        # receivers.append({"name": creator["name"], "email": creator["email"]})
-
-        # success = EmailHelper.send_mail(
-        #     Constants.KI_REJECTED_MAILSUBJECT, mailBody, receivers, None
-        # )
-
         if insert_response.acknowledged:
-            return Common.process_response(insert_response.inserted_id)
+            return get_formatted_response(insert_response.inserted_id)
         else:
             return None
