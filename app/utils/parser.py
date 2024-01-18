@@ -37,7 +37,7 @@ class Parser:
             jwt_payload = {
                 "id": str(user_id),
                 # CHANGE NUMBER OF DAYS LATER
-                "exp": datetime.datetime.utcnow() + datetime.timedelta(days),
+                "exp": datetime.datetime.now() + datetime.timedelta(days),
             }
             jwt_secret_key = Config.JWT_SECRET_KEY
             jwt_algorithm = "HS256"  # Use the desired JWT algorithm

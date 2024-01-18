@@ -317,7 +317,7 @@ class NewsService:
             font = run.font
             font.size = Pt(12)
 
-            timestamp = datetime.utcnow().timestamp()
+            timestamp = datetime.now().timestamp()
             # print(f"SAVING FILE at {timestamp}!")
             # Ensure that the user upload folder exists
             # print("Folder in line 388 : ", folder)
@@ -406,7 +406,7 @@ class NewsService:
             "originalFileName": new_filename,  # Use the unique filename
             "virtualFileName": "",
             "createdBy": {"_id": ObjectId(user_id), "ref": "user"},
-            "createdOn": datetime.utcnow(),
+            "createdOn": datetime.now(),
             "root": root,
             "type": "File",
             "embeddings": None,

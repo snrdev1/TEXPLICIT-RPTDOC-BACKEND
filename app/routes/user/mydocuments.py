@@ -420,7 +420,7 @@ def get_my_documents_itemized_summary_ppt(logged_in_user):
         return send_file(
             file_path,
             as_attachment=True,
-            download_name=f"itemized_summary_{datetime.datetime.utcnow().isoformat()}",
+            download_name=f"itemized_summary_{datetime.datetime.now().isoformat()}",
         )
 
     except Exception as e:
@@ -453,7 +453,7 @@ def get_my_documents_itemized_summary_excel(logged_in_user):
         return send_file(
             file_path,
             as_attachment=True,
-            download_name=f"itemized_summary_{datetime.datetime.utcnow().isoformat()}",
+            download_name=f"itemized_summary_{datetime.datetime.now().isoformat()}",
         )
 
     except Exception as e:
@@ -486,7 +486,7 @@ def get_my_documents_highlights_summary_ppt(logged_in_user):
         return send_file(
             file_path,
             as_attachment=True,
-            download_name=f"highlights_summary_{datetime.datetime.utcnow().isoformat()}",
+            download_name=f"highlights_summary_{datetime.datetime.now().isoformat()}",
         )
 
     except Exception as e:
@@ -519,7 +519,7 @@ def get_my_documents_highlights_summary_excel(logged_in_user):
         return send_file(
             file_path,
             as_attachment=True,
-            download_name=f"highlights_summary_{datetime.datetime.utcnow().isoformat()}",
+            download_name=f"highlights_summary_{datetime.datetime.now().isoformat()}",
         )
 
     except Exception as e:

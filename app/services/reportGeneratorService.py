@@ -2,7 +2,7 @@ import asyncio
 import os
 import re
 import urllib
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Tuple, Union
 from urllib.parse import unquote, urlparse, urlunparse
 
@@ -62,12 +62,17 @@ def report_generate(
     def generate_report_audio(
         report_text: str, report_folder: str
     ) -> dict[str, Union[bool, str]]:
-        
-        if not len(report_folder) or not len(report_text) or report_type not in ["research_report", "detailed_report"]:
+        if (
+            not len(report_folder)
+            or not len(report_text)
+            or report_type not in ["research_report", "detailed_report"]
+        ):
             return {"exists": False, "text": "", "path": ""}
-        
+
         print("🎵 Generating report audio...")
-        emit_report_status(user_id, report_generation_id, "🎵 Generating report audio...")
+        emit_report_status(
+            user_id, report_generation_id, "🎵 Generating report audio..."
+        )
 
         audio_text = extract_text_before_h2(report_text)
         audio_path = tts(report_folder, audio_text)
@@ -385,6 +390,10 @@ def get_pending_reports_from_db(
     format: str = "",
     report_type: str = "",
 ):
+    
+    # First clear the pending reports which have been pending for a certain amount of time
+    _set_reports_as_failed_in_db(user_id)
+    
     m_db = MongoClient.connect()
 
     # Filter stage to filter out the reports based on various criteria
@@ -416,6 +425,30 @@ def get_pending_reports_from_db(
     )
 
     return cursor_to_dict(response)
+
+
+def _set_reports_as_failed_in_db(user_id: Union[str, ObjectId]):
+    try:
+        m_db = MongoClient.connect()
+
+        # Calculate the time threshold (1 hour ago from the current time)
+        time_threshold = datetime.now() - timedelta(hours=1)
+
+        # Filter stage to filter out the reports based on various criteria
+        query = {
+            "createdBy._id": ObjectId(user_id),
+            "createdOn": {"$lt": time_threshold},
+        }
+
+        response = m_db[Config.MONGO_REPORTS_MASTER_COLLECTION].update_many(
+            query, {"$set": {"status.value": int(Enumerator.ReportStep.Failure.value)}}
+        )
+
+        return response.modified_count
+
+    except Exception as e:
+        print(f"Error updating document in the database: {e}")
+        return {"updated_count": 0}
 
 
 def _insert_document_into_db(report_document: dict) -> dict:
