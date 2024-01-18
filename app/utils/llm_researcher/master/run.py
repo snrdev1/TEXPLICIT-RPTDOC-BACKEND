@@ -9,6 +9,7 @@ from .research_agent import ResearchAgent
 from app.utils.socket import emit_report_status
 from app.utils.formatter import get_formatted_report_type
 
+
 class AgentExecutor:
     def __init__(
         self,
@@ -42,7 +43,7 @@ class AgentExecutor:
             format=self.format,
             report_type=self.report_type,
             websocket=self.websocket,
-            report_generation_id=self.report_generation_id
+            report_generation_id=self.report_generation_id,
         )
 
         # Check EXISTING report
@@ -52,15 +53,24 @@ class AgentExecutor:
             else None
         )
         if path:
-            emit_report_status(self.user_id, self.report_generation_id, "💎 Found existing report...")
+            emit_report_status(
+                self.user_id, self.report_generation_id, "💎 Found existing report..."
+            )
             await assistant.extract_tables()
             report_markdown = await assistant.get_report_markdown(self.report_type)
             report_markdown = report_markdown.strip()
 
-            return report_markdown, path, assistant.tables_extractor.tables
+            return (
+                report_markdown,
+                path,
+                assistant.tables_extractor.tables,
+                assistant.visited_urls,
+            )
 
         print("🚦 Starting research")
-        emit_report_status(self.user_id, self.report_generation_id, "🚦 Starting research...")
+        emit_report_status(
+            self.user_id, self.report_generation_id, "🚦 Starting research..."
+        )
         report_markdown = await assistant.conduct_research()
 
         report_markdown = report_markdown.strip()
@@ -69,7 +79,12 @@ class AgentExecutor:
 
         path = await assistant.save_report(report_markdown)
 
-        return report_markdown, path, assistant.tables_extractor.tables
+        return (
+            report_markdown,
+            path,
+            assistant.tables_extractor.tables,
+            assistant.visited_urls,
+        )
 
     async def detailed_report(self) -> tuple:
         main_task_assistant = ResearchAgent(
@@ -79,7 +94,7 @@ class AgentExecutor:
             format=self.format,
             report_type=self.report_type,
             websocket=self.websocket,
-            report_generation_id=self.report_generation_id
+            report_generation_id=self.report_generation_id,
         )
 
         async def get_subtopic_report(subtopic: list):
@@ -96,7 +111,7 @@ class AgentExecutor:
                 websocket=self.websocket,
                 parent_query=self.task,
                 subtopics=self.subtopics,
-                report_generation_id=self.report_generation_id
+                report_generation_id=self.report_generation_id,
             )
 
             print("🚦 Starting subtopic research")
@@ -126,7 +141,11 @@ class AgentExecutor:
 
             # Function to fetch subtopic reports asynchronously
             async def fetch_report(subtopic):
-                emit_report_status(self.user_id, self.report_generation_id, f"🚦 Conducting research on subtopic : {subtopic}...")
+                emit_report_status(
+                    self.user_id,
+                    self.report_generation_id,
+                    f"🚦 Conducting research on subtopic : {subtopic}...",
+                )
                 (
                     subtopic_report_markdown,
                     subtopic_path,
@@ -154,7 +173,10 @@ class AgentExecutor:
             return reports, report_body, tables
 
         async def construct_detailed_report(report_body: str):
-            introduction, conclusion = await main_task_assistant.write_introduction_conclusion()
+            (
+                introduction,
+                conclusion,
+            ) = await main_task_assistant.write_introduction_conclusion()
             detailed_report = introduction + "\n\n" + report_body + "\n\n" + conclusion
             detailed_report_path = await main_task_assistant.save_report(
                 detailed_report
@@ -176,7 +198,7 @@ class AgentExecutor:
             (
                 outline_report_markdown,
                 outline_report_path,
-                _,
+                *_
             ) = await outline_executor.run_agent()
 
             # 2. Extract base subtopics from outline report
@@ -206,7 +228,11 @@ class AgentExecutor:
                 task=self.task, subtopics=all_subtopics
             )
             print(f"💎 Found {len(processed_subtopics)} processed subtopics")
-            emit_report_status(self.user_id, self.report_generation_id, f"💎 Found {len(processed_subtopics)} subtopics to process...")
+            emit_report_status(
+                self.user_id,
+                self.report_generation_id,
+                f"💎 Found {len(processed_subtopics)} subtopics to process...",
+            )
 
             return processed_subtopics
 
@@ -217,19 +243,29 @@ class AgentExecutor:
             else None
         )
         if detailed_report_path:
-            emit_report_status(self.user_id, self.report_generation_id, "💎 Found existing report...")
+            emit_report_status(
+                self.user_id, self.report_generation_id, "💎 Found existing report..."
+            )
             await main_task_assistant.extract_tables()
             report_markdown = await main_task_assistant.get_report_markdown(
                 self.report_type
             )
             detailed_report = report_markdown.strip()
 
-            return detailed_report, detailed_report_path, main_task_assistant.tables_extractor.tables
+            return (
+                detailed_report,
+                detailed_report_path,
+                main_task_assistant.tables_extractor.tables,
+            )
 
         # Get all the processed subtopics on which the detailed report is to be generated
         processed_subtopics = await get_all_subtopics()
 
-        emit_report_status(self.user_id, self.report_generation_id, "🚦 Initiating subtopics research...")
+        emit_report_status(
+            self.user_id,
+            self.report_generation_id,
+            "🚦 Initiating subtopics research...",
+        )
         (
             subtopics_reports,
             subtopics_reports_body,
@@ -240,18 +276,29 @@ class AgentExecutor:
         main_task_assistant.tables_extractor.tables = subtopics_tables
         if len(main_task_assistant.tables_extractor.tables):
             print("📝 Saving extracted tables")
-            emit_report_status(self.user_id, self.report_generation_id, f"📝 Saving extracted tables...")
+            emit_report_status(
+                self.user_id, self.report_generation_id, f"📝 Saving extracted tables..."
+            )
             main_task_assistant.tables_extractor.save_tables()
 
         if len(subtopics_reports_body.strip()) == 0:
             return "", "", []
 
-        emit_report_status(self.user_id, self.report_generation_id, f"📝 Constructing detailed report from subtopics...")
+        emit_report_status(
+            self.user_id,
+            self.report_generation_id,
+            f"📝 Constructing detailed report from subtopics...",
+        )
         detailed_report, detailed_report_path = await construct_detailed_report(
             subtopics_reports_body
         )
 
-        return detailed_report, detailed_report_path, main_task_assistant.tables_extractor.tables
+        return (
+            detailed_report,
+            detailed_report_path,
+            main_task_assistant.tables_extractor.tables,
+            main_task_assistant.visited_urls,
+        )
 
     async def complete_report(self) -> tuple:
         async def create_report(report_type: str) -> tuple:
@@ -265,8 +312,8 @@ class AgentExecutor:
                 websocket=self.websocket,
                 report_generation_id=self.report_generation_id,
             )
-            markdown, path, tables = await report_executor.run_agent()
-            return markdown, path, tables, report_executor.visited_urls
+            markdown, path, tables, urls = await report_executor.run_agent()
+            return markdown, path, tables, urls
 
         assistant = ResearchAgent(
             user_id=self.user_id,
@@ -275,7 +322,7 @@ class AgentExecutor:
             format=self.format,
             report_type=self.report_type,
             websocket=self.websocket,
-            report_generation_id=self.report_generation_id
+            report_generation_id=self.report_generation_id,
         )
 
         # Check EXISTING report
@@ -289,25 +336,35 @@ class AgentExecutor:
             report_markdown = await assistant.get_report_markdown(self.report_type)
             complete_report = report_markdown.strip()
 
-            return complete_report, complete_report_path, assistant.tables_extractor.tables
+            return (
+                complete_report,
+                complete_report_path,
+                assistant.tables_extractor.tables,
+            )
 
-        emit_report_status(self.user_id, self.report_generation_id, f"📝 Generating Outline Report...")
+        emit_report_status(
+            self.user_id, self.report_generation_id, f"📝 Generating Outline Report..."
+        )
         (
             outline_report_markdown,
             outline_report_path,
             outline_report_tables,
             outline_report_urls,
         ) = await create_report("outline_report")
-        
-        emit_report_status(self.user_id, self.report_generation_id, f"📝 Generating Resource Report...")
+
+        emit_report_status(
+            self.user_id, self.report_generation_id, f"📝 Generating Resource Report..."
+        )
         (
             resource_report_markdown,
             resource_report_path,
             resource_report_tables,
             resource_report_urls,
         ) = await create_report("resource_report")
-        
-        emit_report_status(self.user_id, self.report_generation_id, f"📝 Generating Detailed Report...")
+
+        emit_report_status(
+            self.user_id, self.report_generation_id, f"📝 Generating Detailed Report..."
+        )
         (
             detailed_report_markdown,
             detailed_report_path,
@@ -338,7 +395,12 @@ class AgentExecutor:
 
         path = await assistant.save_report(report_markdown)
 
-        return report_markdown, path, assistant.tables_extractor.tables
+        return (
+            report_markdown,
+            path,
+            assistant.tables_extractor.tables,
+            assistant.visited_urls,
+        )
 
     async def run_agent(self) -> tuple:
         start_time = datetime.datetime.now()
@@ -347,18 +409,30 @@ class AgentExecutor:
 
         # In depth report generation
         if self.report_type == "detailed_report":
-            emit_report_status(self.user_id, self.report_generation_id, "📝 Generating Detailed Report...")
-            report_markdown, path, tables = await self.detailed_report()
+            emit_report_status(
+                self.user_id,
+                self.report_generation_id,
+                "📝 Generating Detailed Report...",
+            )
+            report_markdown, path, tables, urls = await self.detailed_report()
 
         # Complete report generation
         elif self.report_type == "complete_report":
-            emit_report_status(self.user_id, self.report_generation_id, "📝 Generating Combined Report...")
-            report_markdown, path, tables = await self.complete_report()
+            emit_report_status(
+                self.user_id,
+                self.report_generation_id,
+                "📝 Generating Combined Report...",
+            )
+            report_markdown, path, tables, urls = await self.complete_report()
 
         else:
             # Basic report generation
-            emit_report_status(self.user_id, self.report_generation_id, f"📝 Generating {get_formatted_report_type(self.report_type)} Report...")
-            report_markdown, path, tables = await self.basic_report()
+            emit_report_status(
+                self.user_id,
+                self.report_generation_id,
+                f"📝 Generating {get_formatted_report_type(self.report_type)}...",
+            )
+            report_markdown, path, tables, urls = await self.basic_report()
 
         end_time = datetime.datetime.now()
 
@@ -368,4 +442,4 @@ class AgentExecutor:
             {"type": "logs", "output": f"\nTotal run time: {end_time - start_time}\n"}
         )
 
-        return report_markdown, path, tables
+        return report_markdown, path, tables, urls

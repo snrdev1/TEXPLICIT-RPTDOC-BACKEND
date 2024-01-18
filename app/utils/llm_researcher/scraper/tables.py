@@ -40,7 +40,7 @@ class TableExtractor:
             os.makedirs(os.path.dirname(self.tables_path), exist_ok=True)
             write_to_file(self.tables_path, str(self.tables))
 
-    def extract_tables(self, url: str) -> list:
+    def extract_tables(self, url: str) -> list:       
         def extract_table_title(table):
             def process_table_title(title):
                 # Removing Table numberings like "Table 1:", "Table1-", etc.

@@ -24,7 +24,8 @@ from ..utils.text import (
 from ..scraper import *
 from . import prompts
 from app.utils.socket import emit_report_status
-
+from app.utils.timer import timeout_handler
+from app.utils.formatter import get_formatted_report_type
 
 class ResearchAgent:
     def __init__(
@@ -116,7 +117,7 @@ class ResearchAgent:
 
             # Write Research Report
             if len("".join(self.context)) > 50:
-                emit_report_status(self.user_id, self.report_generation_id,  f"✍️ Writing {self.report_type} for research task: {self.query}...")
+                emit_report_status(self.user_id, self.report_generation_id,  f"✍️ Writing {get_formatted_report_type(self.report_type)} for research task: {self.query}...")
                 await stream_output(
                     "logs",
                     f"✍️ Writing {self.report_type} for research task: {self.query}...",
@@ -447,7 +448,7 @@ class ResearchAgent:
                     self.websocket,
                 )
 
-                new_table = self.tables_extractor.extract_tables(url)
+                new_table = timeout_handler([], 5, self.tables_extractor.extract_tables, url)
                 if len(new_table):
                     new_tables = {"tables": new_table, "url": url}
                     print(f"💎 Found table/s from {url}")
