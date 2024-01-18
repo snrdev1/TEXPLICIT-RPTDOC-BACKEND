@@ -37,6 +37,7 @@ class ResearchAgent:
         websocket=None,
         parent_query="",
         subtopics=[],
+        report_generation_id=""
     ):
         # Stores the user question (task)
         self.query = query
@@ -87,6 +88,9 @@ class ResearchAgent:
 
         # Stores all the subtopics
         self.subtopics = subtopics
+        
+        # Stores the report generation id 
+        self.report_generation_id = report_generation_id
 
     async def conduct_research(self, max_docs: int = 15, score_threshold: float = 1.2):
         try:
@@ -149,6 +153,7 @@ class ResearchAgent:
             return report
 
         except Exception as e:
+            Common.exception_details("ResearchAgent.conduct_research", e)
             return report
 
     async def get_context_by_search(self, query):

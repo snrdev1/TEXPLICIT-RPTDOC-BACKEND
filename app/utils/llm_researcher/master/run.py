@@ -42,6 +42,7 @@ class AgentExecutor:
             format=self.format,
             report_type=self.report_type,
             websocket=self.websocket,
+            report_generation_id=self.report_generation_id
         )
 
         # Check EXISTING report
@@ -78,6 +79,7 @@ class AgentExecutor:
             format=self.format,
             report_type=self.report_type,
             websocket=self.websocket,
+            report_generation_id=self.report_generation_id
         )
 
         async def get_subtopic_report(subtopic: list):
@@ -94,6 +96,7 @@ class AgentExecutor:
                 websocket=self.websocket,
                 parent_query=self.task,
                 subtopics=self.subtopics,
+                report_generation_id=self.report_generation_id
             )
 
             print("🚦 Starting subtopic research")
@@ -272,6 +275,7 @@ class AgentExecutor:
             format=self.format,
             report_type=self.report_type,
             websocket=self.websocket,
+            report_generation_id=self.report_generation_id
         )
 
         # Check EXISTING report

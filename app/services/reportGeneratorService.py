@@ -62,23 +62,24 @@ def report_generate(
     def generate_report_audio(
         report_text: str, report_folder: str
     ) -> dict[str, Union[bool, str]]:
-        if len(report_text) and report_type in ["research_report", "detailed_report"]:
-            print("🎵 Generating report audio...")
-            emit_report_status(user_id, report_generation_id, "🎵 Generating report audio...")
-
-            audio_text = extract_text_before_h2(report_text)
-            audio_path = tts(report_folder, audio_text)
-            report_audio = {
-                "exists": False,
-                "text": audio_text,
-                "path": urllib.parse.quote(audio_path),
-            }
-            if len(audio_path):
-                report_audio["exists"] = True
-
-            return report_audio
-        else:
+        
+        if not len(report_folder) or not len(report_text) or report_type not in ["research_report", "detailed_report"]:
             return {"exists": False, "text": "", "path": ""}
+        
+        print("🎵 Generating report audio...")
+        emit_report_status(user_id, report_generation_id, "🎵 Generating report audio...")
+
+        audio_text = extract_text_before_h2(report_text)
+        audio_path = tts(report_folder, audio_text)
+        report_audio = {
+            "exists": False,
+            "text": audio_text,
+            "path": urllib.parse.quote(audio_path),
+        }
+        if len(audio_path):
+            report_audio["exists"] = True
+
+        return report_audio
 
     def emit_and_save_report(
         report_id: Union[str, ObjectId],
@@ -135,7 +136,7 @@ def report_generate(
         # Transform the report data to suitable format before emitting
         report_document_for_emitting = transform_data(report_document)
 
-        if not len(update_count):
+        if not update_count:
             Response.socket_reponse(
                 event=f"{user_id}_report",
                 data=report_document_for_emitting,
@@ -172,11 +173,12 @@ def report_generate(
         report, report_path = run_research()
         end_time = datetime.now()
         report_generation_time = (end_time - start_time).total_seconds()
-        report_audio = generate_report_audio(report, report_folder)
+        report_audio = generate_report_audio(report, "")
 
         if len(report):
-            print(f"🖫 Saved report to {report_folder}")
             report_folder = get_report_directory(report_path)
+            print(f"🖫 Saved report to {report_folder}")
+            report_audio = generate_report_audio(report, report_folder)
             emit_and_save_report(
                 report_id,
                 report,
