@@ -71,7 +71,7 @@ def emit_report_status(
     print(f"🔌 Emitting report status : {message}\n")
 
     Response.socket_reponse(
-        event=f"{user_id}_report_status",
-        data={"report_generation_id": report_generation_id},
+        event=f"{user_id}_report_{report_generation_id}_status",
+        data=[],
         message=message,
     )
