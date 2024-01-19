@@ -438,6 +438,7 @@ def _set_reports_as_failed_in_db(user_id: Union[str, ObjectId]):
         query = {
             "createdBy._id": ObjectId(user_id),
             "createdOn": {"$lt": time_threshold},
+            "status.value": int(Enumerator.ReportStep.Pending.value)
         }
 
         response = m_db[Config.MONGO_REPORTS_MASTER_COLLECTION].update_many(
