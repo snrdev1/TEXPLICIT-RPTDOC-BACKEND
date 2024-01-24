@@ -9,6 +9,8 @@ from langchain.prompts import (
 
 from app.utils.common import Common
 from app.utils.llm.base import break_up_text
+from app.config import Config
+
 
 
 def generate_highlights(text):
