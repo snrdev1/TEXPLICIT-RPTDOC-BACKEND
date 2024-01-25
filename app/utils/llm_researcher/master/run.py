@@ -75,7 +75,7 @@ class AgentExecutor:
 
         report_markdown = report_markdown.strip()
         if len(report_markdown) == 0:
-            return "", "", []
+            return "", "", [], set()
 
         path = await assistant.save_report(report_markdown)
 
@@ -282,7 +282,7 @@ class AgentExecutor:
             main_task_assistant.tables_extractor.save_tables()
 
         if len(subtopics_reports_body.strip()) == 0:
-            return "", "", []
+            return "", "", [], set()
 
         emit_report_status(
             self.user_id,
@@ -386,7 +386,7 @@ class AgentExecutor:
         )
 
         if not report_markdown:
-            return "", "", []
+            return "", "", [], set()
 
         # Merge all the sources from all assistants
         assistant.visited_urls.update(
