@@ -581,6 +581,7 @@ class UserService:
             PipelineStages.stage_add_fields(
                 {
                     "_id": {"$toString": "$_id"},
+                    "createdOn": {"$toString": "$createdOn"},
                     "image": {
                         "$cond": {
                             "if": {"$ne": ["$image", ""]},
