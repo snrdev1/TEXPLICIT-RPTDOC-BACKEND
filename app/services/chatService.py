@@ -87,7 +87,7 @@ class ChatService:
                 "prompt": question,
                 "response": data,
                 "sources": sources,
-                "timestamp": datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
+                "timestamp": datetime.utcnow().strftime("%d-%m-%Y %H:%M:%S"),
                 "chatType": chat_type,
             }
 

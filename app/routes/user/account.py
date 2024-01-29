@@ -442,7 +442,7 @@ def account_reset_password_check_token_validity(token):
             )
 
         existing_user = UserService().get_user_by_id(decoded_token["id"])
-        current_time = datetime.now()
+        current_time = datetime.utcnow()
         expiry_time = datetime.utcfromtimestamp(decoded_token["exp"])
 
         if not existing_user:

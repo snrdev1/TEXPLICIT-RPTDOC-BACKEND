@@ -379,6 +379,7 @@ class UserService:
 
         user_data["isActive"] = True
         user_data["balance"] = 0.0
+        user_data["createdOn"] = datetime.utcnow()
 
         m_db = MongoClient.connect()
 

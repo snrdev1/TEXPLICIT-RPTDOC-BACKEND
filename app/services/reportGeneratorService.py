@@ -37,7 +37,7 @@ def report_generate(
             "subtopics": subtopics,
             "report_type": report_type,
             "createdBy": {"_id": ObjectId(user_id), "ref": "user"},
-            "createdOn": datetime.now(),
+            "createdOn": datetime.utcnow(),
             "source": source,
             "format": format,
             "report_generation_id": report_generation_id,
@@ -112,7 +112,7 @@ def report_generate(
                 "report": report,
                 "report_type": report_type,
                 "createdBy": {"_id": ObjectId(user_id), "ref": "user"},
-                "createdOn": datetime.now(),
+                "createdOn": datetime.utcnow(),
                 "source": source,
                 "format": format,
                 "report_generation_id": report_generation_id,
@@ -168,7 +168,7 @@ def report_generate(
             )
 
     try:
-        start_time = datetime.now()
+        start_time = datetime.utcnow()
 
         emit_report_status(
             user_id, report_generation_id, "✈️ Initiaing report generation..."
@@ -176,7 +176,7 @@ def report_generate(
 
         report_id = create_and_insert_report_document()
         report, report_path = run_research()
-        end_time = datetime.now()
+        end_time = datetime.utcnow()
         report_generation_time = (end_time - start_time).total_seconds()
         report_audio = generate_report_audio(report, "")
 
@@ -432,7 +432,7 @@ def _set_reports_as_failed_in_db(user_id: Union[str, ObjectId]):
         m_db = MongoClient.connect()
 
         # Calculate the time threshold (1 hour ago from the current time)
-        time_threshold = datetime.now() - timedelta(hours=1)
+        time_threshold = datetime.utcnow() - timedelta(hours=1)
 
         # Filter stage to filter out the reports based on various criteria
         query = {

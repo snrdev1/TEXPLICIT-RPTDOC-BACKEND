@@ -30,13 +30,13 @@ def generate_highlights(text):
     """
     try:
         print("Using LLM for highlight generation!")
-        st_time = datetime.now()
+        st_time = datetime.utcnow()
         highlights = []
 
         for chunk in break_up_text(text):
             highlights.extend(_get_highlight(chunk))
 
-        ed_time = datetime.now()
+        ed_time = datetime.utcnow()
 
         if len(highlights) > 0:
             return {

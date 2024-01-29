@@ -4,7 +4,7 @@ from datetime import datetime
 def generate_search_queries_prompt(question: str, max_iterations: int = 3) -> str:
     return (
         f'Write {max_iterations} google search queries to search online that form an objective opinion from the following: "{question}"'
-        f'Use the current date if needed: {datetime.now().strftime("%B %d, %Y")}.\n'
+        f'Use the current date if needed: {datetime.utcnow().strftime("%B %d, %Y")}.\n'
         f'You must respond with a list of strings in the following format: ["query 1", "query 2", "query 3"].'
     )
 
@@ -53,7 +53,7 @@ def generate_report_prompt(
             relevant results that answer the query accurately. Place these citations at the end \
             of the sentence or paragraph that reference them.\n"
         f"Please do your best, this is very important to my career. "
-        f"Assume that the current date is {datetime.now().strftime('%B %d, %Y')}"
+        f"Assume that the current date is {datetime.utcnow().strftime('%B %d, %Y')}"
     )
 
 
@@ -201,7 +201,7 @@ def generate_subtopic_report_prompt(
         The H1 header will be used for the heading of the larger report later on.
         - Do NOT include any details, urls or references where data is unavailable.
         - Do NOT include any conclusion or summary section! - Do NOT include a conclusion or summary!
-        Assume that the current date is {datetime.now().strftime('%B %d, %Y')} if required."""
+        Assume that the current date is {datetime.utcnow().strftime('%B %d, %Y')} if required."""
     )
 
     return prompt
@@ -226,7 +226,7 @@ def generate_report_introduction(question: str, research_summary: str = "") -> s
         - The introduction should be succinct, well-structured, informative with markdown syntax.
         - As this introduction will be part of a larger report, do NOT include any other sections, which are generally present in a report.
         - The introduction should be preceded by an H1 heading with a suitable topic for the entire report.
-        Assume that the current date is {datetime.now().strftime('%B %d, %Y')} if required.
+        Assume that the current date is {datetime.utcnow().strftime('%B %d, %Y')} if required.
     """
 
     if research_summary:
@@ -262,7 +262,7 @@ def generate_report_conclusion(question: str, research_summary: str = "") -> str
         - Since the conclusion will be part of a larger report, do not generate any other sections that are generally present in reports.
         - Use a 'Conclusion' H2 header.
         - If there are urls present, they MUST be hyperlinked.
-        Assume that the current date is {datetime.now().strftime('%B %d, %Y')} if required.
+        Assume that the current date is {datetime.utcnow().strftime('%B %d, %Y')} if required.
         """
     if research_summary:
         prompt = f'"""{research_summary}""" Using the above information,' + prompt

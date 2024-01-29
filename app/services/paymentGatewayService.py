@@ -21,7 +21,7 @@ def add_payment_history(user_id: Union[ObjectId, str], payment_details: dict):
         m_db = MongoClient.connect()
         response = m_db[Config.MONGO_PAYMENT_HISTORY_COLLECTION].insert_one({
             "createdBy": {"_id": ObjectId(user_id), "ref": "user"},
-            "createdOn": datetime.now(),
+            "createdOn": datetime.utcnow(),
             "payment_details": payment_details
         })
             

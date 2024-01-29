@@ -403,7 +403,7 @@ class AgentExecutor:
         )
 
     async def run_agent(self) -> tuple:
-        start_time = datetime.datetime.now()
+        start_time = datetime.datetime.utcnow()
 
         print({"type": "logs", "output": f"Start time: {str(start_time)}\n\n"})
 
@@ -434,7 +434,7 @@ class AgentExecutor:
             )
             report_markdown, path, tables, urls = await self.basic_report()
 
-        end_time = datetime.datetime.now()
+        end_time = datetime.datetime.utcnow()
 
         print({"type": "path", "output": path})
         print({"type": "logs", "output": f"\nEnd time: {end_time}\n"})
