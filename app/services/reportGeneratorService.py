@@ -7,13 +7,14 @@ from typing import Tuple, Union
 from urllib.parse import unquote, urlparse, urlunparse
 
 from bson import ObjectId
-from app.utils.formatter import cursor_to_dict
+
 from app.config import Config
 from app.models.mongoClient import MongoClient
 from app.utils.audio import tts
 from app.utils.common import Common
 from app.utils.enumerator import Enumerator
 from app.utils.files_and_folders import get_report_directory
+from app.utils.formatter import cursor_to_dict
 from app.utils.llm_researcher.llm_researcher import research
 from app.utils.response import Response
 from app.utils.socket import emit_report_status
@@ -29,9 +30,22 @@ def report_generate(
     report_generation_id: Union[int, None],
     subtopics: list,
 ) -> None:
-    def create_and_insert_report_document() -> str:
+    
+    def transform_data(report_document, report_id: Union[ObjectId, str] = ""):
+        report_document["_id"] = (
+            str(report_id) if report_id else str(report_document["_id"])
+        )
+        report_document["createdBy"]["_id"] = str(report_document["createdBy"]["_id"])
+        report_document["createdOn"] = str(report_document["createdOn"])
+
+        return report_document
+
+    def emit_and_save_pending_report() -> str:
         document_data = {
-            "status": {"value": 0, "ref": "pending"},
+            "status": {
+                "value": int(Enumerator.ReportStep.Pending.value),
+                "ref": "pending",
+            },
             "task": task,
             "websearch": websearch,
             "subtopics": subtopics,
@@ -43,6 +57,16 @@ def report_generate(
             "report_generation_id": report_generation_id,
         }
         insert_response = _insert_document_into_db(document_data)
+
+        # Also emit the new document inserted as pending
+        Response.socket_reponse(
+            event=f"{user_id}_report_pending",
+            data=transform_data(document_data),
+            message="Report generation successully started!",
+            success=True,
+            status=200,
+        )
+
         return str(insert_response["inserted_id"])
 
     def run_research() -> Tuple[str, str]:
@@ -94,15 +118,6 @@ def report_generate(
         report_generation_time: float,
         status: int,
     ) -> None:
-        def transform_data(report_document):
-            report_document["_id"] = str(report_id)
-            report_document["createdBy"]["_id"] = str(
-                report_document["createdBy"]["_id"]
-            )
-            report_document["createdOn"] = str(report_document["createdOn"])
-
-            return report_document
-
         def prepare_report_document():
             document = {
                 "task": task,
@@ -139,7 +154,7 @@ def report_generate(
         # Update report document in db
         update_count = update_report_document_in_db(report_document)
         # Transform the report data to suitable format before emitting
-        report_document_for_emitting = transform_data(report_document)
+        report_document_for_emitting = transform_data(report_document, report_id)
 
         if not update_count:
             Response.socket_reponse(
@@ -168,14 +183,17 @@ def report_generate(
             )
 
     try:
+        # Log start time of report generation
         start_time = datetime.utcnow()
 
         emit_report_status(
             user_id, report_generation_id, "✈️ Initiaing report generation..."
         )
 
-        report_id = create_and_insert_report_document()
+        report_id = emit_and_save_pending_report()
         report, report_path = run_research()
+
+        # Log end time of report generation
         end_time = datetime.utcnow()
         report_generation_time = (end_time - start_time).total_seconds()
         report_audio = generate_report_audio(report, "")
@@ -390,10 +408,9 @@ def get_pending_reports_from_db(
     format: str = "",
     report_type: str = "",
 ):
-    
     # First clear the pending reports which have been pending for a certain amount of time
     _set_reports_as_failed_in_db(user_id)
-    
+
     m_db = MongoClient.connect()
 
     # Filter stage to filter out the reports based on various criteria
@@ -438,7 +455,7 @@ def _set_reports_as_failed_in_db(user_id: Union[str, ObjectId]):
         query = {
             "createdBy._id": ObjectId(user_id),
             "createdOn": {"$lt": time_threshold},
-            "status.value": int(Enumerator.ReportStep.Pending.value)
+            "status.value": int(Enumerator.ReportStep.Pending.value),
         }
 
         response = m_db[Config.MONGO_REPORTS_MASTER_COLLECTION].update_many(

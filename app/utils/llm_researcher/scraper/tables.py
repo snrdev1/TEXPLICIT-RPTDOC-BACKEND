@@ -40,47 +40,70 @@ class TableExtractor:
             os.makedirs(os.path.dirname(self.tables_path), exist_ok=True)
             write_to_file(self.tables_path, str(self.tables))
 
-    def extract_tables(self, url: str) -> list:       
-        def extract_table_title(table):
+    def extract_tables(self, url: str) -> list:
+        """
+        Extract tables from a given URL excluding those with hyperlinks in values.
+
+        Args:
+        - url (str): The URL to scrape tables from.
+
+        Returns:
+        - list: List of dictionaries, each representing a table with title and values.
+        """
+
+        def extract_table_title(table) -> str:
+            """
+            Extract and process the title of a table.
+
+            Args:
+            - table: BeautifulSoup object representing a table.
+
+            Returns:
+            - str: Processed title of the table.
+            """
             def process_table_title(title):
                 # Removing Table numberings like "Table 1:", "Table1-", etc.
-                cleaned_title = re.sub(r'^\s*Table\s*\d+\s*[:\-]\s*', '', title, flags=re.IGNORECASE)
+                cleaned_title = re.sub(r"^\s*Table\s*\d+\s*[:\-]\s*", "", title, flags=re.IGNORECASE)
                 return cleaned_title.strip()
 
-            # Extract table title
-            title = ""  # Default title if no specific title found
+            title = ""
+            # Check for a caption tag within the table
             table_caption = table.find("caption")
             if table_caption:
                 title = table_caption.get_text(strip=True)
             else:
+                # If no caption, look at previous tags like h1, h2, etc.
                 previous_tag = table.find_previous(["h1", "h2", "h3", "h4", "h5", "h6", "p"])
                 if previous_tag:
                     title = previous_tag.get_text(strip=True)
 
             return process_table_title(title)
 
-        def extract_table_data(table, title):
+        def extract_table_data(table) -> list:
+            """
+            Extract data from a table excluding rows with hyperlinks.
+
+            Args:
+            - table: BeautifulSoup object representing a table.
+
+            Returns:
+            - list: List of dictionaries, each representing a row in the table.
+            """
             table_data = []
             rows = table.find_all("tr")
 
-            # Initialize an empty dictionary to store header row data
             header_dict = {}
-
-            # Extract headers from thead if available
             thead = table.find("thead")
+
             if thead:
                 header_row = thead.find("tr")
                 if header_row:
+                    # Extract header names from thead
                     header_cells = header_row.find_all(["th", "td"])
-                    # Extracting header names
                     header_names = [cell.text.strip() for cell in header_cells if cell.text.strip()]
-                    if header_names:
-                        # Assuming the header row contains unique names for keys
-                        for index, name in enumerate(header_names or list(rows[0].values())):
-                            # Assigning each header name as a key with an empty list as its value
-                            header_dict[index] = name
+                    # Assuming the header row contains unique names for keys
+                    header_dict = {index: name for index, name in enumerate(header_names)}
 
-            # Append the dictionary containing header row data to the table_data list
             if header_dict:
                 table_data.append(header_dict)
 
@@ -89,47 +112,60 @@ class TableExtractor:
                 cells = row.find_all(["td", "th"])
                 valid_row = False
 
-                for idx in range(len(header_dict.keys())):
-                    try:
-                        cell = cells[idx]
-                        cell_text = cell.text.strip()
-                    except IndexError:
-                        cell_text = ""
+                for idx, cell in enumerate(cells):
+                    cell_text = cell.text.strip() if idx < len(header_dict) else ""
 
                     row_data[str(idx)] = cell_text
 
+                    # Check if cell_text is valid (not in exclusion list)
                     if cell_text and cell_text not in ["NA", "n/a", "na", "-", "", "NaN"]:
                         valid_row = True
 
                 if valid_row:
                     table_data.append(row_data)
 
-            return {"title": title, "values": table_data}
+            return {"title": extract_table_title(table), "values": table_data}
+
+        def has_hyperlinks(table_data) -> bool:
+            """
+            Check if any values in the table data contain hyperlinks.
+
+            Args:
+            - table_data (list): List of dictionaries representing table data.
+
+            Returns:
+            - bool: True if hyperlinks are found, False otherwise.
+            """
+            for row in table_data:
+                for value in row.values():
+                    # Check if the value contains an <a> tag
+                    if isinstance(value, str) and re.search(r'<a\s+(?:[^>]*?\s+)?href=[\'"]([^\'"]*)[\'"]', value):
+                        return True
+            return False
 
         try:
             response = requests.get(url)
+            response.raise_for_status()
             soup = BeautifulSoup(response.content, "html.parser")
-
             tables = soup.find_all("table")
             extracted_tables = []
 
             for table in tables:
-                # Check if the table contains any nested tables
                 nested_tables = table.find_all("table")
-                if not nested_tables:  # If no nested tables, extract the main table
-                    title = extract_table_title(table)
+                if not nested_tables:
+                    table_data = extract_table_data(table)
 
-                    # Extract table data
-                    table_data = extract_table_data(table, title)
-
-                    # Exclude tables with a single row and a single data value
-                    if table_data.get('values') and (len(table_data['values']) > 1 or (len(table_data['values']) == 1 and len(table_data['values'][0]) > 1)):
+                    # Exclude tables with hyperlinks
+                    if not has_hyperlinks(table_data):
                         extracted_tables.append(table_data)
 
             return extracted_tables
 
+        except requests.RequestException as e:
+            print(f"🚩 Request Exception when scraping tables : {e}")
+            return []
         except Exception as e:
-            print(f"🚩 Exception when scraping tables : {e}") 
+            print(f"🚩 Exception when scraping tables : {e}")
             return []
 
     def tables_to_html(self, list_of_tables: list, url: str) -> str:
@@ -198,7 +234,7 @@ class TableExtractor:
         except Exception as e:
             print(f"🚩 Exception in converting tables to html: {e}")
             return ""
-    
+
     def add_tables_to_doc(self, document: Document):
         if not len(self.tables):
             return
@@ -215,8 +251,11 @@ class TableExtractor:
                     document, table_data["title"], table_data["values"], url
                 )
 
-    def add_table_to_doc(self, document: Document, table_title: str, table_values: list, url: str):
+    def add_table_to_doc(
+        self, document: Document, table_title: str, table_values: list, url: str
+    ):
         try:
+
             def clean_text(text):
                 """Remove spaces, new lines, and tabs from the text."""
                 return text.replace("\n", " ").replace("\t", " ")
@@ -224,7 +263,7 @@ class TableExtractor:
             document.add_heading(table_title, level=2)
 
             table = document.add_table(rows=1, cols=len(table_values[0]))
-            
+
             table.style = "Table Grid"  # Applying table grid style to have borders
 
             # Set header rows as bold and add borders
