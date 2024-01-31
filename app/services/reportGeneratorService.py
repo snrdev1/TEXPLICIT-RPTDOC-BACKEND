@@ -40,7 +40,7 @@ def report_generate(
 
         return report_document
 
-    def emit_and_save_pending_report() -> str:
+    def emit_and_save_pending_report() -> str:        
         document_data = {
             "status": {
                 "value": int(Enumerator.ReportStep.Pending.value),
@@ -119,6 +119,7 @@ def report_generate(
         status: int,
     ) -> None:
         def prepare_report_document():
+            
             document = {
                 "task": task,
                 "websearch": websearch,
@@ -127,7 +128,6 @@ def report_generate(
                 "report": report,
                 "report_type": report_type,
                 "createdBy": {"_id": ObjectId(user_id), "ref": "user"},
-                "createdOn": datetime.utcnow(),
                 "source": source,
                 "format": format,
                 "report_generation_id": report_generation_id,

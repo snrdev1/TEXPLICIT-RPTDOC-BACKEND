@@ -101,6 +101,7 @@ class ResearchAgent:
 
             # Generate Agent for current task
             self.agent, self.role = await choose_agent(self.query, self.cfg)
+            emit_report_status(self.user_id, self.report_generation_id, self.agent)
             await stream_output("logs", self.agent, self.websocket)
 
             if self.source == "external":
@@ -250,6 +251,7 @@ class ResearchAgent:
             await self.extract_tables(new_search_urls)
 
             # Scrape Urls
+            emit_report_status(self.user_id, self.report_generation_id,  f"🤔Researching for relevant information...")
             await stream_output(
                 "logs", f"🤔Researching for relevant information...\n", self.websocket
             )
@@ -277,8 +279,8 @@ class ResearchAgent:
         return new_urls
 
     async def save_report(self, markdown_report):
-        print("💾 Saving report...")
         emit_report_status(self.user_id, self.report_generation_id, "💾 Saving report...")
+        await stream_output("logs", f"💾 Saving report...\n")
 
         updated_markdown_report = (
             add_source_urls(markdown_report, self.visited_urls)
@@ -293,7 +295,8 @@ class ResearchAgent:
         print("💾 Saved markdown!")
 
         if self.format == "word":
-            print("💾 Saving report document format...")
+            emit_report_status(self.user_id, self.report_generation_id, f"💾 Saving report document format...\n")
+            await stream_output("logs", f"💾 Saving report document format...\n")
             path = await write_md_to_word(
                 self.report_type,
                 self.dir_path,
@@ -301,7 +304,8 @@ class ResearchAgent:
                 self.tables_extractor,
             )
         else:
-            print("💾 Saving report pdf format...")
+            emit_report_status(self.user_id, self.report_generation_id, f"💾 Saving report pdf format...\n")
+            await stream_output("logs", f"💾 Saving report pdf format...\n")
             path = await write_md_to_pdf(
                 self.report_type,
                 self.dir_path,
