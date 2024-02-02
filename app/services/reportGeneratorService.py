@@ -1,5 +1,6 @@
 import asyncio
 import os
+import json
 import re
 import urllib
 from datetime import datetime, timedelta
@@ -33,10 +34,15 @@ def report_generate(
     
     def transform_data(report_document, report_id: Union[ObjectId, str] = ""):
         report_document["_id"] = (
-            str(report_id) if report_id else str(report_document["_id"])
+            str(report_id) if report_id else str(report_document.get("_id", ""))
         )
-        report_document["createdBy"]["_id"] = str(report_document["createdBy"]["_id"])
-        report_document["createdOn"] = str(report_document["createdOn"])
+
+        if "createdBy" in report_document and "_id" in report_document["createdBy"]:
+            report_document["createdBy"]["_id"] = str(report_document["createdBy"]["_id"])
+
+        if "createdOn" in report_document:
+            # Convert UTC time to string in the desired format
+            report_document["createdOn"] = report_document["createdOn"].strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
 
         return report_document
 
@@ -66,7 +72,7 @@ def report_generate(
             success=True,
             status=200,
         )
-
+        
         return str(insert_response["inserted_id"])
 
     def run_research() -> Tuple[str, str]:
