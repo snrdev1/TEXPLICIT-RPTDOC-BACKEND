@@ -4,28 +4,27 @@ import os
 import re
 import time
 from typing import Union
-from app.utils.common import Common
-from bson import ObjectId
-import mistune
-from app.config import Config as GlobalConfig
-from app.utils.files_and_folders import get_report_directory
-from app.utils.production import Production
 
-from ..master.functions import *
-from ..config import Config
-from ..context.compression import ContextCompressor
-from ..memory import Memory
-from ..utils.text import (
-    remove_roman_numerals,
-    save_markdown,
-    write_md_to_pdf,
-    write_md_to_word,
-)
-from ..scraper import *
-from . import prompts
+import mistune
+from bson import ObjectId
+
+from app.config import Config as GlobalConfig
+from app.utils.common import Common
+from app.utils.files_and_folders import get_report_directory
+from app.utils.formatter import get_formatted_report_type
+from app.utils.production import Production
 from app.utils.socket import emit_report_status
 from app.utils.timer import timeout_handler
-from app.utils.formatter import get_formatted_report_type
+
+from ..config import Config
+from ..context.compression import ContextCompressor
+from ..master.functions import *
+from ..memory import Memory
+from ..scraper import *
+from ..utils.text import (remove_roman_numerals, save_markdown,
+                          write_md_to_pdf, write_md_to_word)
+from . import prompts
+
 
 class ResearchAgent:
     def __init__(
@@ -112,7 +111,7 @@ class ResearchAgent:
             else:
                 emit_report_status(self.user_id, self.report_generation_id,  "📂 Retrieving context from documents...")
 
-                self.context = retrieve_context_from_documents(
+                self.context, self.visited_urls = retrieve_context_from_documents(
                     self.user_id, self.query, max_docs, score_threshold
                 )
 
@@ -282,11 +281,7 @@ class ResearchAgent:
         emit_report_status(self.user_id, self.report_generation_id, "💾 Saving report...")
         await stream_output("logs", f"💾 Saving report...\n")
 
-        updated_markdown_report = (
-            add_source_urls(markdown_report, self.visited_urls)
-            if self.report_type in ["detailed_report", "complete_report"]
-            else markdown_report
-        )
+        updated_markdown_report = add_source_urls(markdown_report, self.visited_urls, self.report_type, self.source)
 
         # Save report mardown for future use
         _ = await save_markdown(

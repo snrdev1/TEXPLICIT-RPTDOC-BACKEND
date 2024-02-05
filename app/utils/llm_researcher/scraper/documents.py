@@ -71,4 +71,4 @@ def retrieve_context_from_documents(user_id, query: str, max_docs: int = 15, sco
       # print(f"ℹ️ Context :  {context}")
       print(f"💎 Found {len(processed_docs)} relevant docs...")
 
-    return context
+    return context, filenames

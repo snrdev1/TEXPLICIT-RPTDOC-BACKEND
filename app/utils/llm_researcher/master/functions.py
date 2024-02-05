@@ -1,10 +1,10 @@
-import json
 import asyncio
-from ..utils.llm import *
-from ..scraper import Scraper
-from ..master.prompts import *
 import json
+
+from ..master.prompts import *
 from ..scraper import Scraper
+from ..utils.llm import *
+
 
 def get_retriever(retriever):
     """
@@ -19,33 +19,42 @@ def get_retriever(retriever):
     match retriever:
         case "tavily":
             from ..retrievers import TavilySearch
+
             retriever = TavilySearch
         case "tavily_news":
             from ..retrievers import TavilyNews
+
             retriever = TavilyNews
         case "google":
             from ..retrievers import GoogleSearch
+
             retriever = GoogleSearch
         case "searx":
             from ..retrievers import SearxSearch
+
             retriever = SearxSearch
         case "serpapi":
             from ..retrievers import SerpApiSearch
+
             retriever = SerpApiSearch
         case "googleSerp":
             from ..retrievers import SerperSearch
+
             retriever = SerperSearch
         case "duckduckgo":
             from ..retrievers import Duckduckgo
+
             retriever = Duckduckgo
         case "BingSearch":
             from ..retrievers import BingSearch
+
             retriever = BingSearch
 
         case _:
             raise Exception("Retriever not found.")
 
     return retriever
+
 
 async def get_sub_queries(query, agent_role_prompt, cfg):
     """
@@ -161,28 +170,41 @@ async def generate_report(
         return ""
 
 
-def add_source_urls(report_markdown: str, visited_urls: set):
+def add_source_urls(report_markdown: str, visited_urls: set, report_type: str, source: str):
     """
-    The function `add_source_urls` takes a markdown report and a set of visited URLs, and appends the
-    visited URLs as a list of sources at the end of the report.
+    The function takes a markdown report, a set of visited URLs, a report type, and a source, and
+    returns the report with added source URLs.
     
-    :param report_markdown: A string containing the markdown content of a report
+    :param report_markdown: A string containing the markdown content of the report
     :type report_markdown: str
-    :param visited_urls: A set containing the URLs that have been visited
+    :param visited_urls: The `visited_urls` parameter is a set that contains the URLs of web pages that
+    have already been visited. This is used to keep track of which URLs have already been processed to
+    avoid duplicate entries in the report
     :type visited_urls: set
-    :return: the updated report markdown with the added source URLs.
+    :param report_type: The type of report being generated. It could be "summary", "detailed", or any
+    other type you define
+    :type report_type: str
+    :param source: The `source` parameter is a string that represents the source of the report. It could
+    be the name of a website, a document, or any other source from which the report was generated
+    :type source: str
     """
     try:
-        print("ℹ️ Adding source urls to report!") 
+        if report_type not in ["detailed_report", "complete_report"]:
+            return report_markdown
+        
+        print("ℹ️ Adding source urls/documents to report!")
 
-        url_markdown = """\n\n\n## References\n\n"""
+        url_markdown = "\n\n\n## References\n\n"
 
-        for url in visited_urls:
-            url_markdown += f"- [{url}]({url})\n"
-            
+        if source == "external":
+            url_markdown += "".join(f"- [{url}]({url})\n" for url in visited_urls)
+        else:
+            url_markdown += "".join(f"- {url}\n" for url in visited_urls)
+
         updated_markdown_report = report_markdown + url_markdown
 
         return updated_markdown_report
 
     except Exception as e:
         return report_markdown
+
