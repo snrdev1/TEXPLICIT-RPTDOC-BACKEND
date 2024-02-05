@@ -95,3 +95,40 @@ KI_REJECTED_MAILBODY='''\
     {sender}
 </p>\
 '''
+
+# Demo Request
+DEMO_REQUEST_MAILSUBJECT="Demo Request"
+DEMO_REQUEST_MAILBODY='''\
+<p>
+    Dear Admin,
+    <br/><br/>
+    We have received a request for a demo for TexplicitRW.
+    
+    Details of customer : 
+    <br/>
+    
+    Name : {name}<br/>
+    Email : {email}<br/>
+    Phone : {phone}<br/>
+    Comments : {comments}<br/>
+</p>
+'''
+
+# Demo Request Confirmation
+DEMO_REQUEST_CONFIRMATION_MAILSUBJECT="TexplicitRW Demo Request Confirmation"
+DEMO_REQUEST_CONFIRMATION_MAILBODY='''\
+<p>
+Dear {name},
+<br/>
+Thank you for reaching out to request a demo for TexplicitRW. We acknowledge the receipt of your demo request, and we are excited about the opportunity to showcase the features and capabilities of TexplicitRW.
+<br/>
+<br/>
+Our team will promptly review the information and work towards scheduling a demo at your earliest convenience. We appreciate your interest in TexplicitRW and look forward to demonstrating how it can cater to your needs.
+<br/>
+<br/>
+Thank you for considering TexplicitRW for your requirements. We are eager to assist you further.
+<br/>
+<br/>
+Warm regards,
+The TexplicitRW Team
+'''

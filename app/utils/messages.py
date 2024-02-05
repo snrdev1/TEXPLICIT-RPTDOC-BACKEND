@@ -68,6 +68,7 @@ class Messages:
     ERROR_USER_ACTIVATED = "Failed to activated user!"
     ERROR_USER_DEACTIVATED = "Failed to deactivate user!",
     ERROR_RAZORPAY_PAYMENT_VERIFICATION = "Failed to verify payment!"
+    ERROR_DEMO_REQUEST = "Failed to submit demo request!"
 
     # INVALID_
     INVALID_LOGIN_INFO = "Invalid login information!"
@@ -168,6 +169,7 @@ class Messages:
     OK_REPORT_DELETED = "Report deleted successfully!"
     OK_RAZORPAY_ORDERID_GENERATED = "OrderID generated successfully!"
     OK_RAZORPAY_PAYMENT_VERIFIED = "Payment verified successfully!"
+    OK_DEMO_REQUEST = "Demo request submitted successfully!"
 
     # UNAUTHORIZED_
     UNAUTHORIZED = "Unauthorized!"

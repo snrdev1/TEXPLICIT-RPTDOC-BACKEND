@@ -45,6 +45,7 @@ from app.routes.user.summary import summary
 from app.routes.user.usermanagement import usermanagement
 from app.routes.user.users import users
 from app.routes.user.paymentgateway import payment_gateway
+from app.routes.user.demo import demo
 
 # Admin routes
 app.register_blueprint(admin_account)
@@ -62,3 +63,4 @@ app.register_blueprint(users)
 app.register_blueprint(menu)
 app.register_blueprint(report_generator)
 app.register_blueprint(payment_gateway)
+app.register_blueprint(demo)
