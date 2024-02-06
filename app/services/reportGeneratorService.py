@@ -134,6 +134,7 @@ def report_generate(
                 "report": report,
                 "report_type": report_type,
                 "createdBy": {"_id": ObjectId(user_id), "ref": "user"},
+                "createdOn": datetime.utcnow(),
                 "source": source,
                 "format": format,
                 "report_generation_id": report_generation_id,
