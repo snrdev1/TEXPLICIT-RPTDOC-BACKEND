@@ -7,7 +7,6 @@ from typing import List
 import PyPDF2
 from bson import ObjectId
 from docx import Document
-from google.cloud import storage
 from openpyxl import Workbook
 from pptx import Presentation
 from pptx.dml.color import RGBColor
@@ -16,15 +15,16 @@ from pptx.util import Inches, Pt
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.summarizers.text_rank import TextRankSummarizer
-from app.utils.formatter import cursor_to_dict
+
 from app.config import Config
 from app.models.mongoClient import MongoClient
-from app.services.summaryService import key_phrases
 from app.utils.common import Common
+from app.utils.formatter import cursor_to_dict
 from app.utils.llm.llm_highlights import generate_highlights
 from app.utils.pipelines import PipelineStages
 from app.utils.production import Production
 from app.utils.socket import socket_error, socket_info, socket_success
+from app.utils.vectorstore.document_loaders import DocumentLoader
 
 
 class MyDocumentsService:        
@@ -117,9 +117,10 @@ class MyDocumentsService:
         
         # Update document vectorstore for each successfully inserted id 
         for inserted_id in uploaded_documents_ids:
-            # Update vectorstore
-            from app.utils.vectorstore.base import VectorStore
-            VectorStore().update_document_vectorstore(user_id, inserted_id, path)
+            file = MyDocumentsService().get_file(inserted_id)
+            virtual_file_name = file["virtualFileName"]
+            filepath = MyDocumentsService().get_file_save_path(virtual_file_name, user_id, path)
+            DocumentLoader(user_id, inserted_id, file, filepath).load_document()
         
         # Calculating number of documents successfully uploaded
         if uploaded_documents_num > 0:
@@ -143,28 +144,14 @@ class MyDocumentsService:
         Returns:
           the file save path.
         """
-        # key = '_id'
-        # user_id = user[key]
         file = MyDocumentsService().get_file_by_virtual_name(filename)
         file_created_by = file["createdBy"]["_id"]
-        # print(
-        #     f"File {filename} is created by {file_created_by} and the user is {user}. Path is {path}!"
-        # )
-        # Check if file is created by user
         if str(user) == str(file_created_by):
             user_folder_path = os.path.join(Config.USER_FOLDER, str(user))
             new_path = path[1:]
-            # print("NEW PATH : " + new_path)
             if path != None:
                 user_folder_path = os.path.join(user_folder_path, new_path)
-                # print("USER FOLDER : ", user_folder_path)
-            # if(folder_name != None):
-            #     folder_save_path = os.path.join(user_folder_path, folder_name)
-            # else:
-            #     folder_save_path = user_folder_path
             file_save_path = os.path.join(user_folder_path, filename)
-            # print("File save path to return : ", file_save_path)
-        # If not then the file is shared
         else:
             replace_substring = "/" + str(file_created_by) + "/"
             user_folder_path = os.path.join(
@@ -172,9 +159,7 @@ class MyDocumentsService:
             )
             file_root = file["root"]
             file_root = file_root.replace(replace_substring, "")
-            # print("FILE ROOT: %s" % file_root)
             user_folder_path = os.path.join(user_folder_path, file_root)
-            # print("USER: %s" % user_folder_path)
             file_save_path = os.path.join(user_folder_path, filename)
         return file_save_path
 

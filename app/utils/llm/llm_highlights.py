@@ -8,7 +8,7 @@ from langchain.prompts import (
 )
 
 from app.utils.common import Common
-from app.utils.llm.base import break_up_text
+from app.utils.llm_utils import break_up_text
 from app.config import Config
 
 

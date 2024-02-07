@@ -58,29 +58,3 @@ def get_custom_document_prompt():
     )
 
     return prompt
-
-
-def get_custom_knowledgeitem_prompt():
-    """
-    The function `get_custom_knowledgeitem_prompt` returns a template for generating a prompt to answer
-    a question based on a given context and question.
-    
-    Returns:
-      The function `get_custom_knowledgeitem_prompt()` returns a prompt template for generating a custom
-    knowledge item prompt.
-    """
-    custom_prompt_template = """
-        Answer the question based on the given context.
-        If you do not know the answer, say "I am unable to provide an answer to this question". Do not try to make up an answer.
-                
-        The context and question are - 
-        Context: {context}
-        Question: {question}
-
-        Only return the helpful answer below and nothing else.
-        Helpful answer:
-    """
-    prompt = PromptTemplate(
-        template=custom_prompt_template, input_variables=["context", "question"]
-    )
-    return prompt

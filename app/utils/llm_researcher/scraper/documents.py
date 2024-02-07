@@ -1,6 +1,6 @@
 from app.services.myDocumentsService import MyDocumentsService
 from app.utils.vectorstore.base import VectorStore
-from app.utils.vectorstore.llm_utils import get_embeddings
+from app.utils.llm_utils import get_embeddings
 
 def retrieve_context_from_documents(user_id, query: str, max_docs: int = 15, score_threshold: float = 1.2):
     """

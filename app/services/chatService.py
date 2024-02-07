@@ -17,7 +17,10 @@ from app.utils.common import Common
 from app.utils.formatter import cursor_to_dict
 from app.utils.enumerator import Enumerator
 from app.utils.pipelines import PipelineStages
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from app.utils.vectorstore.base import VectorStore
+from app.utils.llm_utils import load_fast_llm
 
 openai.api_key = Config.OPENAI_API_KEY
 
@@ -25,56 +28,42 @@ openai.api_key = Config.OPENAI_API_KEY
 class ChatService:
     @staticmethod
     def get_chat_response(user_id, chat_type, question):
-        """
-        The function `get_chat_response` takes in a user ID, chat type, and question as input, and
-        generates a response based on the chat type and question.
-
-        Args:
-          user_id: The user ID is a unique identifier for each user in the chat system. It helps to keep
-        track of the user's chat history and personalize the responses if needed.
-          chat_type: The `chat_type` parameter is used to determine the type of chat being conducted. It
-        can have two possible values:
-          question: The `question` parameter is the user's input or query that needs to be processed and
-        responded to. It is the main input for the chatbot to generate a response.
-        """
         try:
             if chat_type == int(Enumerator.ChatType.External.value):
-                chat = ChatOpenAI(temperature=0)
-                template = """ Answer the users question as best as possible.\
-                        - If the answer has multiple paragraphs then format the answer as introduction, content, conclusion in html paragraph.\
-                        - Don't preface answer with 'Introduction' or 'Content' or 'Conclusion'.\
-                        - If the answer has a table then return an html table.\
-                        - If the answer has a numbered list or bullets then return an html list.\
-                        - If the answer has a piece of code logic then return the code logic as HTML code block.\
-                        - Use HTML Code formatting when necessary.
-                    """
-                system_message_prompt = SystemMessagePromptTemplate.from_template(
-                    template
-                )
-                human_template = "{question}"
-                human_message_prompt = HumanMessagePromptTemplate.from_template(
-                    human_template
-                )
-                chat_prompt = ChatPromptTemplate.from_messages(
-                    [system_message_prompt, human_message_prompt]
+            
+                chat = load_fast_llm()
+                prompt = ChatPromptTemplate.from_messages(
+                    [
+                        (
+                            "system",
+                            "You are a helpful assistant. Answer all questions to the best of your ability in MARKDOWN.",
+                        ),
+                        MessagesPlaceholder(variable_name="messages"),
+                    ]
                 )
 
-                # get a chat completion from the formatted messages
-                response = chat(
-                    chat_prompt.format_prompt(question=question).to_messages()
+                chain = prompt | chat
+                
+                response = chain.invoke(
+                    {
+                        "messages": [
+                            HumanMessage(
+                                content=question
+                            ),
+                        ],
+                    }
                 ).content
+                
+                print("Chat output : ", response)
 
             else:
-                response = ChatService._answer_question(
-                    user_id, question=question, max_tokens=300, chat_type=chat_type
-                )
+                response = VectorStore().get_document_chat_response(user_id, question)
 
             # If the chat type is of type document chat then extract both the response and the sources
             if response and (
                 chat_type
                 in [
-                    int(Enumerator.ChatType.Document.value),
-                    int(Enumerator.ChatType.KnowledgeItem.value),
+                    int(Enumerator.ChatType.Document.value)
                 ]
             ):
                 data = response["response"]
@@ -211,42 +200,6 @@ class ChatService:
         except Exception as e:
             Common.exception_details("chatService._customer_service_response", e)
             return ""
-
-    @staticmethod
-    def _answer_question(
-        user_id,
-        question="Am I allowed to publish model outputs to Twitter, without a human review?",
-        max_tokens=150,
-        chat_type=int(Enumerator.ChatType.Document.value),
-    ):
-        """
-        The function `_answer_question` returns a chat response based on the user's question, using
-        different chat types and a maximum number of tokens.
-
-        Args:
-          user_id: The user_id parameter is used to identify the user who is asking the question. It can
-        be any unique identifier for the user, such as their username or user ID in your system.
-          question: The "question" parameter is a string that represents the question or query that the
-        user wants to ask. It is an optional parameter with a default value of "Am I allowed to publish
-        model outputs to Twitter, without a human review?". Defaults to Am I allowed to publish model
-        outputs to Twitter, without a human review?
-          max_tokens: The `max_tokens` parameter specifies the maximum number of tokens allowed in the
-        generated response. Tokens are units of text, such as words or characters. Defaults to 150
-          chat_type: The `chat_type` parameter is used to specify the type of chat or conversation. It
-        can take one of the following values:
-
-        Returns:
-          The function `_answer_question` returns a response based on the given question and chat type.
-        The specific response depends on the logic implemented in the
-        `VectorStore().get_document_chat_response`, `VectorStore().get_knowledgeitem_chat_response`, and
-        `ChatService._customer_service_response` methods.
-        """
-        if chat_type == int(Enumerator.ChatType.Document.value):
-            return VectorStore().get_document_chat_response(user_id, question)
-        elif chat_type == int(Enumerator.ChatType.KnowledgeItem.value):
-            return VectorStore().get_knowledgeitem_chat_response(question)
-        else:
-            return ChatService._customer_service_response(question, max_tokens)
 
     def _update_user_chat_info(self, user_id, chat_dict):
         """

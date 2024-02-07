@@ -22,8 +22,6 @@ class Enumerator:
     class ChatType(enum.Enum):
         External = 0
         Document = 1
-        KnowledgeItem = 2
-        CustomerService = 3
 
     def convert_to_list(T):
         """
