@@ -1,16 +1,8 @@
 from langchain.prompts import PromptTemplate
 
 
-def get_custom_document_prompt():
-    """
-    The function `get_custom_document_prompt()` returns a template for generating a prompt for a
-    question and answer task using a given context and question.
-    
-    Returns:
-      The function `get_custom_document_prompt()` returns a prompt template that can be used to generate
-    a custom document prompt.
-    """
-    custom_prompt_template = """You are a helpful Artifial Intelligence Question and Answer bot who answer the question based on a "context".
+def get_document_prompt():
+    prompt_template = """You are a helpful Artifial Intelligence Question and Answer bot who answer the question based on a "context".
         Example -
             Example Number 1 :
             - Context : The Theory of Relativity was developed by Albert Einstein
@@ -45,6 +37,7 @@ def get_custom_document_prompt():
         - If the answer is not present in the "context" then just say that "I don't know", don't try to make up an answer.
         - If the "context" is empty do not answer, say "I don't know" even if you know anwser.
         - Only return the helpful answer below and nothing else.
+        - ALWAYS answer in MARKDOWN!
 
         The context and question are - 
         Context: {context}
@@ -54,7 +47,7 @@ def get_custom_document_prompt():
         """
 
     prompt = PromptTemplate(
-        template=custom_prompt_template, input_variables=["context", "question"]
+        template=prompt_template, input_variables=["context", "question"]
     )
 
     return prompt
