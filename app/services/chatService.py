@@ -1,26 +1,20 @@
-import os
 from datetime import datetime
 
 import openai
 from bson import ObjectId
-from langchain.chat_models import ChatOpenAI
-from langchain.prompts.chat import (
-    ChatPromptTemplate,
-    HumanMessagePromptTemplate,
-    SystemMessagePromptTemplate,
-)
+from langchain.prompts.chat import ChatPromptTemplate
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from app import socketio
 from app.config import Config
 from app.models.mongoClient import MongoClient
 from app.utils.common import Common
-from app.utils.formatter import cursor_to_dict
 from app.utils.enumerator import Enumerator
-from app.utils.pipelines import PipelineStages
-from langchain_core.messages import AIMessage, HumanMessage
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from app.utils.vectorstore.base import VectorStore
+from app.utils.formatter import cursor_to_dict
 from app.utils.llm_utils import load_fast_llm
+from app.utils.pipelines import PipelineStages
+from app.utils.vectorstore.base import VectorStore
 
 openai.api_key = Config.OPENAI_API_KEY
 
@@ -54,10 +48,10 @@ class ChatService:
                     }
                 ).content
                 
-                print("Chat output : ", response)
-
             else:
                 response = VectorStore().get_document_chat_response(user_id, question)
+
+            print("Chat response : ", response)
 
             # If the chat type is of type document chat then extract both the response and the sources
             if response and (
@@ -122,8 +116,6 @@ class ChatService:
             ]
 
             result = m_db[Config.MONGO_CHAT_MASTER_COLLECTION].aggregate(pipeline)
-
-            print("result : ", result)
 
             response = []
             if result:

@@ -1,23 +1,16 @@
 import os
 
-import bs4
-from langchain import hub
-from langchain.chains import RetrievalQA
-from langchain.retrievers import ContextualCompressionRetriever
-from langchain.retrievers.document_compressors import LLMChainExtractor
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import FAISS
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough, RunnableParallel
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_core.prompts import ChatPromptTemplate
 
 from app.config import Config
 from app.services.myDocumentsService import MyDocumentsService
 from app.utils.common import Common
 from app.utils.production import Production
+from app.utils.vectorstore.retrievers import Retriever
 
 from ..llm_utils import get_embeddings, load_fast_llm
-from .prompts import get_custom_document_prompt
+from .prompts import get_document_prompt
 
 
 class VectorStore:
@@ -45,51 +38,14 @@ class VectorStore:
             Common.exception_details("VectorStore.delete_vectorindex", e)
 
     def get_document_chat_response(self, user_id, query):
-        """
-        The function `get_document_chat_response` retrieves a response and sources based on a user query
-        using vector embeddings and a retrieval question-answering chain.
-
-        Args:
-          user_id: The user_id parameter is a unique identifier for the user who is making the chat
-        request. It is used to retrieve the user's specific document vector store and Faiss database.
-          query: The query parameter is the user's input or question that they want to ask the document
-        chatbot.
-
-        Returns:
-          a dictionary with two keys: "response" and "sources". The value associated with the "response"
-        key is the result of the chat query, and the value associated with the "sources" key is a list
-        of original file names related to the chat query.
-        """
         try:
             embeddings = get_embeddings()
             llm = load_fast_llm()
-
-            db = self.get_document_vectorstore(user_id, embeddings)
-            print("DB : ", db)
-            retriever = db.as_retriever()
-            # qa_prompt = get_custom_document_prompt()
-            prompt = hub.pull("rlm/rag-prompt")
-            # qa_chain = VectorStore._retrieval_qa_chain(llm, prompt, db)
-
-            # Post-processing
-            def format_docs(docs):
-                return "\n\n".join(doc.page_content for doc in docs)
-
-            # Chain
-            rag_chain = (
-                RunnableParallel({"context": retriever, "question": RunnablePassthrough()})
-                | prompt
-                | llm
-                | StrOutputParser()
-            )
-
-            # Question
-            response = rag_chain.invoke(query)
-
-            print("Response : ", response)
-
-            # response = qa_chain({"query": query})
-
+            prompt = get_document_prompt()
+            db = VectorStore().get_document_vectorstore(user_id, embeddings)
+            retriever = Retriever(user_id, query, llm, prompt, db)
+            response = retriever.vectorstore_retriever()
+            
             # result = response["result"] or None
             # sources = (
             #     list(
@@ -164,49 +120,6 @@ class VectorStore:
 
         except Exception as e:
             Common.exception_details("Vectorstore._get_document_vectorstore_path", e)
-            return None
-
-    @staticmethod
-    def _retrieval_qa_chain(llm, prompt, db):
-        """
-        The function `_retrieval_qa_chain` retrieves a question-answering chain using a language model,
-        a prompt, and a database.
-
-        Args:
-          llm: The "llm" parameter is an instance of a language model. It is used for language modeling
-        tasks such as generating text or predicting the next word in a sequence.
-          prompt: The `prompt` parameter is a string that represents the question or query for which you
-        want to retrieve an answer. It is used as input to the retrieval QA chain to find relevant
-        information from the database (`db`) and generate an answer.
-          db: The `db` parameter is an object that represents a database. It is used as a retriever in
-        the `ContextualCompressionRetriever` to perform search operations. The `as_retriever` method is
-        called on the `db` object to convert it into a retriever that can
-
-        Returns:
-          a retrieval QA chain object.
-        """
-        try:
-            # Including a compressor for more better results
-            compressor = LLMChainExtractor.from_llm(llm)
-
-            # Combining compressor and retriever into a single retriever
-            compression_retriever = ContextualCompressionRetriever(
-                base_compressor=compressor,
-                base_retriever=db.as_retriever(search_type="mmr"),
-            )
-
-            qa_chain = RetrievalQA.from_chain_type(
-                llm=llm,
-                chain_type="stuff",
-                retriever=compression_retriever,
-                return_source_documents=True,
-                chain_type_kwargs={"prompt": prompt},
-            )
-
-            return qa_chain
-
-        except Exception as e:
-            Common.exception_details("VectorStore._retrieval_qa_chain", e)
             return None
 
     @staticmethod

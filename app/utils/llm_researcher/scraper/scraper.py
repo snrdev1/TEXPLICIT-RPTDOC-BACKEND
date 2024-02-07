@@ -3,8 +3,8 @@ from functools import partial
 
 import requests
 from bs4 import BeautifulSoup
-from langchain.document_loaders import PyMuPDFLoader
-from langchain.retrievers import ArxivRetriever
+from langchain_community.document_loaders import PyMuPDFLoader
+from langchain_community.retrievers import ArxivRetriever
 from newspaper import Article
 
 

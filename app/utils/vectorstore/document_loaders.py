@@ -1,11 +1,11 @@
-from langchain.document_loaders import (
+from langchain_community.document_loaders import (
     GCSFileLoader,
     TextLoader,
+    UnstructuredExcelLoader,
     UnstructuredPDFLoader,
     UnstructuredPowerPointLoader,
     UnstructuredWordDocumentLoader,
 )
-from langchain_community.document_loaders import UnstructuredExcelLoader
 from langchain_community.document_loaders.csv_loader import UnstructuredCSVLoader
 
 from app.config import Config
@@ -39,10 +39,7 @@ class DocumentLoader:
             if splits:
                 from app.utils.vectorstore.base import VectorStore
 
-                VectorStore().add_vectorindex(
-                    splits=splits,
-                    user_id=self.user_id
-                )
+                VectorStore().add_vectorindex(splits=splits, user_id=self.user_id)
 
     def _load_document_from_gcs(self):
         try:
