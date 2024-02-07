@@ -1,5 +1,5 @@
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
+from langchain_core.runnables import RunnableParallel, RunnablePassthrough
 
 
 class Retriever:
@@ -11,7 +11,7 @@ class Retriever:
         self.prompt = prompt
         self.retriever = db.as_retriever()
 
-    def vectorstore_retriever(self):
+    def rag_chain_without_sources(self):
         rag_chain = (
             {"context": self.retriever, "question": RunnablePassthrough()}
             | self.prompt
@@ -20,3 +20,22 @@ class Retriever:
         )
 
         return rag_chain.invoke(self.query)
+
+    def rag_chain_with_sources(self):
+        rag_chain_from_docs = (
+            RunnablePassthrough.assign(
+                context=(lambda x: self._format_docs(x["context"]))
+            )
+            | self.prompt
+            | self.llm
+            | StrOutputParser()
+        )
+
+        rag_chain_with_source = RunnableParallel(
+            {"context": self.retriever, "question": RunnablePassthrough()}
+        ).assign(answer=rag_chain_from_docs)
+
+        return rag_chain_with_source.invoke(self.query)
+
+    def _format_docs(self, docs):
+        return "\n\n".join(doc.page_content for doc in docs)

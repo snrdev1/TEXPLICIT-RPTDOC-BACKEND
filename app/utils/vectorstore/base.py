@@ -44,7 +44,7 @@ class VectorStore:
             prompt = get_document_prompt()
             db = VectorStore().get_document_vectorstore(user_id, embeddings)
             retriever = Retriever(user_id, query, llm, prompt, db)
-            response = retriever.vectorstore_retriever()
+            response = retriever.rag_chain_with_sources()
             
             # result = response["result"] or None
             # sources = (
