@@ -11,15 +11,12 @@ from flask import Blueprint, request, send_file
 from app.auth.userauthorization import authorized
 from app.config import Config
 from app.services.reportGeneratorService import (
-    report_generate,
-    get_reports_from_db,
-    get_report_from_db,
-    get_report_download_filename,
-    get_report_audio_download_filename,
-    get_pending_reports_from_db
-)
+    delete_failed_reports_from_db, get_failed_reports_from_db,
+    get_pending_reports_from_db, get_report_audio_download_filename,
+    get_report_download_filename, get_report_from_db, get_reports_from_db,
+    report_generate)
 from app.utils.common import Common
-from app.utils.files_and_folders import get_report_path, get_report_audio_path
+from app.utils.files_and_folders import get_report_audio_path, get_report_path
 from app.utils.messages import Messages
 from app.utils.production import Production
 from app.utils.response import Response
@@ -215,4 +212,30 @@ def download_report_audio(logged_in_user, reportid):
 
     except Exception as e:
         Common.exception_details("mydocuments.py : download_report_audio", e)
+        return Response.server_error()
+
+@report_generator.route("/failed", methods=["GET"])
+@authorized
+def get_failed_reports(logged_in_user):
+    try:
+        user_id = str(logged_in_user["_id"])
+
+        report_document = get_failed_reports_from_db(user_id)
+        return Response.custom_response(report_document, "", True, 200)
+    
+    except Exception as e:
+        Common.exception_details("mydocuments.py : get_failed_reports", e)
+        return Response.server_error()
+    
+@report_generator.route("/failed/delete", methods=["DELETE"])
+@authorized
+def clear_failed_reports(logged_in_user):
+    try:
+        user_id = str(logged_in_user["_id"])
+
+        report_document = delete_failed_reports_from_db(user_id).get("delete_count", 0)
+        return Response.custom_response([{"delete_count": report_document}], Messages.OK_REPORTS_DELETED, True, 200)
+    
+    except Exception as e:
+        Common.exception_details("mydocuments.py : get_failed_reports", e)
         return Response.server_error()

@@ -10,6 +10,7 @@ from docx.shared import Pt
 
 from app.config import Config as GlobalConfig
 from app.utils.production import Production
+from app.utils.common import Common
 
 from ...document import add_hyperlink
 from ..utils.text import *
@@ -165,7 +166,7 @@ class TableExtractor:
             print(f"🚩 Request Exception when scraping tables : {e}")
             return []
         except Exception as e:
-            print(f"🚩 Exception when scraping tables : {e}")
+            Common.exception_details("TableExtractor.extract_tables", e)
             return []
 
     def tables_to_html(self, list_of_tables: list, url: str) -> str:
