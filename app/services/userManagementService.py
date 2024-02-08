@@ -14,8 +14,6 @@ from app.utils.production import Production
 from app.utils.formatter import cursor_to_dict
 
 class UserManagementService:
-    PRODUCTION_CHECK = Config.GCP_PROD_ENV
-
     def create_user(self, user_data):
         """
         The create_user function creates a new user in the database.

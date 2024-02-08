@@ -10,7 +10,6 @@ from langchain_community.document_loaders.csv_loader import UnstructuredCSVLoade
 
 from app.config import Config
 from app.utils.llm_utils import split_text
-from app.utils.production import Production
 
 
 class DocumentLoader:

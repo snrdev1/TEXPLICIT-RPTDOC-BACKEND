@@ -1,7 +1,6 @@
 import os
 
 from langchain_community.vectorstores import FAISS
-from langchain_core.prompts import ChatPromptTemplate
 
 from app.config import Config
 from app.services.myDocumentsService import MyDocumentsService

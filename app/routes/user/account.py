@@ -5,8 +5,9 @@ import os
 from datetime import datetime
 
 from flask import Blueprint, request, send_file
-from app.config import Config
+
 from app.auth.userauthorization import authorized
+from app.config import Config
 from app.services.userService import UserService
 from app.utils.common import Common
 from app.utils.enumerator import Enumerator
@@ -139,8 +140,7 @@ def account_login():
         return Response.custom_response(response_data,Messages.OK_LOGIN, True, 200)
         # =================================================================
         # Folder Creation
-        PRODUCTION_CHECK = Config.GCP_PROD_ENV
-        if PRODUCTION_CHECK:
+        if Config.GCP_PROD_ENV:
             bucket = Production.get_users_bucket()
 
             # Name of the folder you want to create

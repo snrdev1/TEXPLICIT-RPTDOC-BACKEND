@@ -488,7 +488,7 @@ class MyDocumentsService:
     def save_file(self, original_file, file_id, user, path):
         """
         The `save_file` function saves a file either to a cloud storage bucket or to a local folder,
-        depending on the value of the `PRODUCTION_CHECK` variable.
+        depending on the value of the `Config.GCP_PROD_ENV` variable.
 
         Args:
           original_file: The original file that needs to be saved.
