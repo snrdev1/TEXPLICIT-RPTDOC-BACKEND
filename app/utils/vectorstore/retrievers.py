@@ -35,7 +35,23 @@ class Retriever:
             {"context": self.retriever, "question": RunnablePassthrough()}
         ).assign(answer=rag_chain_from_docs)
 
-        return rag_chain_with_source.invoke(self.query)
+        response_dict = rag_chain_with_source.invoke(self.query)
+
+        response = response_dict.get("answer", "")
+
+        sources = (
+            list(
+                set(
+                    [
+                        document.metadata["source"]
+                        for document in response_dict["context"]
+                    ]
+                )
+            )
+            or []
+        )
+
+        return response, sources
 
     def _format_docs(self, docs):
         return "\n\n".join(doc.page_content for doc in docs)

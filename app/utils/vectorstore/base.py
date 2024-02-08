@@ -43,26 +43,9 @@ class VectorStore:
             prompt = get_document_prompt()
             db = VectorStore().get_document_vectorstore(user_id, embeddings)
             retriever = Retriever(user_id, query, llm, prompt, db)
-            response = retriever.rag_chain_with_sources()
-            
-            # result = response["result"] or None
-            # sources = (
-            #     list(
-            #         set(
-            #             [
-            #                 document.metadata["source"]
-            #                 for document in response["source_documents"]
-            #             ]
-            #         )
-            #     )
-            #     or []
-            # )
-            # print("Sources : ", sources)
+            response, sources = retriever.rag_chain_with_sources()
 
-            # files = MyDocumentsService().get_all_files_by_virtual_name(user_id, sources)
-            # original_sources = [file["originalFileName"] for file in files]
-
-            return {"response": response, "sources": []}
+            return {"response": response, "sources": sources}
 
         except Exception as e:
             Common.exception_details("VectorStore.get_document_chat_response", e)
