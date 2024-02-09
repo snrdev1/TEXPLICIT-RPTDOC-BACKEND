@@ -47,7 +47,6 @@ class Common:
             # Handle the specific exception that may be raised by check_password_hash function
             return False
 
-
     @staticmethod
     def get_field_value_or_default(dictionary: dict, field_name: str, default_value: Any) -> Any:
         """Returns the value of a field from a dict or the default value specified

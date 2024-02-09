@@ -1,6 +1,5 @@
 from app.config import Config
 from app.config import Config
-from app.utils.production import Production
 import os
 import hashlib
 import urllib
@@ -22,7 +21,6 @@ def get_user_folder(user_id: Union[str, ObjectId]):
     user_folder = os.path.join(Config.USER_FOLDER, str(user_id))
     
     return user_folder
-
   
 def get_report_folder(question, source:str ="external"):        
     """
@@ -59,7 +57,6 @@ def get_report_folder(question, source:str ="external"):
       directory_folder = os.path.join('report_outputs', hashed_folder)
     
     return directory_folder
-
         
 def get_report_directory(user_id: Union[str, ObjectId], question:str ="", source:str ="external", report_folder=None):
     """
@@ -88,7 +85,6 @@ def get_report_directory(user_id: Union[str, ObjectId], question:str ="", source
       directory_path = os.path.join(user_folder, directory_folder)
             
     return directory_path
-  
 
 def get_report_path(report_document):
     file_path = urllib.parse.unquote(report_document["report_path"])

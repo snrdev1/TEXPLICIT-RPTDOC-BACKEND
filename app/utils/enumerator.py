@@ -66,6 +66,7 @@ class Enumerator:
             return "Not Available"
 
     # MenuItems
+    # The class `MenuItems` is an enumeration that represents different menu items.
     class MenuItems(enum.Enum):
         Home = 0
         MyDocuments = 1
@@ -73,6 +74,7 @@ class Enumerator:
         UserManagement = 3
         Admin = 4
 
+    # The class "ReportStep" is an enumeration that represents different steps in a report.
     class ReportStep(enum.Enum):
         Pending = 0
         Success = 1

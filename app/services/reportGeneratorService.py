@@ -11,7 +11,7 @@ from bson import ObjectId
 
 from app.config import Config
 from app.models.mongoClient import MongoClient
-from app.utils.audio import tts
+from app.utils.audio import AudioGenerator
 from app.utils.common import Common
 from app.utils.enumerator import Enumerator
 from app.utils.files_and_folders import get_report_directory
@@ -109,7 +109,8 @@ def report_generate(
         )
 
         audio_text = extract_text_before_h2(report_text)
-        audio_path = tts(report_folder, audio_text)
+        audio_generator = AudioGenerator(report_folder, audio_text)
+        audio_path = audio_generator.tts()
         report_audio = {
             "exists": False,
             "text": audio_text,
