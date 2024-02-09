@@ -30,7 +30,7 @@ def save_demo_request(demo_data: dict):
 
         if insert_response.acknowledged:
             # If insert into db is acknowledged then also send an email to the one in charge
-            # send_email_to_admin(demo_data)
+            send_email_to_admin(demo_data)
 
             # And also to the user
             send_email_to_user(demo_data)
@@ -45,21 +45,18 @@ def save_demo_request(demo_data: dict):
 
 
 def send_email_to_admin(demo_data: dict):
-    try:
-        mailBody = Constants.DEMO_REQUEST_MAILBODY.format(
+    try:        
+        mailBody = Constants.NEW_DEMO_REQUEST_MAILBODY.format(
             name=demo_data.get("name"),
             email=demo_data.get("email"),
             phone=demo_data.get("phone", ""),
             comments=demo_data.get("comments", ""),
         )
 
-        receivers = []
-        receivers.append(
-            {"name": Config.MAIL_SENDER_NAME, "email": Config.MAIL_SENDER_EMAIL}
-        )
+        receivers = Config.ADMIN_EMAIL_ADDRESSES
 
         success = EmailHelper.send_mail(
-            Constants.DEMO_REQUEST_MAILSUBJECT, mailBody, receivers, None
+            Constants.NEW_DEMO_REQUEST_MAILSUBJECT, mailBody, receivers, None
         )
 
     except Exception as e:

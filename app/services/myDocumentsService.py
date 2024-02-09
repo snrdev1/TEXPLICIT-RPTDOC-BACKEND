@@ -995,51 +995,6 @@ class MyDocumentsService:
 
         return cursor_to_dict(documents)
 
-    # def get_all_folders(self, user_id):
-    #     folders = []
-    #     sub_folders = []
-    #     root_folder_path = os.path.join(Config.USER_FOLDER"], user_id)
-
-    #     # listing all the folders in the user's directory
-    #     # for root, dirs, files in os.walk(root_folder_path):
-    #     #     for dir in dirs:
-    #     #         # folders.append(dir)
-    #     #         sub_dir_path = os.path.join(root_folder_path, dir)
-    #     #         sub_folders = self.get_sub_folders(sub_dir_path)
-    #     #         folders.append({"folder" : dir, "sub_folders": sub_folders})
-
-    #     for item in os.listdir(root_folder_path):
-    #         item_path = os.path.join(root_folder_path, item)
-    #         if os.path.isdir(item_path):
-    #             folder_name = os.path.basename(item_path)
-    #             sub_folders = self.get_sub_folders(item_path)
-    #             folders.append({"folder": folder_name, "sub_folders": sub_folders})
-    #             # subfolders.append(subfolder_name)
-    #     # for item in os.listdir(root_folder_path):
-    #     #     print("Item : ", item)
-    #     #     item_path = os.path.join(root_folder_path, item)
-    #     #     print(item_path)
-    #     #     if os.path.isdir(item_path):
-    #     #         print("Sub folders : " , sub_folders)
-    #     #         sub_folders.append(item_path)
-
-    #     return folders
-
-    # def get_sub_folders(self, root_path):
-    #     folders = []
-    #     # for root, dirs, files in os.walk(root_path):
-    #     #     for dir in dirs:
-    #     #         folders.append(dir)
-    #     for item in os.listdir(root_path):
-    #         item_path = os.path.join(root_path, item)
-    #         if os.path.isdir(item_path):
-    #             folder_name = os.path.basename(item_path)
-    #             sub_folders = self.get_sub_folders(item_path)
-    #             folders.append({"folder": folder_name, "sub_folders": sub_folders})
-    #     return folders
-
-    # =================================================================
-    # SUMMARY GENERATION CODE
     def my_documents_summarize_gpt(self, document_ids: list, sentence_count: int):
         """
         Summarizes the descriptions of user-uploaded documents one-by-one using Text Rank method from sumy module

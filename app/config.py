@@ -115,3 +115,9 @@ class Config(object):
     razorpay_client = razorpay.Client(
         auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET)
     )
+    
+    # Admin email details
+    ADMIN_EMAIL_ADDRESSES = [
+        {"name": "Prabir Aditya", "email": "prabir@springandriver.com"},
+        {"name": "Prateep Kumar Guha", "email": "prateep.guha@springandriver.com"}
+    ]
