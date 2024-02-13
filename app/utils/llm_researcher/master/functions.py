@@ -1,6 +1,8 @@
 import asyncio
 import json
 
+import markdown
+
 from ..master.prompts import *
 from ..scraper import Scraper
 from ..utils.llm import *
@@ -170,11 +172,13 @@ async def generate_report(
         return ""
 
 
-def add_source_urls(report_markdown: str, visited_urls: set, report_type: str, source: str):
+def add_source_urls(
+    report_markdown: str, visited_urls: set, report_type: str, source: str
+):
     """
     The function takes a markdown report, a set of visited URLs, a report type, and a source, and
     returns the report with added source URLs.
-    
+
     :param report_markdown: A string containing the markdown content of the report
     :type report_markdown: str
     :param visited_urls: The `visited_urls` parameter is a set that contains the URLs of web pages that
@@ -191,7 +195,7 @@ def add_source_urls(report_markdown: str, visited_urls: set, report_type: str, s
     try:
         if report_type not in ["detailed_report", "complete_report"]:
             return report_markdown
-        
+
         print("ℹ️ Adding source urls/documents to report!")
 
         url_markdown = "\n\n\n## References\n\n"
@@ -208,3 +212,66 @@ def add_source_urls(report_markdown: str, visited_urls: set, report_type: str, s
     except Exception as e:
         return report_markdown
 
+
+def table_of_contents(markdown_text: str):
+    try:
+        # Function to extract headers from markdown text
+        def extract_headers(markdown_text: str):
+            headers = []
+            parsed_md = markdown.markdown(markdown_text)  # Parse markdown text
+            lines = parsed_md.split("\n")  # Split text into lines
+
+            stack = []  # Initialize stack to keep track of nested headers
+            for line in lines:
+                if line.startswith(
+                    "<h"
+                ):  # Check if the line starts with an HTML header tag
+                    level = int(line[2])  # Extract header level
+                    header_text = line[
+                        line.index(">") + 1 : line.rindex("<")
+                    ]  # Extract header text
+
+                    # Pop headers from the stack with higher or equal level
+                    while stack and stack[-1]["level"] >= level:
+                        stack.pop()
+
+                    header = {
+                        "level": level,
+                        "text": header_text,
+                    }  # Create header dictionary
+                    if stack:
+                        stack[-1].setdefault("children", []).append(
+                            header
+                        )  # Append as child if parent exists
+                    else:
+                        headers.append(
+                            header
+                        )  # Append as top-level header if no parent exists
+
+                    stack.append(header)  # Push header onto the stack
+
+            return headers  # Return the list of headers
+
+        # Function to generate table of contents recursively
+        def generate_table_of_contents(headers, indent_level=0):
+            toc = ""  # Initialize table of contents string
+            for header in headers:
+                toc += (
+                    " " * (indent_level * 4) + "- " + header["text"] + "\n"
+                )  # Add header text with indentation
+                if "children" in header:  # If header has children
+                    toc += generate_table_of_contents(
+                        header["children"], indent_level + 1
+                    )  # Generate TOC for children
+            return toc  # Return the generated table of contents
+
+        headers = extract_headers(markdown_text)  # Extract headers from markdown text
+        toc = "## Table of Contents\n\n" + generate_table_of_contents(
+            headers
+        )  # Generate table of contents
+
+        return toc  # Return the generated table of contents
+
+    except Exception as e:
+        print("table_of_contents Exception : ", e)  # Print exception if any
+        return markdown_text  # Return original markdown text if an exception occurs
