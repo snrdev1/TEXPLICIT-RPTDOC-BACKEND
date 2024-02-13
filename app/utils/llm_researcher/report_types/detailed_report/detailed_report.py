@@ -4,11 +4,12 @@ import asyncio
 from typing import Union
 
 from bson import ObjectId
-from ...master.run import AgentExecutor
+
 from app.utils.socket import emit_report_status
 
 from ...master.functions import table_of_contents
 from ...master.research_agent import ResearchAgent
+from ...master.run import AgentExecutor
 from ...utils.llm import llm_process_subtopics
 
 
@@ -195,7 +196,7 @@ class DetailedReport:
             print(f"⚠️ Failed to gather data from research on subtopic : {self.task}")
             return "", "", []
 
-        main_task_assistant.visited_urls.update(subtopic_assistant.visited_urls)
+        self.main_task_assistant.visited_urls.update(subtopic_assistant.visited_urls)
 
         return report_markdown, "", subtopic_assistant.tables_extractor.tables
 
