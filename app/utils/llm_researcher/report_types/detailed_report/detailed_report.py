@@ -7,7 +7,7 @@ from bson import ObjectId
 
 from app.utils.socket import emit_report_status
 
-from ...master.functions import table_of_contents
+from ...master.functions import table_of_contents, extract_headers
 from ...master.research_agent import ResearchAgent
 from ...master.run import AgentExecutor
 from ...utils.llm import llm_process_subtopics
@@ -38,6 +38,7 @@ class DetailedReport:
         self.subtopics = subtopics
         self.check_existing_report = check_existing_report
         self.main_task_assistant = self._create_main_task_assistant()
+        self.existing_headers = []
 
     async def generate_report(self) -> tuple:
         detailed_report_path = await self._check_existing_report()
@@ -188,9 +189,15 @@ class DetailedReport:
         )
 
         report_markdown = await subtopic_assistant.conduct_research(
-            max_docs=10, score_threshold=1
+            max_docs=10, score_threshold=1, existing_headers=self.existing_headers
         )
         report_markdown = report_markdown.strip()
+        
+        # After a subtopic report has been generated then append the headers of the report to existing headers
+        self.existing_headers.append({
+            "subtopic task": current_subtopic_task,
+            "headers": extract_headers(report_markdown)
+        })
 
         if len(report_markdown) == 0:
             print(f"⚠️ Failed to gather data from research on subtopic : {self.task}")

@@ -141,13 +141,14 @@ async def generate_report(
     cfg,
     all_subtopics: list = [],
     main_topic: str = "",
+    existing_headers: list = []
 ):
     try:
         generate_prompt = get_report_by_type(report_type)
 
         if report_type == "subtopic_report":
-            all_subtopic_tasks = [subtopic.get("task") for subtopic in all_subtopics]
-            content = f"{generate_prompt(query, all_subtopic_tasks, main_topic, context, cfg.report_format, cfg.total_words)}"
+            # all_subtopic_tasks = [subtopic.get("task") for subtopic in all_subtopics]
+            content = f"{generate_prompt(query, existing_headers, main_topic, context, cfg.report_format, cfg.total_words)}"
         else:
             content = (
                 f"{generate_prompt(query, context, cfg.report_format, cfg.total_words)}"
@@ -212,46 +213,45 @@ def add_source_urls(
     except Exception as e:
         return report_markdown
 
+# Function to extract headers from markdown text
+def extract_headers(markdown_text: str):
+    headers = []
+    parsed_md = markdown.markdown(markdown_text)  # Parse markdown text
+    lines = parsed_md.split("\n")  # Split text into lines
+
+    stack = []  # Initialize stack to keep track of nested headers
+    for line in lines:
+        if line.startswith(
+            "<h"
+        ):  # Check if the line starts with an HTML header tag
+            level = int(line[2])  # Extract header level
+            header_text = line[
+                line.index(">") + 1 : line.rindex("<")
+            ]  # Extract header text
+
+            # Pop headers from the stack with higher or equal level
+            while stack and stack[-1]["level"] >= level:
+                stack.pop()
+
+            header = {
+                "level": level,
+                "text": header_text,
+            }  # Create header dictionary
+            if stack:
+                stack[-1].setdefault("children", []).append(
+                    header
+                )  # Append as child if parent exists
+            else:
+                headers.append(
+                    header
+                )  # Append as top-level header if no parent exists
+
+            stack.append(header)  # Push header onto the stack
+
+    return headers  # Return the list of headers
 
 def table_of_contents(markdown_text: str):
     try:
-        # Function to extract headers from markdown text
-        def extract_headers(markdown_text: str):
-            headers = []
-            parsed_md = markdown.markdown(markdown_text)  # Parse markdown text
-            lines = parsed_md.split("\n")  # Split text into lines
-
-            stack = []  # Initialize stack to keep track of nested headers
-            for line in lines:
-                if line.startswith(
-                    "<h"
-                ):  # Check if the line starts with an HTML header tag
-                    level = int(line[2])  # Extract header level
-                    header_text = line[
-                        line.index(">") + 1 : line.rindex("<")
-                    ]  # Extract header text
-
-                    # Pop headers from the stack with higher or equal level
-                    while stack and stack[-1]["level"] >= level:
-                        stack.pop()
-
-                    header = {
-                        "level": level,
-                        "text": header_text,
-                    }  # Create header dictionary
-                    if stack:
-                        stack[-1].setdefault("children", []).append(
-                            header
-                        )  # Append as child if parent exists
-                    else:
-                        headers.append(
-                            header
-                        )  # Append as top-level header if no parent exists
-
-                    stack.append(header)  # Push header onto the stack
-
-            return headers  # Return the list of headers
-
         # Function to generate table of contents recursively
         def generate_table_of_contents(headers, indent_level=0):
             toc = ""  # Initialize table of contents string

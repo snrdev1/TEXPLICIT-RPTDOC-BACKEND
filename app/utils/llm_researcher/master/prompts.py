@@ -23,7 +23,7 @@ def generate_report_prompt(
     source_url = ""
     if source == "external":
         current_source = "urls"
-        
+
         source_hyperlinks = """
         Additionally, you MUST include hyperlinks to the relevant URLs wherever they are referenced in the report : 
         
@@ -32,7 +32,7 @@ def generate_report_prompt(
             
             This is a sample text. ([url website](url))
         """
-        
+
         source_url = "(Each url in hyperlinked form : [url website](url))"
 
     return (
@@ -169,7 +169,7 @@ def generate_summary_prompt(query, data):
 
 def generate_subtopic_report_prompt(
     current_subtopic,
-    subtopics,
+    existing_headers,
     main_topic,
     context,
     report_format="apa",
@@ -186,7 +186,7 @@ def generate_subtopic_report_prompt(
             
             This is a sample text. ([url website](url))
         """
-    
+
     prompt = (
         f'"""{context}""" Using the above latest information,'
         f"""construct a detailed report on the subtopic: {current_subtopic} under the main topic: {main_topic}.
@@ -196,7 +196,9 @@ def generate_subtopic_report_prompt(
         without any introduction, conclusion, or reference section.
         {source_hyperlinks}
         - All related numerical values (if any) should be bold.
-        - Also avoid including any details from these other subtopics: {[subtopic for subtopic in subtopics[1:] if subtopic!=current_subtopic]}
+        - This is a list of exisitng subtopic reports and its headers : 
+        {existing_headers}.\n 
+        - You MUST AVOID using any of the above headers or any related details, to avoid duplicates!
         - Ensure that you use smaller Markdown headers (e.g., H2 or H3) to structure your content and avoid using the largest Markdown header (H1).
         The H1 header will be used for the heading of the larger report later on.
         - Do NOT include any details, urls or references where data is unavailable.
