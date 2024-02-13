@@ -204,8 +204,8 @@ class DetailedReport:
         introduction, conclusion = (
             await self.main_task_assistant.write_introduction_conclusion()
         )
-        detailed_report = introduction + "\n\n" + report_body + "\n\n" + conclusion
-        detailed_report = table_of_contents(detailed_report) + detailed_report
+        detailed_report = report_body + "\n\n" + conclusion
+        detailed_report = introduction + "\n\n" + table_of_contents(detailed_report) + detailed_report
         detailed_report_path = await self.main_task_assistant.save_report(
             detailed_report
         )
