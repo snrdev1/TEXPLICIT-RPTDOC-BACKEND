@@ -32,8 +32,8 @@ class Config(object):
     MAIL_SENDER_NAME = os.getenv("MAIL_SENDER_NAME", "Texplicit2 Admin")
 
     # Constant variable for environment
-    GCP_PROD_ENV = eval(os.getenv("GCP_PROD_ENV", False))
-    TESTING = eval(os.getenv("TESTING", False))
+    GCP_PROD_ENV = eval(os.getenv("GCP_PROD_ENV", "False"))
+    TESTING = eval(os.getenv("TESTING", "False"))
     
     # LLM models used
     FAST_LLM_MODEL = os.getenv("FAST_LLM_MODEL", "gpt-3.5-turbo-1106")
