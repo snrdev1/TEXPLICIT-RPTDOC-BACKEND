@@ -98,6 +98,7 @@ class Config(object):
     GCP_BUCKET_USERS = "texplicit-rw-users"
     
     GCP_PROJECT = os.getenv("GCP_PROJECT", 'stoked-forest-413805')  # Replace with your GCP project ID
+    GCP_TEST_FILE = os.getenv("GCP_TEST_FILE")
     # GCP_REPORT_QUEUE = os.getenv("GCP_REPORT_QUEUE", 'texplicit02-reports')  # Replace with your queue name
     # GCP_REPORT_QUEUE_LOCATION = os.getenv("GCP_REPORT_QUEUE_LOCATION", 'asia-south1')  # Replace with your queue location
     # GCP_REPORT_CLOUD_RUN_URL = os.getenv("GCP_REPORT_CLOUD_RUN_URL", 'https://texplicit.com/api/report/execute_report') # GCP Cloud Run url for report execution from google cloud task

@@ -1,5 +1,3 @@
-import io
-
 from google.cloud import storage
 
 from app.config import Config
@@ -26,7 +24,7 @@ class Production:
 
             if Config.TESTING:
                 # Credentials for GCP Connection
-                credential_path = "E:\Texplicit\stoked-forest-413805-36093e911d10.json"
+                credential_path = Config.GCP_TEST_FILE
 
                 # Create a client object using the JSON credential file (For local testing purposes)
                 client = storage.Client.from_service_account_json(credential_path)
