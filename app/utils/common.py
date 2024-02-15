@@ -47,7 +47,6 @@ class Common:
             # Handle the specific exception that may be raised by check_password_hash function
             return False
 
-
     @staticmethod
     def get_field_value_or_default(dictionary: dict, field_name: str, default_value: Any) -> Any:
         """Returns the value of a field from a dict or the default value specified
@@ -158,11 +157,11 @@ class Common:
         """
         # code to handle the exception
         print("=====================================================================================")
-        print("⚠️ Exception in function: ", function_name)
+        print("🚩 Exception in function: ", function_name)
         print("-------------------------------------------------------------------------------------")
-        print("Exception details:", exception)
+        print("⚠️ Exception details:", exception)
         print("-------------------------------------------------------------------------------------")
-        print("Traceback information:")
+        print("🔽 Traceback information: ")
         traceback.print_exc()
         print("=====================================================================================")
 

@@ -14,8 +14,6 @@ from app.utils.production import Production
 from app.utils.formatter import cursor_to_dict
 
 class UserManagementService:
-    PRODUCTION_CHECK = Config.GCP_PROD_ENV
-
     def create_user(self, user_data):
         """
         The create_user function creates a new user in the database.
@@ -36,7 +34,7 @@ class UserManagementService:
 
         if response:
             id = str(response.inserted_id)
-            if self.PRODUCTION_CHECK:
+            if Config.GCP_PROD_ENV:
                 # Name of the folder you want to create
                 folder_name = id + "/"
 
@@ -218,7 +216,7 @@ class UserManagementService:
         # 2. Remove user from DB
 
         # Check if GCP
-        if self.PRODUCTION_CHECK:
+        if Config.GCP_PROD_ENV:
             bucket = Production.get_users_bucket()
 
             # Find folder whose name matches with user id

@@ -20,7 +20,7 @@ chat = Blueprint("chat", __name__, url_prefix="/chat")
 @authorized
 def get_chat(logged_in_user):
     """
-    The get_chat function is used to get the chat response from the user.
+        The get_chat function is used to get the chat response from the user.
         The function takes in a logged_in_user as an argument and returns a custom response object.
 
 
@@ -32,7 +32,6 @@ def get_chat(logged_in_user):
             chatType: The type of chat the user wants:
                        0: External
                        1: Documents
-                       2: Knowledge Items
 
     """
     user_id = logged_in_user["_id"]

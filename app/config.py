@@ -22,11 +22,6 @@ class Config(object):
     SERPAPI_KEY = os.getenv("SERPAPI_KEY", "")
     SERPAPI_NO_CACHE = False
 
-    # URL prefix for knowledge item details
-    APPLICATION_KNOWLEDGEITEM_DETAIL_URL = os.getenv(
-        "APPLICATION_KNOWLEDGEITEM_DETAIL_URL", "http://localhost:4200/ki/"
-    )
-
     # OPENAI
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
     openai.api_key = OPENAI_API_KEY
@@ -99,9 +94,9 @@ class Config(object):
     SUMMARY_DEFAULT_NUM_SENTENCES = 10
 
     # GCP Bucket Names
-    GCP_BUCKET_USERS = "texplicit-02-users"
+    GCP_BUCKET_USERS = "texplicit-rw-users"
     
-    GCP_PROJECT = os.getenv("GCP_PROJECT", 'texplicit-02')  # Replace with your GCP project ID
+    GCP_PROJECT = os.getenv("GCP_PROJECT", 'stoked-forest-413805')  # Replace with your GCP project ID
     GCP_REPORT_QUEUE = os.getenv("GCP_REPORT_QUEUE", 'texplicit02-reports')  # Replace with your queue name
     GCP_REPORT_QUEUE_LOCATION = os.getenv("GCP_REPORT_QUEUE_LOCATION", 'asia-south1')  # Replace with your queue location
     GCP_REPORT_CLOUD_RUN_URL = os.getenv("GCP_REPORT_CLOUD_RUN_URL", 'https://texplicit.com/api/report/execute_report') # GCP Cloud Run url for report execution from google cloud task
@@ -115,3 +110,9 @@ class Config(object):
     razorpay_client = razorpay.Client(
         auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET)
     )
+    
+    # Admin email details
+    ADMIN_EMAIL_ADDRESSES = [
+        {"name": "Prabir Aditya", "email": "prabir@springandriver.com"},
+        {"name": "Prateep Kumar Guha", "email": "prateep.guha@springandriver.com"}
+    ]

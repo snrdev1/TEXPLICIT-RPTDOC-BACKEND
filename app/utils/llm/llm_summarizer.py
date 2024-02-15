@@ -1,6 +1,6 @@
 import openai
 
-from app.utils.llm.base import break_up_text
+from app.utils.llm_utils import break_up_text
 
 
 def summarize_text(text, max_tokens=450):

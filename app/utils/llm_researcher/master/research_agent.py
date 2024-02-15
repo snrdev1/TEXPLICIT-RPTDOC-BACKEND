@@ -92,7 +92,7 @@ class ResearchAgent:
         # Stores the report generation id 
         self.report_generation_id = report_generation_id
 
-    async def conduct_research(self, max_docs: int = 15, score_threshold: float = 1.2):
+    async def conduct_research(self, max_docs: int = 15, score_threshold: float = 1.2, existing_headers: list = []):
         try:
             report = ""
             print(f"🔎 Running research for '{self.query}'...")
@@ -136,8 +136,8 @@ class ResearchAgent:
                         report_type=self.report_type,
                         websocket=self.websocket,
                         cfg=self.cfg,
-                        all_subtopics=self.subtopics,
                         main_topic=self.parent_query,
+                        existing_headers=existing_headers
                     )
                 else:
                     report = await generate_report(

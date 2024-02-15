@@ -247,8 +247,7 @@ class NewsService:
         Returns:
           None.
         """
-        PRODUCTION_CHECK = Config.GCP_PROD_ENV
-        if PRODUCTION_CHECK:
+        if Config.GCP_PROD_ENV:
             bucket = Production.get_users_bucket()
             
         try:
@@ -339,7 +338,7 @@ class NewsService:
             # print("File save path : ", file_save_path)
             document.save(file_save_path)
             print("Document saved to assets successfully!")
-            if PRODUCTION_CHECK:
+            if Config.GCP_PROD_ENV:
                 if folder == "/":
                     destination_blob_name = str(user_id) + "/" + virtual_filename
                 else:

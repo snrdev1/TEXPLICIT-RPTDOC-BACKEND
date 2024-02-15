@@ -42,7 +42,3 @@ class Production:
     @staticmethod
     def get_users_bucket():
       return Production.get_bucket(Config.GCP_BUCKET_USERS)
-    
-    @staticmethod
-    def get_knowledgeitems_bucket():
-      return Production.get_bucket(Config.GCP_BUCKET_KNOWLEDGEITEMS)

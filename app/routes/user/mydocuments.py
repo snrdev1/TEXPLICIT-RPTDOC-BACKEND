@@ -533,15 +533,14 @@ def get_my_documents_highlights_summary_excel(logged_in_user):
 @authorized
 def my_documents_download(logged_in_user, virtual_document_name):
     try:
-        PRODUCTION_CHECK = Config.GCP_PROD_ENV
-        if PRODUCTION_CHECK:
+        if Config.GCP_PROD_ENV:
             bucket = Production.get_users_bucket()
 
         # The document name provided in the url is the virtual file name
         file = MyDocumentsService().get_file_by_virtual_name(virtual_document_name)
         file_created_by = str(file["createdBy"]["_id"])
         file_root = str(file["root"])
-        if PRODUCTION_CHECK:
+        if Config.GCP_PROD_ENV:
             # if params == "":
             if file_root == f"/{file_created_by}/":
                 path = file_root[1:]

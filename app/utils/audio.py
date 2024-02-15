@@ -1,83 +1,105 @@
+import os
+
+import soundfile as sf
+from google.cloud import storage
+from nltk.tokenize import sent_tokenize
+from openai import OpenAI
+
 from app.config import Config
 from app.utils.common import Common
-import os
-from openai import OpenAI
-import soundfile as sf
-import os
-from nltk.tokenize import sent_tokenize
+from app.utils.production import Production
 
-def chunk_text(text, chunk_size):
-    # Split the text into sentences using NLTK
-    sentences = sent_tokenize(text)
 
-    # Initialize variables
-    current_chunk = ""
-    chunks = []
+class AudioGenerator:
 
-    for sentence in sentences:
-        # Check if adding the current sentence exceeds the chunk_size
-        if len(current_chunk) + len(sentence) <= chunk_size:
-            current_chunk += sentence + " "
+    def __init__(self, dir: str, text: str, chunk_size: int = 4096):
+        self.dir = dir
+        self.text = text
+        self.chunk_size = chunk_size
+
+    def tts(self):
+        if Config.GCP_PROD_ENV:
+            return self._tts_prod()
         else:
-            # If adding the sentence exceeds the chunk_size, start a new chunk
-            chunks.append(current_chunk.strip())
-            current_chunk = sentence + " "
+            return self._tts_dev()
 
-    # Add the last chunk
-    chunks.append(current_chunk.strip())
+    def _chunk_text(self):
+        # Split the text into sentences using NLTK
+        sentences = sent_tokenize(self.text)
 
-    return chunks
+        # Initialize variables
+        current_chunk = ""
+        chunks = []
 
-def tts(dir: str, text: str):
-    try:
-        client = OpenAI(api_key=Config.OPENAI_API_KEY)
+        for sentence in sentences:
+            # Check if adding the current sentence exceeds the chunk_size
+            if len(current_chunk) + len(sentence) <= self.chunk_size:
+                current_chunk += sentence + " "
+            else:
+                # If adding the sentence exceeds the chunk_size, start a new chunk
+                chunks.append(current_chunk.strip())
+                current_chunk = sentence + " "
 
-        # Set your desired chunk size
-        chunk_size = 4096
+        # Add the last chunk
+        chunks.append(current_chunk.strip())
 
-        # Chunk the text into complete sentences
-        text_chunks = chunk_text(text, chunk_size)
+        return chunks
 
-        # Ensure that the output folder exists
-        os.makedirs(dir, exist_ok=True)
+    def _tts_dev(self):
+        try:
+            client = OpenAI(api_key=Config.OPENAI_API_KEY)
 
-        # List to store audio segments
-        audio_segments = []
+            # Chunk the text into complete sentences
+            text_chunks = self._chunk_text()
 
-        # Generate audio responses for each chunk
-        for i, chunk in enumerate(text_chunks):
-            response = client.audio.speech.create(
-                model="tts-1",
-                voice="alloy",
-                input=chunk,
-            )
+            # Ensure that the output folder exists
+            os.makedirs(self.dir, exist_ok=True)
 
-            audio_chunk_path = f"report_audio_{i}.wav"
-            file_path = os.path.join(dir, "audio_chunks", audio_chunk_path)
+            # List to store audio segments
+            audio_segments = []
 
-            # Ensure that the directory structure exists
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            # Generate audio responses for each chunk
+            for i, chunk in enumerate(text_chunks):
+                response = client.audio.speech.create(
+                    model="tts-1",
+                    voice="alloy",
+                    input=chunk,
+                )
 
-            response.stream_to_file(file_path)
+                audio_chunk_path = f"report_audio_{i}.wav"
+                file_path = os.path.join(self.dir, "audio_chunks", audio_chunk_path)
 
-            # Append the audio segment to the list
-            audio_segments.append(file_path)
+                # Ensure that the directory structure exists
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-        # Concatenate audio files
-        combined_audio = []
+                response.stream_to_file(file_path)
 
-        for file_path in audio_segments:
-            audio_chunk, _ = sf.read(file_path, dtype="int16")
-            combined_audio.extend(audio_chunk)
+                # Append the audio segment to the list
+                audio_segments.append(file_path)
 
-        # Write the combined audio to a new file
-        output_filename = os.path.join(dir, "report_audio.wav")
-        sf.write(output_filename, combined_audio, 22050, subtype="PCM_16")
+            # Concatenate audio files
+            combined_audio = []
 
-        print(f"🎵 Combined audio saved to {dir}")
+            for file_path in audio_segments:
+                audio_chunk, _ = sf.read(file_path, dtype="int16")
+                combined_audio.extend(audio_chunk)
 
-        return output_filename
+            # Write the combined audio to a new file
+            output_file_path = os.path.join(self.dir, "report_audio.wav")
+            sf.write(output_file_path, combined_audio, 22050, subtype="PCM_16")
 
-    except Exception as e:
-        Common.exception_details("tts", e)
-        return ""
+            print(f"🎵 Combined audio saved to {dir}")
+
+            return output_file_path
+
+        except Exception as e:
+            Common.exception_details("_tts_dev", e)
+            return ""
+
+    def _tts_prod(self):
+        try:
+            pass
+
+        except Exception as e:
+            Common.exception_details("_tts_prod", e)
+            return ""

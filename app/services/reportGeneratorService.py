@@ -1,6 +1,6 @@
 import asyncio
-import os
 import json
+import os
 import re
 import urllib
 from datetime import datetime, timedelta
@@ -11,7 +11,7 @@ from bson import ObjectId
 
 from app.config import Config
 from app.models.mongoClient import MongoClient
-from app.utils.audio import tts
+from app.utils.audio import AudioGenerator
 from app.utils.common import Common
 from app.utils.enumerator import Enumerator
 from app.utils.files_and_folders import get_report_directory
@@ -31,22 +31,26 @@ def report_generate(
     report_generation_id: Union[int, None],
     subtopics: list,
 ) -> None:
-    
+
     def transform_data(report_document, report_id: Union[ObjectId, str] = ""):
         report_document["_id"] = (
             str(report_id) if report_id else str(report_document.get("_id", ""))
         )
 
         if "createdBy" in report_document and "_id" in report_document["createdBy"]:
-            report_document["createdBy"]["_id"] = str(report_document["createdBy"]["_id"])
+            report_document["createdBy"]["_id"] = str(
+                report_document["createdBy"]["_id"]
+            )
 
         if "createdOn" in report_document:
             # Convert UTC time to string in the desired format
-            report_document["createdOn"] = report_document["createdOn"].strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+            report_document["createdOn"] = (
+                report_document["createdOn"].strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+            )
 
         return report_document
 
-    def emit_and_save_pending_report() -> str:        
+    def emit_and_save_pending_report() -> str:
         document_data = {
             "status": {
                 "value": int(Enumerator.ReportStep.Pending.value),
@@ -72,7 +76,7 @@ def report_generate(
             success=True,
             status=200,
         )
-        
+
         return str(insert_response["inserted_id"])
 
     def run_research() -> Tuple[str, str]:
@@ -105,7 +109,8 @@ def report_generate(
         )
 
         audio_text = extract_text_before_h2(report_text)
-        audio_path = tts(report_folder, audio_text)
+        audio_generator = AudioGenerator(report_folder, audio_text)
+        audio_path = audio_generator.tts()
         report_audio = {
             "exists": False,
             "text": audio_text,
@@ -125,7 +130,7 @@ def report_generate(
         status: int,
     ) -> None:
         def prepare_report_document():
-            
+
             document = {
                 "task": task,
                 "websearch": websearch,
@@ -466,7 +471,15 @@ def _set_reports_as_failed_in_db(user_id: Union[str, ObjectId]):
         }
 
         response = m_db[Config.MONGO_REPORTS_MASTER_COLLECTION].update_many(
-            query, {"$set": {"status.value": int(Enumerator.ReportStep.Failure.value)}}
+            query,
+            {
+                "$set": {
+                    "status": {
+                        "value": int(Enumerator.ReportStep.Failure.value),
+                        "ref": "failed",
+                    }
+                }
+            },
         )
 
         return response.modified_count
@@ -544,3 +557,46 @@ def _delete_document_from_db(reportid: str) -> dict:
     )
 
     return {"deleted_count": response.deleted_count}
+
+
+def get_failed_reports_from_db(user_id: Union[str, ObjectId]):
+    m_db = MongoClient.connect()
+
+    # Filter stage to filter out the reports based on various criteria
+    filter_stage = {
+        "createdBy._id": ObjectId(user_id),
+        "status.value": int(Enumerator.ReportStep.Failure.value),
+    }
+
+    response = m_db[Config.MONGO_REPORTS_MASTER_COLLECTION].aggregate(
+        [
+            {"$match": filter_stage},
+            {"$sort": {"createdOn": -1}},
+            {
+                "$addFields": {
+                    "_id": {"$toString": "$_id"},
+                    "createdBy._id": {"$toString": "$createdBy._id"},
+                    "createdOn": {"$dateToString": {"date": "$createdOn"}},
+                }
+            },
+        ]
+    )
+
+    return cursor_to_dict(response)
+
+
+def delete_failed_reports_from_db(user_id: Union[str, ObjectId]) -> dict:
+    try:
+        m_db = MongoClient.connect()
+
+        response = m_db[Config.MONGO_REPORTS_MASTER_COLLECTION].delete_many(
+            {
+                "createdBy._id": ObjectId(user_id),
+                "status.value": int(Enumerator.ReportStep.Failure.value),
+            }
+        )
+
+        return {"deleted_count": response.deleted_count}
+
+    except Exception as e:
+        return {"deleted_count": 0}

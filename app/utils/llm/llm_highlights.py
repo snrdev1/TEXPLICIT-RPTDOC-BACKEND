@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from langchain.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI
 from langchain.output_parsers import ResponseSchema, StructuredOutputParser
 from langchain.prompts import (
     ChatPromptTemplate,
@@ -8,7 +8,7 @@ from langchain.prompts import (
 )
 
 from app.utils.common import Common
-from app.utils.llm.base import break_up_text
+from app.utils.llm_utils import break_up_text
 from app.config import Config
 
 

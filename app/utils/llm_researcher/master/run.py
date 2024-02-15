@@ -4,11 +4,6 @@ from typing import Union
 
 from bson import ObjectId
 
-from ..utils.llm import llm_process_subtopics
-from .research_agent import ResearchAgent
-from app.utils.socket import emit_report_status
-from app.utils.formatter import get_formatted_report_type
-
 
 class AgentExecutor:
     def __init__(
@@ -35,407 +30,43 @@ class AgentExecutor:
         self.subtopics = subtopics
         self.check_existing_report = check_existing_report
 
-    async def basic_report(self) -> tuple:
-        assistant = ResearchAgent(
-            user_id=self.user_id,
-            query=self.task,
-            source=self.source,
-            format=self.format,
-            report_type=self.report_type,
-            websocket=self.websocket,
-            report_generation_id=self.report_generation_id,
-        )
+    def get_report_executor(self):
+        match self.report_type:
+            case "detailed_report":
+                from ..report_types import DetailedReport
 
-        # Check EXISTING report
-        path = (
-            await assistant.check_existing_report(self.report_type)
-            if self.check_existing_report
-            else None
-        )
-        if path:
-            emit_report_status(
-                self.user_id, self.report_generation_id, "💎 Found existing report..."
-            )
-            await assistant.extract_tables()
-            report_markdown = await assistant.get_report_markdown(self.report_type)
-            report_markdown = report_markdown.strip()
+                executor = DetailedReport
+            case "complete_report":
+                from ..report_types import CompleteReport
 
-            return (
-                report_markdown,
-                path,
-                assistant.tables_extractor.tables,
-                assistant.visited_urls,
-            )
+                executor = CompleteReport
 
-        print("🚦 Starting research")
-        emit_report_status(
-            self.user_id, self.report_generation_id, "🚦 Starting research..."
-        )
-        report_markdown = await assistant.conduct_research()
+            case _:
+                from ..report_types import BasicReport
 
-        report_markdown = report_markdown.strip()
-        if len(report_markdown) == 0:
-            return "", "", [], set()
+                executor = BasicReport
 
-        path = await assistant.save_report(report_markdown)
-
-        return (
-            report_markdown,
-            path,
-            assistant.tables_extractor.tables,
-            assistant.visited_urls,
-        )
-
-    async def detailed_report(self) -> tuple:
-        main_task_assistant = ResearchAgent(
-            user_id=self.user_id,
-            query=self.task,
-            source=self.source,
-            format=self.format,
-            report_type=self.report_type,
-            websocket=self.websocket,
-            report_generation_id=self.report_generation_id,
-        )
-
-        async def get_subtopic_report(subtopic: list):
-            # Extract relevant information from subtopic dictionaries
-            current_subtopic_task = subtopic.get("task")
-            subtopic_source = subtopic.get("source")
-
-            subtopic_assistant = ResearchAgent(
-                user_id=self.user_id,
-                query=current_subtopic_task,
-                source=subtopic_source,
-                format=format,
-                report_type="subtopic_report",
-                websocket=self.websocket,
-                parent_query=self.task,
-                subtopics=self.subtopics,
-                report_generation_id=self.report_generation_id,
-            )
-
-            print("🚦 Starting subtopic research")
-            report_markdown = await subtopic_assistant.conduct_research(
-                max_docs=10, score_threshold=1
-            )
-            report_markdown = report_markdown.strip()
-
-            if len(report_markdown) == 0:
-                print(
-                    f"⚠️ Failed to gather data from research on subtopic : {self.task}"
-                )
-                return "", "", []
-
-            # Append all visited_urls from subtopic report generation to the visited_urls set of the main assistant
-            main_task_assistant.visited_urls.update(subtopic_assistant.visited_urls)
-
-            # Not incredibly necessary to save the subtopic report (as of now)
-            # path = await subtopic_assistant.save_report(report_markdown)
-
-            return report_markdown, "", subtopic_assistant.tables_extractor.tables
-
-        async def generate_subtopic_reports(subtopics: list):
-            reports = []
-            report_body = ""
-            tables = []
-
-            # Function to fetch subtopic reports asynchronously
-            async def fetch_report(subtopic):
-                emit_report_status(
-                    self.user_id,
-                    self.report_generation_id,
-                    f"🚦 Conducting research on subtopic : {subtopic}...",
-                )
-                (
-                    subtopic_report_markdown,
-                    subtopic_path,
-                    subtopic_tables,
-                ) = await get_subtopic_report(subtopic)
-                return {
-                    "topic": subtopic,
-                    "markdown_report": subtopic_report_markdown,
-                    "path": subtopic_path,
-                    "tables": subtopic_tables,
-                }
-
-            # Create a list of tasks for fetching reports
-            tasks = [fetch_report(subtopic) for subtopic in subtopics]
-
-            # Gather the results when the tasks are completed
-            results = await asyncio.gather(*tasks)
-
-            for result in results:
-                if len(result["markdown_report"]):
-                    reports.append(result)
-                    report_body = report_body + "\n\n\n" + result["markdown_report"]
-                    tables.extend(result["tables"])
-
-            return reports, report_body, tables
-
-        async def construct_detailed_report(report_body: str):
-            (
-                introduction,
-                conclusion,
-            ) = await main_task_assistant.write_introduction_conclusion()
-            detailed_report = introduction + "\n\n" + report_body + "\n\n" + conclusion
-            detailed_report_path = await main_task_assistant.save_report(
-                detailed_report
-            )
-            return detailed_report, detailed_report_path
-
-        async def get_all_subtopics() -> list:
-            # 1. Get outline report
-            outline_executor = AgentExecutor(
-                user_id=self.user_id,
-                task=self.task,
-                websearch=self.websearch,
-                report_type="outline_report",
-                source=self.source,
-                format=self.format,
-                report_generation_id=self.report_generation_id,
-                websocket=self.websocket,
-            )
-            (
-                outline_report_markdown,
-                outline_report_path,
-                *_
-            ) = await outline_executor.run_agent()
-
-            # 2. Extract base subtopics from outline report
-            base_subtopics = main_task_assistant.extract_subtopics(
-                outline_report_markdown, self.websearch, self.source
-            )
-
-            # 3. Append all subtopics:
-            # a. main task
-            # b. subtopics extracted from outline report
-            # c. subtopics provided  by user
-            all_subtopics = (
-                [
-                    {
-                        "task": self.task,
-                        "websearch": self.websearch,
-                        "source": self.source,
-                    }
-                ]
-                + base_subtopics
-                + self.subtopics
-            )
-            print(f"💎 Found total of {len(all_subtopics)} subtopics")
-
-            # 4. Perform processing on subtopics:
-            processed_subtopics = await llm_process_subtopics(
-                task=self.task, subtopics=all_subtopics
-            )
-            print(f"💎 Found {len(processed_subtopics)} processed subtopics")
-            emit_report_status(
-                self.user_id,
-                self.report_generation_id,
-                f"💎 Found {len(processed_subtopics)} subtopics to process...",
-            )
-
-            return processed_subtopics
-
-        # Check EXISTING report
-        detailed_report_path = (
-            await main_task_assistant.check_existing_report(self.report_type)
-            if self.check_existing_report
-            else None
-        )
-        if detailed_report_path:
-            emit_report_status(
-                self.user_id, self.report_generation_id, "💎 Found existing report..."
-            )
-            await main_task_assistant.extract_tables()
-            report_markdown = await main_task_assistant.get_report_markdown(
-                self.report_type
-            )
-            detailed_report = report_markdown.strip()
-
-            return (
-                detailed_report,
-                detailed_report_path,
-                main_task_assistant.tables_extractor.tables,
-            )
-
-        # Get all the processed subtopics on which the detailed report is to be generated
-        processed_subtopics = await get_all_subtopics()
-
-        emit_report_status(
-            self.user_id,
-            self.report_generation_id,
-            "🚦 Initiating subtopics research...",
-        )
-        (
-            subtopics_reports,
-            subtopics_reports_body,
-            subtopics_tables,
-        ) = await generate_subtopic_reports(processed_subtopics)
-
-        # If any tables at all are found then store them
-        main_task_assistant.tables_extractor.tables = subtopics_tables
-        if len(main_task_assistant.tables_extractor.tables):
-            print("📝 Saving extracted tables")
-            emit_report_status(
-                self.user_id, self.report_generation_id, f"📝 Saving extracted tables..."
-            )
-            main_task_assistant.tables_extractor.save_tables()
-
-        if len(subtopics_reports_body.strip()) == 0:
-            return "", "", [], set()
-
-        emit_report_status(
-            self.user_id,
-            self.report_generation_id,
-            f"📝 Constructing detailed report from subtopics...",
-        )
-        detailed_report, detailed_report_path = await construct_detailed_report(
-            subtopics_reports_body
-        )
-
-        return (
-            detailed_report,
-            detailed_report_path,
-            main_task_assistant.tables_extractor.tables,
-            main_task_assistant.visited_urls,
-        )
-
-    async def complete_report(self) -> tuple:
-        async def create_report(report_type: str) -> tuple:
-            report_executor = AgentExecutor(
-                user_id=self.user_id,
-                task=self.task,
-                websearch=self.websearch,
-                report_type=report_type,
-                source=self.source,
-                format=self.format,
-                websocket=self.websocket,
-                report_generation_id=self.report_generation_id,
-            )
-            markdown, path, tables, urls = await report_executor.run_agent()
-            return markdown, path, tables, urls
-
-        assistant = ResearchAgent(
-            user_id=self.user_id,
-            query=self.task,
-            source=self.source,
-            format=self.format,
-            report_type=self.report_type,
-            websocket=self.websocket,
-            report_generation_id=self.report_generation_id,
-        )
-
-        # Check EXISTING report
-        complete_report_path = (
-            await assistant.check_existing_report(self.report_type)
-            if self.check_existing_report
-            else None
-        )
-        if complete_report_path:
-            await assistant.extract_tables()
-            report_markdown = await assistant.get_report_markdown(self.report_type)
-            complete_report = report_markdown.strip()
-
-            return (
-                complete_report,
-                complete_report_path,
-                assistant.tables_extractor.tables,
-            )
-
-        emit_report_status(
-            self.user_id, self.report_generation_id, f"📝 Generating Outline Report..."
-        )
-        (
-            outline_report_markdown,
-            outline_report_path,
-            outline_report_tables,
-            outline_report_urls,
-        ) = await create_report("outline_report")
-
-        emit_report_status(
-            self.user_id, self.report_generation_id, f"📝 Generating Resource Report..."
-        )
-        (
-            resource_report_markdown,
-            resource_report_path,
-            resource_report_tables,
-            resource_report_urls,
-        ) = await create_report("resource_report")
-
-        emit_report_status(
-            self.user_id, self.report_generation_id, f"📝 Generating Detailed Report..."
-        )
-        (
-            detailed_report_markdown,
-            detailed_report_path,
-            detailed_reports_tables,
-            detailed_report_urls,
-        ) = await create_report("detailed_report")
-
-        report_markdown = (
-            outline_report_markdown
-            + "\n\n\n\n"
-            + resource_report_markdown
-            + "\n\n\n\n"
-            + detailed_report_markdown
-        )
-        report_markdown = report_markdown.strip()
-
-        assistant.tables_extractor.tables = (
-            outline_report_tables + resource_report_tables + detailed_reports_tables
-        )
-
-        if not report_markdown:
-            return "", "", [], set()
-
-        # Merge all the sources from all assistants
-        assistant.visited_urls.update(
-            outline_report_urls, resource_report_urls, detailed_report_urls
-        )
-
-        path = await assistant.save_report(report_markdown)
-
-        return (
-            report_markdown,
-            path,
-            assistant.tables_extractor.tables,
-            assistant.visited_urls,
-        )
+        return executor
 
     async def run_agent(self) -> tuple:
         start_time = datetime.datetime.utcnow()
-
         print({"type": "logs", "output": f"Start time: {str(start_time)}\n\n"})
 
-        # In depth report generation
-        if self.report_type == "detailed_report":
-            emit_report_status(
-                self.user_id,
-                self.report_generation_id,
-                "📝 Generating Detailed Report...",
-            )
-            report_markdown, path, tables, urls = await self.detailed_report()
-
-        # Complete report generation
-        elif self.report_type == "complete_report":
-            emit_report_status(
-                self.user_id,
-                self.report_generation_id,
-                "📝 Generating Combined Report...",
-            )
-            report_markdown, path, tables, urls = await self.complete_report()
-
-        else:
-            # Basic report generation
-            emit_report_status(
-                self.user_id,
-                self.report_generation_id,
-                f"📝 Generating {get_formatted_report_type(self.report_type)}...",
-            )
-            report_markdown, path, tables, urls = await self.basic_report()
+        Executor = self.get_report_executor()
+        executor = Executor(
+            user_id=self.user_id,
+            task=self.task,
+            websearch=self.websearch,
+            report_type=self.report_type,
+            source=self.source,
+            format=self.format,
+            report_generation_id=self.report_generation_id,
+            websocket=self.websocket,
+            check_existing_report=self.check_existing_report,
+        )
+        report_markdown, path, tables, urls = await executor.generate_report()
 
         end_time = datetime.datetime.utcnow()
-
         print({"type": "path", "output": path})
         print({"type": "logs", "output": f"\nEnd time: {end_time}\n"})
         print(
