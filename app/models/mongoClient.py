@@ -26,7 +26,7 @@ class MongoClient:
             # print('[database] connecting to database', connection_string, file=sys.stdout)
             sys.stdout.flush()
 
-            try:
+            try:                
                 if Config.GCP_PROD_ENV and not(Config.TESTING):
                     print("🗳️ Connecting to GCP database...")
                     client = pymongo.MongoClient(
