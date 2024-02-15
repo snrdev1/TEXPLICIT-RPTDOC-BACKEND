@@ -1,3 +1,4 @@
+import io
 import os
 
 import soundfile as sf
@@ -98,7 +99,48 @@ class AudioGenerator:
 
     def _tts_prod(self):
         try:
-            pass
+            client = OpenAI(api_key=Config.OPENAI_API_KEY)
+
+            # Chunk the text into complete sentences
+            text_chunks = self._chunk_text()
+
+            # List to store audio segments
+            audio_segments = []
+
+            # Generate audio responses for each chunk
+            for chunk in text_chunks:
+                response = client.audio.speech.create(
+                    model="tts-1",
+                    voice="alloy",
+                    input=chunk,
+                )
+
+                audio_segments.append(response.read())
+
+            # Merge audio segments
+            combined_audio = []
+            for audio_chunk in audio_segments:
+                audio_chunk, _ = sf.read(io.BytesIO(audio_chunk), dtype="int16")
+                combined_audio.extend(audio_chunk)
+
+            # Write the combined audio to a new in-memory file
+            merged_audio_bytes = io.BytesIO()
+            sf.write(
+                merged_audio_bytes,
+                combined_audio,
+                22050,
+                format="wav",
+                subtype="PCM_16",
+            )
+            merged_audio_bytes.seek(0)
+
+            # Upload merged audio to the bucket
+            user_bucket = Production.get_users_bucket()
+            audio_path = f"{self.dir}/report_audio.wav"
+            blob = user_bucket.blob(audio_path)
+            blob.upload_from_file(merged_audio_bytes)
+
+            return audio_path
 
         except Exception as e:
             Common.exception_details("_tts_prod", e)

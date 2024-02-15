@@ -27,11 +27,13 @@ class MongoClient:
             sys.stdout.flush()
 
             try:
-                if Config.GCP_PROD_ENV:
+                if Config.GCP_PROD_ENV and not(Config.TESTING):
+                    print("🗳️ Connecting to GCP database...")
                     client = pymongo.MongoClient(
                         connection_string, maxPoolSize=None, tlsCAFile=certifi.where()
                     )
                 else:
+                    print("🗳️ Connecting to LOCAL database...") 
                     client = pymongo.MongoClient(
                         connection_string, maxPoolSize=None
                     )
@@ -42,7 +44,7 @@ class MongoClient:
                 database = client[Config.MONGO_DATABASE]
 
                 MongoClient.__MongoDB = database
-                print("connected to db")
+                print("☑️ Successfully connected to database!")
                 
                 # `sys.stdout.flush()` is used to flush the standard output buffer.
                 sys.stdout.flush()
