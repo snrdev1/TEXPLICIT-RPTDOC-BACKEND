@@ -1,10 +1,13 @@
+import io
+
 from google.cloud import storage
 
-from app.utils.common import Common
 from app.config import Config
+from app.utils.common import Common
+
 
 class Production:
-    
+
     @staticmethod
     def get_bucket(bucket_name):
         """
@@ -20,15 +23,17 @@ class Production:
         if there is an exception or error.
         """
         try:
-            # Credentials for GCP Connection
 
-            credential_path = "texplicit-02-f98951e4984c.json"
-            
-            # Create a client object using the JSON credential file (For local testing purposes)
-            client = storage.Client.from_service_account_json(credential_path)
-            
-            # For production environment
-            # client = storage.Client()
+            if Config.TESTING:
+                # Credentials for GCP Connection
+                credential_path = "E:\Texplicit\stoked-forest-413805-36093e911d10.json"
+
+                # Create a client object using the JSON credential file (For local testing purposes)
+                client = storage.Client.from_service_account_json(credential_path)
+
+            else:
+                # For production environment
+                client = storage.Client()
 
             # Replace 'your-bucket-name' with the actual name of your bucket
             bucket = client.get_bucket(bucket_name)
@@ -41,4 +46,4 @@ class Production:
 
     @staticmethod
     def get_users_bucket():
-      return Production.get_bucket(Config.GCP_BUCKET_USERS)
+        return Production.get_bucket(Config.GCP_BUCKET_USERS)
