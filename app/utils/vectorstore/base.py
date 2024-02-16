@@ -15,14 +15,16 @@ from .prompts import get_document_prompt
 
 
 class VectorStore:
-    
+
     def __init__(self, user_id: Union[str, ObjectId]):
         self.user_id = user_id
+        self.vector_index_path = f"{self.user_id}/vectorstore/db_faiss/index.pkl"
+        self.embeddings = get_embeddings()
 
     def delete_vectorindex(self, file_id):
         """
         The function `delete_vectorindex` deletes a vector index file based on the provided file ID.
-        
+
         :param file_id: The `file_id` parameter is the unique identifier of the file that needs to be
         deleted
         """
@@ -40,10 +42,9 @@ class VectorStore:
 
     def get_document_chat_response(self, query):
         try:
-            embeddings = get_embeddings()
             llm = load_fast_llm()
             prompt = get_document_prompt()
-            db = self.get_document_vectorstore(embeddings)
+            db = self.get_document_vectorstore(self.embeddings)
             retriever = Retriever(self.user_id, query, llm, prompt, db)
             response, sources = retriever.rag_chain_with_sources()
 
@@ -57,7 +58,7 @@ class VectorStore:
         """
         The function `get_document_vectorstore` retrieves a vectorstore either from Google Cloud Storage
         (GCS) or from a local path, depending on the environment, and returns it.
-        
+
         :param embeddings: The "embeddings" parameter is an optional argument that represents the
         pre-trained word embeddings or document embeddings. It is used to load the vectorstore with the
         specified embeddings. If no embeddings are provided, the vectorstore will be loaded without any
@@ -82,21 +83,20 @@ class VectorStore:
     def add_vectorindex(self, splits):
         """
         The function `add_vectorindex` adds vector indices to a database using embeddings.
-        
+
         :param splits: The "splits" parameter is a list of documents that need to be added to the vector
         index. Each document in the list should be a string or a list of strings representing the text
         or content of the document
         """
         try:
-            embeddings = get_embeddings()
-            db = FAISS.from_documents(splits, embeddings)
+            db = FAISS.from_documents(splits, self.embeddings)
             db_path = self._get_document_vectorstore_path()
 
             if Config.GCP_PROD_ENV:
                 bucket = Production.get_users_bucket()
                 self._add_vectorindex_production(db, bucket)
             else:
-                self._add_vectorindex_testing(db, embeddings, db_path)
+                self._add_vectorindex_testing(db, db_path)
 
         except Exception as e:
             Common.exception_details("VectorStore.add_vectorindex", e)
@@ -109,7 +109,8 @@ class VectorStore:
         """
         try:
             db_path = os.path.join(
-                os.path.join(Config.USER_FOLDER, self.user_id), Config.USER_VECTORSTORE_PATH
+                os.path.join(Config.USER_FOLDER, self.user_id),
+                Config.USER_VECTORSTORE_PATH,
             )
 
             return db_path
@@ -125,22 +126,31 @@ class VectorStore:
         :return: the variable `db`, which is the deserialized FAISS index object.
         """
         try:
-            embeddings = get_embeddings()
             bucket = Production.get_users_bucket()
-            user_folder_path = f"{self.user_id}/"
-            vectorstore_path = f"{user_folder_path}vectorstore/db_faiss/"
 
-            blob = bucket.blob(vectorstore_path + "index.pkl")
+            print("vector_index_path : ", self.vector_index_path)
 
-            # Download the pickled object as bytes from GCS
-            serialized_bytes = blob.download_as_bytes()
+            blob = bucket.blob(self.vector_index_path)
 
-            # Load the index
-            db = FAISS.deserialize_from_bytes(
-                embeddings=embeddings, serialized=serialized_bytes
-            )
-            
-            return db
+            if blob.exists():
+                print(f"🟢 Vectorstore found at path : {self.vector_index_path}")
+
+                # Download the pickled object as bytes from GCS
+                pkl = blob.download_as_bytes()
+                print("Type of pkl : ", type(pkl))
+
+                # Load the index
+                db = FAISS.deserialize_from_bytes(
+                    embeddings=self.embeddings, serialized=pkl
+                )
+
+                print("db : ", db)
+                print("type of db : ", type(db))
+
+                return db
+            else:
+                print(f"🔺 Blob does not exist at path : {self.vector_index_path}")
+                return None
 
         except Exception as e:
             Common.exception_details("VectorStore._get_user_faiss_db_from_gcs", e)
@@ -150,7 +160,7 @@ class VectorStore:
         """
         The function `_upload_user_faiss_db_to_gcs` uploads a serialized Faiss index to Google Cloud
         Storage.
-        
+
         :param db: The "db" parameter in the above code refers to a Faiss index object. Faiss is a
         library for efficient similarity search and clustering of dense vectors. The index object
         contains the data and metadata required for performing similarity search operations on the
@@ -159,12 +169,12 @@ class VectorStore:
         try:
             bucket = Production.get_users_bucket()
 
-            user_folder_path = f"{self.user_id}/"
-            vectorstore_path = f"{user_folder_path}vectorstore/db_faiss/"
-            db_blob = bucket.blob(vectorstore_path + "index.pkl")
+            db_blob = bucket.blob(self.vector_index_path)
 
             pkl = db.serialize_to_bytes()  # serializes the faiss index
             db_blob.upload_from_string(pkl)
+
+            print("Type of pkl : ", type(pkl))
 
         except Exception as e:
             Common.exception_details("VectorStore._upload_user_faiss_db_to_gcs", e)
@@ -173,7 +183,7 @@ class VectorStore:
         """
         The function `_delete_vectorindex_production` deletes matching IDs from a vectorstore database
         and saves the updated indices to a cloud storage.
-        
+
         :param file: The `file` parameter is a dictionary that contains information about a file. It has
         a key called "virtualFileName" which represents the file path
         """
@@ -209,17 +219,16 @@ class VectorStore:
         """
         The function `_delete_vectorindex_testing` deletes matching IDs from a vector store and saves
         the updated indices.
-        
+
         :param file: The `file` parameter is the name or path of the file that you want to delete from
         the vector index
         """
         try:
-            embeddings = get_embeddings()
             file_path = MyDocumentsService.get_file_path(file, self.user_id)
             print("delete_vectorindex File path : ", file_path)
 
             db_path = self._get_document_vectorstore_path()
-            db = FAISS.load_local(db_path, embeddings)
+            db = FAISS.load_local(db_path, self.embeddings)
             dbdict = db.docstore._dict
 
             matching_ids = [
@@ -245,7 +254,7 @@ class VectorStore:
         The function `_add_vectorindex_production` checks if a folder exists in a bucket, and if not,
         creates the folder and uploads a database to it. If the folder already exists, it merges the
         existing database with a new one and uploads the updated database.
-        
+
         :param db: The `db` parameter is a database object that represents the vector index data. It is
         used to store and retrieve vectors for similarity search operations
         :param bucket: The "bucket" parameter is the name of the Google Cloud Storage bucket where the
@@ -291,7 +300,7 @@ class VectorStore:
         except Exception as e:
             Common.exception_details("VectorStore._add_vectorindex_production", e)
 
-    def _add_vectorindex_testing(self, db, embeddings, db_path):
+    def _add_vectorindex_testing(self, db, db_path):
         """
         The function `_add_vectorindex_testing` updates or creates a vector index in a database.
 
@@ -300,14 +309,11 @@ class VectorStore:
         where the vector index will be stored.
           db: The `db` parameter is a database object that contains vectors and their corresponding
         embeddings.
-          embeddings: The "embeddings" parameter is a variable that represents the embeddings or vector
-        representations of documents. It is used in the code to update or create an index in a vector
-        store database.
         """
         try:
             if os.path.exists(db_path):
                 print("Updating existing index!")
-                existing_db = FAISS.load_local(db_path, embeddings)
+                existing_db = FAISS.load_local(db_path, self.embeddings)
                 existing_db.merge_from(db)
                 existing_db.save_local(db_path)
 

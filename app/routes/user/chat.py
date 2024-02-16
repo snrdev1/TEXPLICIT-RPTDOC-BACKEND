@@ -7,12 +7,12 @@ import threading
 from flask import Blueprint, request
 
 from app.auth.userauthorization import authorized
-from app.config import Config
 from app.services.chatService import ChatService
 from app.utils.common import Common
 from app.utils.enumerator import Enumerator
 from app.utils.messages import Messages
 from app.utils.response import Response
+from datetime import datetime
 
 chat = Blueprint("chat", __name__, url_prefix="/chat")
 
@@ -43,11 +43,13 @@ def get_chat(logged_in_user):
     chat_type = Common.get_field_value_or_default(
         request_body.get("params"), "chatType", int(Enumerator.ChatType.External.value)
     )
+    chatId = request_body.get("chatId", f"{user_id}_{datetime.utcnow()}")
 
     # Getting chat response and emitting it in a separate non-blocking thread
+    chatService = ChatService(user_id)
     t1 = threading.Thread(
-        target=ChatService.get_chat_response,
-        args=(user_id, chat_type, prompt),
+        target=chatService.get_chat_response,
+        args=(chat_type, prompt, chatId),
     )
     t1.start()
 
@@ -74,7 +76,7 @@ def get_chat_history(logged_in_user):
         limit = int(request_params.get("limit", 10))
         offset = int(request_params.get("offset", 0))
 
-        response = ChatService().get_all_user_related_chat(user_id, limit, offset)
+        response = ChatService(user_id).get_all_user_related_chat(limit, offset)
 
         return Response.custom_response(
             [response, logged_in_user["image"]],
@@ -93,7 +95,7 @@ def get_chat_history(logged_in_user):
 def delete_chats(logged_in_user):
     try:
         user_id = logged_in_user["_id"]
-        response = ChatService().delete_chats(user_id)
+        response = ChatService(user_id).delete_chats()
 
         if response:
             return Response.custom_response(
