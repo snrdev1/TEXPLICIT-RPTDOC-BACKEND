@@ -20,11 +20,13 @@ openai.api_key = Config.OPENAI_API_KEY
 
 
 class ChatService:
-    @staticmethod
-    def get_chat_response(user_id, chat_type, question):
+    def __init__(self, user_id):
+        self.user_id = user_id
+
+    def get_chat_response(self, chat_type, question):
         try:
             if chat_type == int(Enumerator.ChatType.External.value):
-            
+
                 chat = load_fast_llm()
                 prompt = ChatPromptTemplate.from_messages(
                     [
@@ -37,22 +39,22 @@ class ChatService:
                 )
 
                 chain = prompt | chat
-                
+
                 response = chain.invoke(
                     {
                         "messages": [
-                            HumanMessage(
-                                content=question
-                            ),
+                            HumanMessage(content=question),
                         ],
                     }
                 ).content
-                
+
                 data = response
                 sources = []
-                
+
             else:
-                response = VectorStore(user_id).get_document_chat_response(question)
+                response = VectorStore(self.user_id).get_document_chat_response(
+                    question
+                )
                 data = response["response"]
                 sources = response["sources"]
 
@@ -67,23 +69,21 @@ class ChatService:
             }
 
             if data:
-                chat_event = "chat_" + str(user_id)
+                chat_event = "chat_" + str(self.user_id)
                 socketio.emit(chat_event, [chat_dict])
 
             # Update user chat history
-            ChatService()._update_user_chat_info(user_id, chat_dict)
+            self._update_user_chat_info(self.user_id, chat_dict)
 
         except Exception as e:
             Common.exception_details("ChatSerice.get_chat_response", e)
 
-    def get_all_user_related_chat(self, user_id, limit=10, offset=0):
+    def get_all_user_related_chat(self, limit=10, offset=0):
         """
         The function `get_all_user_related_chat` retrieves chat data related to a specific user from a
         MongoDB database.
 
         Args:
-          user_id: The `user_id` parameter is the unique identifier of the user for whom you want to
-        retrieve the related chat.
           limit: The `limit` parameter specifies the maximum number of chat records to retrieve. By
         default, it is set to 10, but you can change it to any positive integer value to retrieve a
         different number of records. Defaults to 10
@@ -101,7 +101,7 @@ class ChatService:
             unset_keys = ["_id"]
             pipeline = [
                 PipelineStages.stage_match(
-                    {"user._id": ObjectId(user_id), "user.ref": "user"}
+                    {"user._id": ObjectId(self.user_id), "user.ref": "user"}
                 ),
                 PipelineStages.stage_project(project_keys),
                 PipelineStages.stage_unset(unset_keys),
@@ -123,22 +123,19 @@ class ChatService:
             Common.exception_details("chatService.get_all_user_related_chat", e)
             return None
 
-    def delete_chats(self, user_id):
+    def delete_chats(self):
         """
         The delete_chats function deletes the chat history of a user.
-            Args:
-                user_id (str): The id of the user whose chat history is to be deleted.
 
         Args:
             self: Represent the instance of the class
-            user_id: Identify the user in the database
 
         Returns:
             The response of the update_one function
         """
         m_db = MongoClient.connect()
 
-        delete_filter = {"user._id": ObjectId(user_id)}
+        delete_filter = {"user._id": ObjectId(self.user_id)}
         delete_field = {"$unset": {"chat": 1}}
         response = m_db[Config.MONGO_CHAT_MASTER_COLLECTION].update_one(
             delete_filter, delete_field
@@ -149,14 +146,12 @@ class ChatService:
         else:
             return False
 
-    def _update_user_chat_info(self, user_id, chat_dict):
+    def _update_user_chat_info(self, chat_dict):
         """
         The function `_update_user_chat_info` updates the chat information for a user in a MongoDB
         database.
 
         Args:
-          user_id: The user_id parameter is the unique identifier of the user for whom the chat
-        information is being updated.
           chat_dict: The `chat_dict` parameter is a dictionary that contains the following keys and
         values:
 
@@ -166,7 +161,7 @@ class ChatService:
         try:
             m_db = MongoClient.connect()
 
-            query = {"user._id": ObjectId(user_id), "user.ref": "user"}
+            query = {"user._id": ObjectId(self.user_id), "user.ref": "user"}
 
             update_data = {
                 "$push": {
