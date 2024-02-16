@@ -1631,14 +1631,14 @@ class MyDocumentsService:
             if blob.exists():
                 blob.delete()
                 deleted = True
-                # print(
-                #     f"File '{file_name}' deleted successfully from bucket '{self.bucket_name}'."
-                # )
+                print(
+                    f"🟢 File '{file_name}' deleted successfully from bucket!."
+                ) 
             else:
                 deleted = False
-                # print(
-                #     f"File '{file_name}' does not exist in bucket '{self.bucket_name}'."
-                # )
+                print(
+                    f"🔺 File '{file_name}' does NOT EXIST in bucket!." 
+                )
         else:
             file_path = MyDocumentsService.get_file_path(file, user_id)
             if os.path.isfile(file_path):
@@ -1646,6 +1646,7 @@ class MyDocumentsService:
                 os.remove(file_path)
                 deleted = True
             else:
+                deleted = False
                 print("Invalid file path: %s" % file_path)
 
         # Delete document if the user is the one who uploaded the file
@@ -1665,7 +1666,7 @@ class MyDocumentsService:
             {"$pull": {"usersWithAccess": ObjectId(user_id)}},
         )
 
-        return bool(user_access_update_response.modified_count)
+        return deleted
 
     def delete_files(self, file_ids, user_id):
         """
