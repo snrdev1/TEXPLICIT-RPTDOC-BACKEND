@@ -24,7 +24,7 @@ class Production:
 
             if Config.TESTING:
                 # Credentials for GCP Connection
-                credential_path = Config.GCP_TEST_FILE
+                credential_path = Config.GCP_SERVICE_ACCOUNT_FILE
 
                 # Create a client object using the JSON credential file (For local testing purposes)
                 client = storage.Client.from_service_account_json(credential_path)

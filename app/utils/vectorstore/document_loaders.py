@@ -7,7 +7,7 @@ from langchain_community.document_loaders import (
     UnstructuredWordDocumentLoader,
 )
 from langchain_community.document_loaders.csv_loader import UnstructuredCSVLoader
-
+from app.utils.common import Common
 from app.config import Config
 from app.utils.llm_utils import split_text
 
@@ -24,11 +24,13 @@ class DocumentLoader:
 
     def load_document(self):
         if Config.GCP_PROD_ENV:
+            print("Loading document from gcs")
             data = self._load_document_from_gcs()
         else:
             data = self._load_document_from_local()
 
         if data:
+            print("Found data!")
             splits = split_text(data)
 
             # Converting source files to virtual file name
@@ -38,6 +40,7 @@ class DocumentLoader:
             if splits:
                 from app.utils.vectorstore.base import VectorStore
 
+                print("Adding vector index!")
                 VectorStore().add_vectorindex(splits=splits, user_id=self.user_id)
 
     def _load_document_from_gcs(self):
@@ -48,15 +51,23 @@ class DocumentLoader:
                 blob = f"{self.file_root[1:]}/{self.virtual_file_name}"
 
             loader = GCSFileLoader(
-                project_name=Config.GCP_PROJECT,
+                project_name=Config.GCP_PROJECT_NAME,
                 bucket=Config.GCP_BUCKET_USERS,
                 blob=blob,
             )
+            
+            print("Config.GCP_PROJECT_NAME : ", Config.GCP_PROJECT_NAME)
+            print("Config.GCP_BUCKET_USERS : ", Config.GCP_BUCKET_USERS)
+            print("blob : ", blob)            
+            
+            print("Loader : ", loader)
             data = loader.load()
+
+            print("Data from GCS : ", data)
 
             return data
         except Exception as e:
-            print(e)
+            Common.exception_details("DocumentLoader._load_document_from_gcs", e)
             return None
 
     def _load_document_from_local(self):
