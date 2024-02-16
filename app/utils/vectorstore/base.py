@@ -121,7 +121,8 @@ class VectorStore:
         try:
             embeddings = get_embeddings()
             bucket = Production.get_users_bucket()
-            vectorstore_path = f"{user_id}/vectorstore/db_faiss/"
+            user_folder_path = f"{user_id}/"
+            vectorstore_path = f"{user_folder_path}vectorstore/db_faiss/"
 
             blob = bucket.blob(vectorstore_path + "index.pkl")
 

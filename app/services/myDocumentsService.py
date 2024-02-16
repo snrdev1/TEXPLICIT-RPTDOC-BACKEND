@@ -110,16 +110,21 @@ class MyDocumentsService:
         
         # Getting function returns from all function calls from threadpool
         outputs = [result.result() for result in results]
+        print("MyDocumentsService outputs : ", outputs)
         # All document _ids inserted
         uploaded_documents_ids = [output[1] for output in outputs if output[1]]
+        print("MyDocumentsService uploaded_documents_ids : ", uploaded_documents_ids)
         # Number of documents successfully uploaded
         uploaded_documents_num = sum([output[0] for output in outputs])
+        print("MyDocumentsService uploaded_documents_num : ", uploaded_documents_num)
         
         # Update document vectorstore for each successfully inserted id 
         for inserted_id in uploaded_documents_ids:
             file = MyDocumentsService().get_file(inserted_id)
+            print("MyDocumentsService file : ", file)
             virtual_file_name = file["virtualFileName"]
             filepath = MyDocumentsService().get_file_save_path(virtual_file_name, user_id, path)
+            print("MyDocumentsService filepath : ", filepath)
             DocumentLoader(user_id, inserted_id, file, filepath).load_document()
         
         # Calculating number of documents successfully uploaded
