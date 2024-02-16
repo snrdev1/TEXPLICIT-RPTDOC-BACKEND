@@ -30,7 +30,7 @@ def retrieve_context_from_documents(user_id, query: str, max_docs: int = 15, sco
     embedded_query = embeddings.embed_query(query)
 
     # Get the document vectorstore
-    db = VectorStore().get_document_vectorstore(user_id, embeddings)
+    db = VectorStore(user_id).get_document_vectorstore(embeddings)
     
     context = ""
     if db:

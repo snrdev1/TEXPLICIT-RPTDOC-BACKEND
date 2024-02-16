@@ -242,19 +242,19 @@ def delete_document(logged_in_user, file_id):
     try:
         user_id = logged_in_user["_id"]
         
-        # VectorStore.delete_vectorindex(file_id, user_id)
-        t1 = threading.Thread(target=VectorStore().delete_vectorindex, args=(file_id, user_id))
+        vectorstore_obj = VectorStore(user_id)
+        t1 = threading.Thread(target=vectorstore_obj.delete_vectorindex, args=(file_id, ))
         t1.start()
         
-        response = MyDocumentsService().delete_file(file_id, user_id)
+        delete_response = MyDocumentsService().delete_file(file_id, user_id)
 
-        if response:
+        if delete_response:
             return Response.custom_response(
-                response, Messages.OK_MY_DOCUMENT_DELETED, True, 200
+                delete_response, Messages.OK_MY_DOCUMENT_DELETED, True, 200
             )
         else:
             return Response.custom_response(
-                response, Messages.ERROR_MY_DOCUMENT_DELETED, False, 400
+                delete_response, Messages.ERROR_MY_DOCUMENT_DELETED, False, 400
             )
 
     except Exception as e:

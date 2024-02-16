@@ -52,7 +52,7 @@ class ChatService:
                 sources = []
                 
             else:
-                response = VectorStore().get_document_chat_response(user_id, question)
+                response = VectorStore(user_id).get_document_chat_response(question)
                 data = response["response"]
                 sources = response["sources"]
 

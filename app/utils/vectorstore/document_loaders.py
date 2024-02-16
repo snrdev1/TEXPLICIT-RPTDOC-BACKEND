@@ -41,7 +41,7 @@ class DocumentLoader:
                 from app.utils.vectorstore.base import VectorStore
 
                 print("Adding vector index!")
-                VectorStore().add_vectorindex(splits=splits, user_id=self.user_id)
+                VectorStore(user_id=self.user_id).add_vectorindex(splits=splits)
 
     def _load_document_from_gcs(self):
         try:
