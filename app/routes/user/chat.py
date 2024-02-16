@@ -12,6 +12,7 @@ from app.utils.common import Common
 from app.utils.enumerator import Enumerator
 from app.utils.messages import Messages
 from app.utils.response import Response
+from datetime import datetime
 
 chat = Blueprint("chat", __name__, url_prefix="/chat")
 
@@ -42,12 +43,13 @@ def get_chat(logged_in_user):
     chat_type = Common.get_field_value_or_default(
         request_body.get("params"), "chatType", int(Enumerator.ChatType.External.value)
     )
+    chatId = request_body.get("chatId", f"{user_id}_{datetime.utcnow()}")
 
     # Getting chat response and emitting it in a separate non-blocking thread
     chatService = ChatService(user_id)
     t1 = threading.Thread(
         target=chatService.get_chat_response,
-        args=(chat_type, prompt),
+        args=(chat_type, prompt, chatId),
     )
     t1.start()
 

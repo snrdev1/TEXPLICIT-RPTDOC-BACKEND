@@ -23,60 +23,116 @@ class ChatService:
     def __init__(self, user_id):
         self.user_id = user_id
 
-    def get_chat_response(self, chat_type, question):
+    def get_chat_response(self, chat_type, question: str, chatId: str):
         try:
             if chat_type == int(Enumerator.ChatType.External.value):
-
-                chat = load_fast_llm()
-                prompt = ChatPromptTemplate.from_messages(
-                    [
-                        (
-                            "system",
-                            "You are a helpful assistant. Answer all questions to the best of your ability in MARKDOWN.",
-                        ),
-                        MessagesPlaceholder(variable_name="messages"),
-                    ]
-                )
-
-                chain = prompt | chat
-
-                response = chain.invoke(
-                    {
-                        "messages": [
-                            HumanMessage(content=question),
-                        ],
-                    }
-                ).content
-
-                data = response
-                sources = []
+                self._get_external_chat_response(question, chatId)
 
             else:
-                response = VectorStore(self.user_id).get_document_chat_response(
-                    question
-                )
-                data = response["response"]
-                sources = response["sources"]
-
-            print("Chat response : ", response)
-
-            chat_dict = {
-                "prompt": question,
-                "response": data,
-                "sources": sources,
-                "timestamp": datetime.utcnow().strftime("%d-%m-%Y %H:%M:%S"),
-                "chatType": chat_type,
-            }
-
-            if data:
-                chat_event = "chat_" + str(self.user_id)
-                socketio.emit(chat_event, [chat_dict])
-
-            # Update user chat history
-            self._update_user_chat_info(self.user_id, chat_dict)
+                self._get_document_chat_response(question, chatId)
 
         except Exception as e:
             Common.exception_details("ChatSerice.get_chat_response", e)
+            self._emit_chat_stream({
+                "prompt": question,
+                "response": "Failed to get chat response....try again after some time...",
+                "sources": [],
+                "timestamp": datetime.utcnow().strftime("%d-%m-%Y %H:%M:%S"),
+                "chatType": int(Enumerator.ChatType.External.value),
+                "chatId": chatId
+            })
+
+    def _get_external_chat_response(self, question: str, chatId: str):
+        try:
+            chat = load_fast_llm()
+            prompt = ChatPromptTemplate.from_messages([
+                (
+                    "system",
+                    "You are a helpful assistant. Answer all questions to the best of your ability in MARKDOWN.",
+                ),
+                    MessagesPlaceholder(variable_name="messages"),
+                ])
+
+            chain = prompt | chat
+            messages = [HumanMessage(content=question)]
+            
+            response = ""
+            for chunk in chat.stream(messages):
+                # Keep on appending chunks to construct the entire response
+                response = response + chunk.content
+                print(chunk.content, end="", flush=True)
+                
+                # Prepare chat_dict
+                chat_dict = self._get_chat_dict(
+                    question=question,
+                    response=chunk.content,
+                    sources=[],
+                    chatType=int(Enumerator.ChatType.External.value),
+                    chatId=chatId
+                )
+                
+                # Emit chat chunk through chat stream socket
+                self._emit_chat_stream(
+                    chat_dict
+                )
+                
+            # Prepare final chat_dict with complete response
+            chat_dict = self._get_chat_dict(
+                question=question,
+                response=response,
+                sources = [],
+                chatType=int(Enumerator.ChatType.External.value),
+                chatId=chatId
+            )
+            # Update user chat history
+            self._update_user_chat_info(chat_dict)
+        
+        except Exception as e:
+            Common.exception_details("ChatSerice._get_external_chat_response", e)
+            
+    def _get_document_chat_response(self, question: str, chatId: str):
+        try:  
+            response = VectorStore(self.user_id).get_document_chat_response(question)
+            data = response["response"]
+            sources = response["sources"]
+            
+            # Prepare chat_dict
+            chat_dict = self._get_chat_dict(
+                question=question,
+                response=data,
+                sources=sources,
+                chatType=int(Enumerator.ChatType.Document.value),
+                chatId=chatId
+            )
+
+            # Emit chat chunk through chat stream socket
+            self._emit_chat_stream(
+                chat_dict
+            )
+            
+            # Update user chat history
+            self._update_user_chat_info(chat_dict)
+        
+        except Exception as e:
+            Common.exception_details("ChatSerice._get_document_chat_response", e)
+            
+    def _emit_chat_stream(self, chat_dict: dict):       
+        chat_event = "chat_" + str(self.user_id)
+        socketio.emit(chat_event, [chat_dict])
+        
+        return chat_dict
+    
+    def _get_chat_dict(self, question: str, response: str, sources, chatType, chatId: str):
+        chat_dict = {
+            "prompt": question,
+            "response": response,
+            "sources": sources,
+            "timestamp": datetime.utcnow().strftime("%d-%m-%Y %H:%M:%S"),
+            "chatType": chatType,
+            "chatId": chatId
+        }
+        
+        return chat_dict
 
     def get_all_user_related_chat(self, limit=10, offset=0):
         """
