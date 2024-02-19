@@ -2,9 +2,9 @@ from datetime import datetime
 
 import openai
 from bson import ObjectId
-from langchain.prompts.chat import ChatPromptTemplate
-from langchain_core.messages import HumanMessage
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
+from langchain_core.runnables import RunnableParallel, RunnablePassthrough
 
 from app import socketio
 from app.config import Config
@@ -15,6 +15,7 @@ from app.utils.formatter import cursor_to_dict
 from app.utils.llm_utils import load_fast_llm
 from app.utils.pipelines import PipelineStages
 from app.utils.vectorstore.base import VectorStore
+from app.utils.timer import timeout_handler
 
 openai.api_key = Config.OPENAI_API_KEY
 
@@ -25,11 +26,41 @@ class ChatService:
 
     def get_chat_response(self, chat_type, question: str, chatId: str):
         try:
+            default_chat_response = "Sorry, I am unable to answer your question at the moment. Try again later."
             if chat_type == int(Enumerator.ChatType.External.value):
-                self._get_external_chat_response(question, chatId)
-
+                response = timeout_handler(
+                    default_chat_response, 
+                    60, 
+                    self._get_external_chat_response, 
+                    question, 
+                    chatId
+                )
             else:
-                self._get_document_chat_response(question, chatId)
+                response = timeout_handler(
+                    default_chat_response, 
+                    60, 
+                    self._get_document_chat_response, 
+                    question, 
+                    chatId
+                )
+            
+            # Prepare final chat_dict with complete response
+            chat_dict = self._get_chat_dict(
+                question=question,
+                response=response,
+                sources = [],
+                chatType=int(Enumerator.ChatType.External.value),
+                chatId=chatId
+            )
+            
+            if response == default_chat_response:
+                # Emit chat chunk through chat stream socket
+                self._emit_chat_stream(
+                    chat_dict
+                )
+                    
+            # Update user chat history
+            self._update_user_chat_info(chat_dict)
 
         except Exception as e:
             Common.exception_details("ChatSerice.get_chat_response", e)
@@ -44,18 +75,15 @@ class ChatService:
 
     def _get_external_chat_response(self, question: str, chatId: str):
         try:
-            chat = load_fast_llm()
-            prompt = ChatPromptTemplate.from_messages([
-                (
-                    "system",
-                    "You are a helpful assistant. Answer all questions to the best of your ability in MARKDOWN.",
-                ),
-                    MessagesPlaceholder(variable_name="messages"),
-                ])
+            chat = load_fast_llm()            
+            template = ChatPromptTemplate.from_messages([
+                ("system", "You are a helpful assistant. Answer all questions to the best of your ability in MARKDOWN."),
+                ("human", "{question}"),
+            ])
+            messages = template.format_messages(
+                question=question
+            )
 
-            chain = prompt | chat
-            messages = [HumanMessage(content=question)]
-            
             response = ""
             for chunk in chat.stream(messages):
                 # Keep on appending chunks to construct the entire response
@@ -76,45 +104,49 @@ class ChatService:
                     chat_dict
                 )
                 
-            # Prepare final chat_dict with complete response
-            chat_dict = self._get_chat_dict(
-                question=question,
-                response=response,
-                sources = [],
-                chatType=int(Enumerator.ChatType.External.value),
-                chatId=chatId
-            )
-            # Update user chat history
-            self._update_user_chat_info(chat_dict)
+            return response
         
         except Exception as e:
             Common.exception_details("ChatSerice._get_external_chat_response", e)
+            return ""
             
     def _get_document_chat_response(self, question: str, chatId: str):
         try:  
-            response = VectorStore(self.user_id).get_document_chat_response(question)
-            data = response["response"]
-            sources = response["sources"]
-            
-            # Prepare chat_dict
-            chat_dict = self._get_chat_dict(
-                question=question,
-                response=data,
-                sources=sources,
-                chatType=int(Enumerator.ChatType.Document.value),
-                chatId=chatId
+            vectorstore = VectorStore(self.user_id)
+            chat = load_fast_llm()
+            prompt = self.get_document_prompt()
+            db = vectorstore.get_document_vectorstore()
+            rag_chain = (
+                {"context": db.as_retriever(), "question": RunnablePassthrough()}
+                | prompt
+                | chat
+                | StrOutputParser()
             )
-
-            # Emit chat chunk through chat stream socket
-            self._emit_chat_stream(
-                chat_dict
-            )
-            
-            # Update user chat history
-            self._update_user_chat_info(chat_dict)
+            response = ""
+            for chunk in rag_chain.stream(question):
+                # Keep on appending chunks to construct the entire response
+                response = response + chunk
+                print(chunk, end="", flush=True)
+                
+                # Prepare chat_dict
+                chat_dict = self._get_chat_dict(
+                    question=question,
+                    response=chunk,
+                    sources=[],
+                    chatType=int(Enumerator.ChatType.Document.value),
+                    chatId=chatId
+                )
+                
+                # Emit chat chunk through chat stream socket
+                self._emit_chat_stream(
+                    chat_dict
+                )
+                
+            return response
         
         except Exception as e:
             Common.exception_details("ChatSerice._get_document_chat_response", e)
+            return ""
             
     def _emit_chat_stream(self, chat_dict: dict):       
         chat_event = "chat_" + str(self.user_id)
@@ -252,3 +284,54 @@ class ChatService:
 
         except Exception as e:
             Common.exception_details("ChatSerice._update_user_chat_info", e)
+
+    def get_document_prompt(self):
+        prompt_template = """
+        You are a helpful Artificial Intelligence Question and Answer bot who answers questions based on context.
+
+        Example Number 1:
+        - Context: The Theory of Relativity was developed by Albert Einstein
+        - Question: Who developed the Theory of Relativity?
+        - AI Response: The Theory of Relativity was developed by Albert Einstein.
+
+        Example Number 2:
+        - Context: Marketing is the activity, set of institutions, and processes for creating, communicating, delivering, and exchanging offerings that have value for customers, clients, partners, and society at large.
+        - Question: How do you manage your finance?
+        - AI Response: I don't know.
+
+        Example Number 3:
+        - Context: Water boils at 100 degrees Celsius at sea level
+        - Question: What is the boiling point of water at sea level?
+        - AI Response: The boiling point of water at sea level is 100 degrees Celsius.
+
+        Example Number 4:
+        - Context: Artificial intelligence is the ability of machines to perform tasks that are typically associated with human intelligence.
+        - Question: What is the safety measure taken in Steel?
+        - AI Response: I don't know.
+
+        Example Number 5:
+        - Context: 
+        - Question: How to get over depression?
+        - AI Response: I don't know.
+
+        Since the context does not contain the answer to the question in Examples 2 and 4, and since the context was empty in Example 5, the AI Response is "I don't know". In a similar way, if the context is not related to the answer or the context is empty, the final answer should be "I don't know".
+
+        Remember the following points before providing any answer:
+        - If the answer is not present in the "context", then just say "I don't know"; don't try to make up an answer.
+        - If the "context" is empty, do not answer; say "I don't know", even if you know the answer.
+        - Only return the helpful answer below and nothing else.
+        - ALWAYS answer in MARKDOWN!
+
+        The context and question are - 
+        Context: {context}
+        Question: {question}
+
+        Helpful answer:
+
+        """
+
+        prompt = PromptTemplate(
+            template=prompt_template, input_variables=["context", "question"]
+        )
+
+        return prompt
