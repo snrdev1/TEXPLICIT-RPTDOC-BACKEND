@@ -1,5 +1,6 @@
 from func_timeout import FunctionTimedOut, func_timeout
 
+
 # Wrapper function to handle timeout
 def timeout_handler(default_value, timeout, func, *args, **kwargs):
     try:

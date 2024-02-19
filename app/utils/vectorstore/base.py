@@ -8,10 +8,8 @@ from app.config import Config
 from app.services.myDocumentsService import MyDocumentsService
 from app.utils.common import Common
 from app.utils.production import Production
-from app.utils.vectorstore.retrievers import Retriever
 
-from ..llm_utils import get_embeddings, load_fast_llm
-from .prompts import get_document_prompt
+from ..llm_utils import get_embeddings
 
 
 class VectorStore:
@@ -40,21 +38,7 @@ class VectorStore:
         except Exception as e:
             Common.exception_details("VectorStore.delete_vectorindex", e)
 
-    def get_document_chat_response(self, query):
-        try:
-            llm = load_fast_llm()
-            prompt = get_document_prompt()
-            db = self.get_document_vectorstore(self.embeddings)
-            retriever = Retriever(self.user_id, query, llm, prompt, db)
-            response, sources = retriever.rag_chain_with_sources()
-
-            return {"response": response, "sources": sources}
-
-        except Exception as e:
-            Common.exception_details("VectorStore.get_document_chat_response", e)
-            return None
-
-    def get_document_vectorstore(self, embeddings=None):
+    def get_document_vectorstore(self):
         """
         The function `get_document_vectorstore` retrieves a vectorstore either from Google Cloud Storage
         (GCS) or from a local path, depending on the environment, and returns it.
@@ -73,7 +57,7 @@ class VectorStore:
             else:
                 print("💁 Getting vectorstore from LOCAL")
                 db_path = self._get_document_vectorstore_path()
-                db = FAISS.load_local(db_path, embeddings)
+                db = FAISS.load_local(db_path, self.embeddings)
 
             return db
 
