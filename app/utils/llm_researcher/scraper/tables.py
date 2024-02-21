@@ -7,10 +7,9 @@ from bs4 import BeautifulSoup
 from docx import Document
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.shared import Pt
-
 from app.config import Config as GlobalConfig
-from app.utils.production import Production
 from app.utils.common import Common
+from app.utils.production import Production
 
 from ...document import add_hyperlink
 from ..utils.text import *
@@ -41,7 +40,7 @@ class TableExtractor:
             os.makedirs(os.path.dirname(self.tables_path), exist_ok=True)
             write_to_file(self.tables_path, str(self.tables))
 
-    def extract_tables(self, url: str) -> list:
+    async def extract_tables(self, url: str) -> list:
         """
         Extract tables from a given URL excluding those with hyperlinks in values.
 
@@ -138,13 +137,52 @@ class TableExtractor:
             - bool: True if hyperlinks are found, False otherwise.
             """
             for row in table_data:
-                for value in row.values():
+                
+                for value in row:
                     # Check if the value contains an <a> tag
                     if isinstance(value, str) and re.search(r'<a\s+(?:[^>]*?\s+)?href=[\'"]([^\'"]*)[\'"]', value):
                         return True
             return False
 
+        def filter_tables(table) -> bool:
+            """
+            The function `filter_tables` filters out tables based on specific criteria such as blank
+            values, hyperlinks, titles, and column names.
+            
+            :param table: The `filter_tables` function takes a `table` parameter, which is expected to
+            be a dictionary representing a table. The dictionary should have the following keys:
+            :return: The function `filter_tables` returns a boolean value - `True` if the table passes
+            all the exclusion criteria specified in the function, and `False` if the table fails any of
+            the criteria.
+            """
+            try:
+                # Exlcude tables where value field is blank
+                if len(table["values"]) in [0, 1]:
+                    return False
+                
+                # Exclude tables with hyperlinks
+                if has_hyperlinks(table["values"]):
+                    return False
+                
+                # Exclude tables with specific titles
+                if table["title"].lower() in ["", "information related to the various screen readers"]:
+                    return False
+                
+                # Exclude tables with specific column names
+                for column_name in table["values"][0].values():
+                    if column_name.lower() in ["download"]:
+                        return False
+                
+                return True
+            
+            except Exception as e:
+                Common.exception_details("TableExtractor.filter_tables", e)
+                return False
+            
         try:
+            if url.endswith(".pdf"):
+                return [], url
+            
             response = requests.get(url)
             response.raise_for_status()
             soup = BeautifulSoup(response.content, "html.parser")
@@ -154,20 +192,19 @@ class TableExtractor:
             for table in tables:
                 nested_tables = table.find_all("table")
                 if not nested_tables:
-                    table_data = extract_table_data(table)
-
-                    # Exclude tables with hyperlinks
-                    if not has_hyperlinks(table_data):
-                        extracted_tables.append(table_data)
-
-            return extracted_tables
+                    table_struct = extract_table_data(table)
+                    
+                    if filter_tables(table_struct):
+                        extracted_tables.append(table_struct)
+                        
+            return extracted_tables, url
 
         except requests.RequestException as e:
             print(f"🚩 Request Exception when scraping tables : {e}")
-            return []
+            return [], url
         except Exception as e:
             Common.exception_details("TableExtractor.extract_tables", e)
-            return []
+            return [], url
 
     def tables_to_html(self, list_of_tables: list, url: str) -> str:
         try:
@@ -177,8 +214,8 @@ class TableExtractor:
             for table in list_of_tables:
                 title = table.get("title", "")
                 values = table.get("values", [])
-
-                print(f"Title : {title}")
+                if values == []:
+                    continue
 
                 # Create the table header row
                 headers = list(values[0].values())
@@ -233,7 +270,7 @@ class TableExtractor:
             return "<br><br><br>".join(html_tables)
 
         except Exception as e:
-            print(f"🚩 Exception in converting tables to html: {e}")
+            Common.exception_details("TableExtractor.tables_to_html", e)
             return ""
 
     def add_tables_to_doc(self, document: Document):
@@ -329,7 +366,7 @@ class TableExtractor:
         combined_html = report_html
         if len(tables_html):
             print(f"➕ Appending {len(self.tables)} tables to report...\n")
-            combined_html += "<br><h1>Data Tables</h1><br>" + tables_html
+            combined_html += "<br><h2>Data Tables</h2><br>" + tables_html
 
         return combined_html
 

@@ -1,6 +1,7 @@
 """
     All Documents related routes
 """
+
 import datetime
 import io
 import os
@@ -122,7 +123,7 @@ def upload_documents(logged_in_user):
 
         # Upload files
         MyDocumentsService.upload_documents(logged_in_user, files, path)
-        
+
         return Response.custom_response([], Messages.OK_FILE_UPLOAD_STARTED, True, 200)
 
     except Exception as e:
@@ -143,12 +144,11 @@ def get_documents(logged_in_user):
         A custom response
     """
     try:
-        # print(request)
-        # request_body = request.get_json()
         folder_name = request.args.get("root")
-        # print(folder_name)
+        limit = int(request.args.get("limit", 20))
+        offset = int(request.args.get("offset", 0))
         user_id = logged_in_user["_id"]
-        docs = MyDocumentsService().get_all_files(user_id, folder_name)
+        docs = MyDocumentsService().get_all_files(user_id, folder_name, limit, offset)
 
         if docs and len(docs) > 0:
             return Response.custom_response(
@@ -180,9 +180,7 @@ def get_folders(logged_in_user):
         user_id = logged_in_user["_id"]
         folders = MyDocumentsService().get_all_folders(user_id)
 
-        return Response.custom_response(
-            folders, Messages.OK_FOLDER_RETRIVE, True, 200
-        )
+        return Response.custom_response(folders, Messages.OK_FOLDER_RETRIVE, True, 200)
 
     except Exception as e:
         Common.exception_details("mydocuments.py : get_folders", e)
@@ -241,11 +239,13 @@ def get_document(logged_in_user, document_id):
 def delete_document(logged_in_user, file_id):
     try:
         user_id = logged_in_user["_id"]
-        
+
         vectorstore_obj = VectorStore(user_id)
-        t1 = threading.Thread(target=vectorstore_obj.delete_vectorindex, args=(file_id, ))
+        t1 = threading.Thread(
+            target=vectorstore_obj.delete_vectorindex, args=(file_id,)
+        )
         t1.start()
-        
+
         delete_response = MyDocumentsService().delete_file(file_id, user_id)
 
         if delete_response:
@@ -320,9 +320,9 @@ def my_documents_itemized_summary(logged_in_user):
                     "title": title,
                     "createdOn": date,
                 },
-                "message": Messages.OK_GENERATE_SUMMARY
-                if success
-                else Messages.NOT_FOUND_KI,
+                "message": (
+                    Messages.OK_GENERATE_SUMMARY if success else Messages.NOT_FOUND_KI
+                ),
                 "success": success,
             }
             print()
@@ -374,9 +374,11 @@ def get_highlights_by_file_ids(logged_in_user):
                     "sequenceNumber": idx + 1,
                     "highlights": key_phrase_obj["out"],
                 },
-                "message": Messages.OK_GENERATE_HIGHLIGHTS
-                if key_phrase_obj["suc"]
-                else Messages.NOT_FOUND_KI,
+                "message": (
+                    Messages.OK_GENERATE_HIGHLIGHTS
+                    if key_phrase_obj["suc"]
+                    else Messages.NOT_FOUND_KI
+                ),
                 "success": key_phrase_obj["suc"],
             }
 
@@ -387,9 +389,7 @@ def get_highlights_by_file_ids(logged_in_user):
             print(f"Emitted highlight! - {idx + 1}/{len(file_ids)}")
             socketio.sleep(1)
 
-        return Response.custom_response(
-            [], Messages.OK_GENERATE_HIGHLIGHTS, True, 200
-        )
+        return Response.custom_response([], Messages.OK_GENERATE_HIGHLIGHTS, True, 200)
 
     except Exception as e:
         Common.exception_details("mydocuments.py : get_highlights_by_file_ids", e)
@@ -546,7 +546,7 @@ def my_documents_download(logged_in_user, virtual_document_name):
                 path = file_root[1:]
             else:
                 path = file_root[1:] + "/"
-            print("\nPATH : ", path+virtual_document_name)
+            print("\nPATH : ", path + virtual_document_name)
             blob = bucket.blob(path + virtual_document_name)
             # blob.download_to_filename(file["originalFileName"])
             bytes = blob.download_as_bytes()
@@ -617,6 +617,7 @@ def share_document(logged_in_user):
         Common.exception_details("mydocuments.py : share_document", e)
         return Response.server_error()
 
+
 @mydocuments.route("/rename/<string:_id>", methods=["PUT"])
 @authorized
 def rename_docs(logged_in_user, _id):
@@ -624,7 +625,7 @@ def rename_docs(logged_in_user, _id):
         user_id = str(logged_in_user["_id"])
         request_params = request.get_json()
         rename_value = request_params["renameValue"]
-        print("Request parameters : " , request_params)
+        print("Request parameters : ", request_params)
         print("")
 
         # Check if rename_value is present in the request params

@@ -17,8 +17,9 @@ class DocumentLoader:
         self.user_id = user_id
         self.file_id = file_id
         self.file = file
-        self.virtual_file_name = self.file["virtualFileName"]
         self.filepath = filepath
+        
+        self.virtual_file_name = self.file["virtualFileName"]
         self.file_extension = self.virtual_file_name.rsplit(".", 1)[-1]
         self.file_root = self.file["root"]
 

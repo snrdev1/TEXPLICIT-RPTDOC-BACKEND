@@ -27,14 +27,14 @@ from app.utils.socket import socket_error, socket_info, socket_success
 from app.utils.vectorstore.document_loaders import DocumentLoader
 
 
-class MyDocumentsService:        
+class MyDocumentsService:
     @staticmethod
     def upload_document(logged_in_user, file, path):
         """
         The `upload_document` function uploads a file to a specified path, parses and inserts the
         document into a database, updates the virtual filename, and saves the file on disk or a cloud
         bucket.
-        
+
         Args:
           logged_in_user: The logged_in_user parameter is an object that represents the currently logged
         in user. It contains information about the user, such as their ID, name, email, etc.
@@ -43,7 +43,7 @@ class MyDocumentsService:
           path: The `path` parameter represents the directory path where the document should be
         uploaded. It is a string that specifies the location within the file system or cloud storage
         where the document should be saved.
-        
+
         Returns:
           a tuple containing two values: 1) an integer indicating the success or failure of the upload
         process (1 for success, 0 for failure), and 2) the inserted ID of the document in the database.
@@ -83,8 +83,8 @@ class MyDocumentsService:
 
         # Save file on disk or cloud bucket
         MyDocumentsService().save_file(file, inserted_id, logged_in_user, path)
-        
-        return 1, inserted_id 
+
+        return 1, inserted_id
 
     @staticmethod
     def upload_documents(logged_in_user, files, path):
@@ -92,7 +92,7 @@ class MyDocumentsService:
         The function `upload_documents` uploads multiple files to a specified path, using a
         ThreadPoolExecutor to execute the upload process concurrently, and updates the document
         vectorstore for each successfully uploaded file.
-        
+
         Args:
           logged_in_user: The logged_in_user parameter is the user object of the currently logged in
         user. It contains information about the user, such as their ID, name, email, etc.
@@ -102,12 +102,17 @@ class MyDocumentsService:
           path: The `path` parameter is the directory path where the documents will be uploaded to.
         """
         user_id = str(logged_in_user["_id"])
-        
+
         # Create a ThreadPoolExecutor with a specified number of threads (e.g., 4)
         with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
             # Submit the function with arguments to the thread pool
-            results = [executor.submit(MyDocumentsService().upload_document, logged_in_user, file, path) for file in files]
-        
+            results = [
+                executor.submit(
+                    MyDocumentsService().upload_document, logged_in_user, file, path
+                )
+                for file in files
+            ]
+
         # Getting function returns from all function calls from threadpool
         outputs = [result.result() for result in results]
         print("MyDocumentsService outputs : ", outputs)
@@ -117,16 +122,18 @@ class MyDocumentsService:
         # Number of documents successfully uploaded
         uploaded_documents_num = sum([output[0] for output in outputs])
         print("MyDocumentsService uploaded_documents_num : ", uploaded_documents_num)
-        
-        # Update document vectorstore for each successfully inserted id 
+
+        # Update document vectorstore for each successfully inserted id
         for inserted_id in uploaded_documents_ids:
             file = MyDocumentsService().get_file(inserted_id)
             print("MyDocumentsService file : ", file)
             virtual_file_name = file["virtualFileName"]
-            filepath = MyDocumentsService().get_file_save_path(virtual_file_name, user_id, path)
+            filepath = MyDocumentsService().get_file_save_path(
+                virtual_file_name, user_id, path
+            )
             print("MyDocumentsService filepath : ", filepath)
             DocumentLoader(user_id, inserted_id, file, filepath).load_document()
-        
+
         # Calculating number of documents successfully uploaded
         if uploaded_documents_num > 0:
             socket_success(
@@ -159,9 +166,7 @@ class MyDocumentsService:
             file_save_path = os.path.join(user_folder_path, filename)
         else:
             replace_substring = "/" + str(file_created_by) + "/"
-            user_folder_path = os.path.join(
-                Config.USER_FOLDER, str(file_created_by)
-            )
+            user_folder_path = os.path.join(Config.USER_FOLDER, str(file_created_by))
             file_root = file["root"]
             file_root = file_root.replace(replace_substring, "")
             user_folder_path = os.path.join(user_folder_path, file_root)
@@ -267,7 +272,7 @@ class MyDocumentsService:
         )
         return response.modified_count
 
-    def get_all_files(self, user_id, root):
+    def get_all_files(self, user_id, root, limit: int = 20, offset: int = 0):
         """
         Retrieves all the files uploaded by the user
         """
@@ -303,7 +308,9 @@ class MyDocumentsService:
         pipeline = [
             PipelineStages.stage_facet(
                 {"uploaded": uploaded_documents, "shared": shared_documents}
-            )
+            ),
+            {"$skip": offset},
+            {"$limit": limit},
         ]
 
         documents = m_db[Config.MONGO_DOCUMENT_MASTER_COLLECTION].aggregate(pipeline)
@@ -367,7 +374,7 @@ class MyDocumentsService:
                     new_folder_name = root[1:] + "/" + rename_value + "/"
                 # print("Folder to rename : ", folder_to_rename)
                 # print("New folder name: ", new_folder_name)
-                
+
                 bucket = Production.get_users_bucket()
                 source_blob = bucket.blob(folder_to_rename)
                 destination_blob = bucket.blob(new_folder_name)
@@ -617,7 +624,7 @@ class MyDocumentsService:
                 "createdBy": {"_id": ObjectId(user_id), "ref": "user"},
                 "createdOn": datetime.datetime.utcnow(),
                 "type": "Folder",
-                "root": db_path
+                "root": db_path,
                 # "root": "/" + ObjectId(user_id) + "/" if path == None else path
             }
             # print("DB PATH : " + db_path)
@@ -678,9 +685,7 @@ class MyDocumentsService:
                 blobs = bucket.list_blobs(prefix=folder_to_del + "/")
                 for blob in blobs:
                     blob.delete()
-                print(
-                    f"Folder '{folder_name}' deleted from bucket successfully."
-                )
+                print(f"Folder '{folder_name}' deleted from bucket successfully.")
                 folder_delete_flag = True
             except Exception as e:
                 print(f"Error deleting folder with name '{folder_name}': {e}")
@@ -1282,9 +1287,7 @@ class MyDocumentsService:
         # Ensure that the user image upload folder exists
         os.makedirs(Config.USER_SUMMARY_PPTX_DOWNLOAD_FOLDER, exist_ok=True)
 
-        file_path = os.path.join(
-            Config.USER_SUMMARY_PPTX_DOWNLOAD_FOLDER, file_name
-        )
+        file_path = os.path.join(Config.USER_SUMMARY_PPTX_DOWNLOAD_FOLDER, file_name)
         root.save(file_path)
 
         return file_path
@@ -1498,9 +1501,7 @@ class MyDocumentsService:
         # Ensure that the user image upload folder exists
         os.makedirs(Config.USER_SUMMARY_PPTX_DOWNLOAD_FOLDER, exist_ok=True)
 
-        file_path = os.path.join(
-            Config.USER_SUMMARY_PPTX_DOWNLOAD_FOLDER, file_name
-        )
+        file_path = os.path.join(Config.USER_SUMMARY_PPTX_DOWNLOAD_FOLDER, file_name)
         root.save(file_path)
 
         return file_path
@@ -1535,9 +1536,7 @@ class MyDocumentsService:
         # Ensure that the user image upload folder exists
         os.makedirs(Config.USER_SUMMARY_XLSX_DOWNLOAD_FOLDER, exist_ok=True)
 
-        file_path = os.path.join(
-            Config.USER_SUMMARY_XLSX_DOWNLOAD_FOLDER, file_name
-        )
+        file_path = os.path.join(Config.USER_SUMMARY_XLSX_DOWNLOAD_FOLDER, file_name)
         workbook.save(file_path)
         workbook.close()
         return file_path
@@ -1583,9 +1582,7 @@ class MyDocumentsService:
         # Ensure that the user image upload folder exists
         os.makedirs(Config.USER_SUMMARY_XLSX_DOWNLOAD_FOLDER, exist_ok=True)
 
-        file_path = os.path.join(
-            Config.USER_SUMMARY_XLSX_DOWNLOAD_FOLDER, file_name
-        )
+        file_path = os.path.join(Config.USER_SUMMARY_XLSX_DOWNLOAD_FOLDER, file_name)
         workbook.save(file_path)
         workbook.close()
         return file_path
@@ -1631,14 +1628,10 @@ class MyDocumentsService:
             if blob.exists():
                 blob.delete()
                 deleted = True
-                print(
-                    f"🟢 File '{file_name}' deleted successfully from bucket!."
-                ) 
+                print(f"🟢 File '{file_name}' deleted successfully from bucket!.")
             else:
                 deleted = False
-                print(
-                    f"🔺 File '{file_name}' does NOT EXIST in bucket!." 
-                )
+                print(f"🔺 File '{file_name}' does NOT EXIST in bucket!.")
         else:
             file_path = MyDocumentsService.get_file_path(file, user_id)
             if os.path.isfile(file_path):
@@ -2065,7 +2058,7 @@ class MyDocumentsService:
             file_data = MyDocumentsService._create_my_document_db_struct(
                 title, data, filename, user, root
             )
-            
+
             print("File data  : ", file_data)
 
             m_db = MongoClient.connect()

@@ -16,6 +16,8 @@ from app.utils.llm_utils import load_fast_llm
 from app.utils.pipelines import PipelineStages
 from app.utils.vectorstore.base import VectorStore
 from app.utils.timer import timeout_handler
+from langchain.memory import ConversationBufferWindowMemory
+
 
 openai.api_key = Config.OPENAI_API_KEY
 
