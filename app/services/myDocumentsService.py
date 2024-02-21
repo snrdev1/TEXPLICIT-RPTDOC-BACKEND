@@ -267,7 +267,12 @@ class MyDocumentsService:
         )
         return response.modified_count
 
-    def get_all_files(self, user_id, root):
+    def get_all_files(self, 
+        user_id, 
+        root,
+        limit: int = 20, 
+        offset: int = 0
+    ):
         """
         Retrieves all the files uploaded by the user
         """
@@ -295,6 +300,8 @@ class MyDocumentsService:
                 "userDetails",
             ),
             PipelineStages.stage_unwind("userDetails"),
+            {"$skip": offset},
+            {"$limit": limit},
             PipelineStages.stage_add_fields({"owner": "$userDetails.name"}),
             PipelineStages.stage_unset(["userDetails", "usersWithAccess"]),
         ] + common_pipeline
