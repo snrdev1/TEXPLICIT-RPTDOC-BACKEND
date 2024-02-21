@@ -372,16 +372,42 @@ def get_report_from_db(reportid):
         return None
 
 
-def extract_text_before_h2(markdown_text):
-    # Use regular expression to find the content before the first H2 heading
-    match = re.match(r"^(.*?)(?=\n## )", markdown_text, re.DOTALL)
-
-    if match:
-        # Return the content before the first H2 heading
-        return match.group(1)
+def extract_text_before_h2(markdown_string):
+    # Split the string into lines
+    lines = markdown_string.split('\n')
+    
+    # Initialize variables to store the text
+    text_before_first_h2 = ''
+    text_before_second_h2 = ''
+    
+    # Flag to track if we have encountered the first h2 header
+    first_h2_found = False
+    
+    # Iterate over the lines
+    for line in lines:
+        # Check if the line is an H1 or H2 header
+        if re.match(r'^#{1,2} ', line):
+            if not first_h2_found:
+                if line.startswith('# '):  # H1 header
+                    text_before_first_h2 = ''
+                else:  # H2 header
+                    text_before_first_h2 = text_before_first_h2.strip()
+                    first_h2_found = True
+            else:
+                text_before_second_h2 = text_before_second_h2.strip()
+                break
+        else:
+            # Append the line to the appropriate text variable
+            if not first_h2_found:
+                text_before_first_h2 += line + '\n'
+            else:
+                text_before_second_h2 += line + '\n'
+    
+    # Return the extracted text
+    if text_before_first_h2.strip() == '':
+        return text_before_second_h2.strip()
     else:
-        # If no H2 heading found, return the entire text
-        return markdown_text
+        return text_before_first_h2.strip()
 
 
 def get_report_download_filename(report_type: str, report_task: str, report_created):
