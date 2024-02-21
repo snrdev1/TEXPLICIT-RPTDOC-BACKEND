@@ -7,7 +7,6 @@ from bs4 import BeautifulSoup
 from docx import Document
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.shared import Pt
-
 from app.config import Config as GlobalConfig
 from app.utils.common import Common
 from app.utils.production import Production
@@ -41,7 +40,7 @@ class TableExtractor:
             os.makedirs(os.path.dirname(self.tables_path), exist_ok=True)
             write_to_file(self.tables_path, str(self.tables))
 
-    def extract_tables(self, url: str) -> list:
+    async def extract_tables(self, url: str) -> list:
         """
         Extract tables from a given URL excluding those with hyperlinks in values.
 
@@ -166,7 +165,7 @@ class TableExtractor:
                     return False
                 
                 # Exclude tables with specific titles
-                if table["title"].lower() in ["information related to the various screen readers"]:
+                if table["title"].lower() in ["", "information related to the various screen readers"]:
                     return False
                 
                 # Exclude tables with specific column names
@@ -181,6 +180,9 @@ class TableExtractor:
                 return False
             
         try:
+            if url.endswith(".pdf"):
+                return [], url
+            
             response = requests.get(url)
             response.raise_for_status()
             soup = BeautifulSoup(response.content, "html.parser")
@@ -195,14 +197,14 @@ class TableExtractor:
                     if filter_tables(table_struct):
                         extracted_tables.append(table_struct)
                         
-            return extracted_tables
+            return extracted_tables, url
 
         except requests.RequestException as e:
             print(f"🚩 Request Exception when scraping tables : {e}")
-            return []
+            return [], url
         except Exception as e:
             Common.exception_details("TableExtractor.extract_tables", e)
-            return []
+            return [], url
 
     def tables_to_html(self, list_of_tables: list, url: str) -> str:
         try:
