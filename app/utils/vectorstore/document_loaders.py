@@ -76,31 +76,31 @@ class DocumentLoader:
             # PDF
             if self.file_extension == "pdf":
                 print("Loader : PDF")
-                data = self.load_pdf()
+                data = self._load_pdf()
 
             # WORD
             elif self.file_extension == "doc" or self.file_extension == "docx":
                 print("Loader : DOCX")
-                data = self.load_docx()
+                data = self._load_docx()
 
             # PPT
             elif self.file_extension == "pptx":
                 print("Loader : PPTX")
-                data = self.load_pptx()
+                data = self._load_pptx()
 
             # TXT
             elif self.file_extension == "txt":
                 print("Loader : TXT")
-                data = self.load_txt()
+                data = self._load_txt()
 
             # CSV
             elif self.file_extension == "csv":
                 print("Loader : CSV")
-                data = self.load_csv()
+                data = self._load_csv()
 
             elif self.file_extension == "xls" or self.file_extension == "xlsx":
                 print("Loader : Excel")
-                data = self.load_excel()
+                data = self._load_excel()
 
             else:
                 data = None
@@ -111,37 +111,37 @@ class DocumentLoader:
             print(e)
             return None
 
-    def load_pdf(self):
+    def _load_pdf(self):
         loader = UnstructuredPDFLoader(self.filepath)
         docs = loader.load()
 
         return docs
 
-    def load_docx(self):
+    def _load_docx(self):
         loader = UnstructuredWordDocumentLoader(self.filepath)
         docs = loader.load()
 
         return docs
 
-    def load_pptx(self):
+    def _load_pptx(self):
         loader = UnstructuredPowerPointLoader(self.filepath)
         docs = loader.load()
 
         return docs
 
-    def load_txt(self):
+    def _load_txt(self):
         loader = TextLoader(self.filepath)
         docs = loader.load()
 
         return docs
 
-    def load_excel(self):
+    def _load_excel(self):
         loader = UnstructuredExcelLoader(self.filepath, mode="elements")
         docs = loader.load()
 
         return docs
 
-    def load_csv(self):
+    def _load_csv(self):
         loader = UnstructuredCSVLoader(self.filepath, mode="elements")
         docs = loader.load()
 
