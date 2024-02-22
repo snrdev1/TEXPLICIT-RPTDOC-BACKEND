@@ -1,7 +1,7 @@
 import tiktoken
 from langchain_community.embeddings import HuggingFaceEmbeddings, OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
 from app.config import Config
 from app.utils.common import Common
 
@@ -20,10 +20,14 @@ def load_fast_llm():
 
 def get_embeddings():
     """
-    The function `get_embeddings` returns an instance of the OpenAIEmbeddings class with no disallowed
-    special characters.
-    :return: an instance of the OpenAIEmbeddings class.
+    The function `get_embeddings` returns embeddings using the Hugging Face model
+    "sentence-transformers/all-MiniLM-L6-v2" on the CPU.
+    :return: An instance of the HuggingFaceEmbeddings class initialized with the model
+    "sentence-transformers/all-MiniLM-L6-v2" and device set to "cpu" is being returned.
     """
+    
+    print(f"Fetching embeddings!")
+    
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2",
         model_kwargs={"device": "cpu"},
