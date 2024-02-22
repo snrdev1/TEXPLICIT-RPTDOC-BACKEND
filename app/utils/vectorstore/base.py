@@ -122,6 +122,7 @@ class VectorStore:
                 # Download the pickled object as bytes from GCS
                 pkl = blob.download_as_bytes()
                 print("Type of pkl : ", type(pkl))
+                print("Type of embeddings : ", type(self.embeddings))
 
                 # Load the index
                 db = FAISS.deserialize_from_bytes(
