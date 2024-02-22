@@ -120,9 +120,10 @@ def upload_documents(logged_in_user):
     try:
         files = request.files.getlist("files[]")
         path = request.form.get("path")
+        upload_id = request.form.get("uploadId")
 
         # Upload files
-        MyDocumentsService.upload_documents(logged_in_user, files, path)
+        MyDocumentsService.upload_documents(logged_in_user, files, path, upload_id)
 
         return Response.custom_response([], Messages.OK_FILE_UPLOAD_STARTED, True, 200)
 
