@@ -68,10 +68,24 @@ def socket_info(userid: Union[str, ObjectId], msg: str) -> None:
 def emit_report_status(
     user_id: Union[str, ObjectId], report_generation_id: str, message: str
 ) -> None:
-    print(f"🔌 Emitting report status : {message}\n")
+    print(f"🔌 Emitting Report Generation Status : {message}\n")
 
     Response.socket_reponse(
         event=f"{user_id}_report_{report_generation_id}_status",
         data=[],
+        message=message,
+    )
+
+
+def emit_document_upload_status(
+    user_id: Union[str, ObjectId], upload_id: str, message: str, progress: int = 0
+) -> None:
+    print(f"🔌 Emitting Document Upload Status : {message}\n")
+    
+    print(f"Event name : {user_id}_{upload_id}_document_upload_status")
+
+    Response.socket_reponse(
+        event=f"{user_id}_{upload_id}_document_upload_status",
+        data=[{"progress": progress}],
         message=message,
     )

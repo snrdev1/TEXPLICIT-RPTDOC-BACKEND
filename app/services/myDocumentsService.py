@@ -23,13 +23,13 @@ from app.utils.formatter import cursor_to_dict
 from app.utils.llm.llm_highlights import generate_highlights
 from app.utils.pipelines import PipelineStages
 from app.utils.production import Production
-from app.utils.socket import socket_error, socket_info, socket_success
+from app.utils.socket import socket_error, socket_info, socket_success, emit_document_upload_status
 from app.utils.vectorstore.document_loaders import DocumentLoader
 
 
 class MyDocumentsService:
     @staticmethod
-    def upload_document(logged_in_user, file, path):
+    def upload_document(logged_in_user, file, path: str, upload_id: str):
         """
         The `upload_document` function uploads a file to a specified path, parses and inserts the
         document into a database, updates the virtual filename, and saves the file on disk or a cloud
@@ -60,8 +60,9 @@ class MyDocumentsService:
         if file_extension not in ["pdf", "doc", "docx", "pptx", "ppt", "txt"]:
             socket_info(
                 user_id,
-                f"Skipping upload of {filename} due to incompatible file format",
+                f"Skipping upload of {filename} due to incompatible file format"
             )
+            emit_document_upload_status(user_id, upload_id, f"Skipping upload of {filename} due to incompatible file format", 20)
             return 0, None
 
         # Parse and insert document into database
@@ -72,8 +73,9 @@ class MyDocumentsService:
         if not inserted_id:
             socket_error(
                 user_id,
-                f"Failed to save {filename} to database due to some error...",
+                f"Failed to save {filename} to database due to some error..."
             )
+            emit_document_upload_status(user_id, upload_id, f"Failed to save {filename} to database due to some error...", 20)
             return 0, None
 
         # Update the virtual filename of the file based on its inserted ID
@@ -87,7 +89,7 @@ class MyDocumentsService:
         return 1, inserted_id
 
     @staticmethod
-    def upload_documents(logged_in_user, files, path):
+    def upload_documents(logged_in_user, files, path: str, upload_id: str):
         """
         The function `upload_documents` uploads multiple files to a specified path, using a
         ThreadPoolExecutor to execute the upload process concurrently, and updates the document
@@ -102,18 +104,21 @@ class MyDocumentsService:
           path: The `path` parameter is the directory path where the documents will be uploaded to.
         """
         user_id = str(logged_in_user["_id"])
+        
+        emit_document_upload_status(user_id, upload_id, f"Uploading {len(files)} document(s)...", 20)
 
         # Create a ThreadPoolExecutor with a specified number of threads (e.g., 4)
         with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
             # Submit the function with arguments to the thread pool
             results = [
                 executor.submit(
-                    MyDocumentsService().upload_document, logged_in_user, file, path
+                    MyDocumentsService().upload_document, logged_in_user, file, path, upload_id, 
                 )
                 for file in files
             ]
 
         # Getting function returns from all function calls from threadpool
+        emit_document_upload_status(user_id, upload_id, f"Saved documents to database...", 50)
         outputs = [result.result() for result in results]
         print("MyDocumentsService outputs : ", outputs)
         # All document _ids inserted
@@ -124,6 +129,7 @@ class MyDocumentsService:
         print("MyDocumentsService uploaded_documents_num : ", uploaded_documents_num)
 
         # Update document vectorstore for each successfully inserted id
+        emit_document_upload_status(user_id, upload_id, f"Parsing documents and getting them ready for chat...", 70)
         for inserted_id in uploaded_documents_ids:
             file = MyDocumentsService().get_file(inserted_id)
             print("MyDocumentsService file : ", file)
@@ -139,6 +145,8 @@ class MyDocumentsService:
             socket_success(
                 user_id, f"Successfully uploaded {uploaded_documents_num} documents!"
             )
+            emit_document_upload_status(user_id, upload_id, f"Successfully uploaded {uploaded_documents_num} documents!", 100)
+
 
     @staticmethod
     def get_file_save_path(filename, user, path):
