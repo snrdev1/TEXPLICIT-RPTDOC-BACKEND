@@ -141,7 +141,7 @@ async def generate_report(
     cfg,
     all_subtopics: list = [],
     main_topic: str = "",
-    existing_headers: list = []
+    existing_headers: list = [],
 ):
     try:
         generate_prompt = get_report_by_type(report_type)
@@ -213,6 +213,7 @@ def add_source_urls(
     except Exception as e:
         return report_markdown
 
+
 # Function to extract headers from markdown text
 def extract_headers(markdown_text: str):
     headers = []
@@ -221,9 +222,7 @@ def extract_headers(markdown_text: str):
 
     stack = []  # Initialize stack to keep track of nested headers
     for line in lines:
-        if line.startswith(
-            "<h"
-        ):  # Check if the line starts with an HTML header tag
+        if line.startswith("<h"):  # Check if the line starts with an HTML header tag
             level = int(line[2])  # Extract header level
             header_text = line[
                 line.index(">") + 1 : line.rindex("<")
@@ -242,13 +241,12 @@ def extract_headers(markdown_text: str):
                     header
                 )  # Append as child if parent exists
             else:
-                headers.append(
-                    header
-                )  # Append as top-level header if no parent exists
+                headers.append(header)  # Append as top-level header if no parent exists
 
             stack.append(header)  # Push header onto the stack
 
     return headers  # Return the list of headers
+
 
 def table_of_contents(markdown_text: str):
     try:
