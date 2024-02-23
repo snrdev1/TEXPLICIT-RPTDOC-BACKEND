@@ -2226,12 +2226,13 @@ class MyDocumentsService:
                 path = file_root[1:] + ("/" if file_root != f"/{file_created_by}/" else "")
                 blob = bucket.blob(path + virtual_document_name)
                 bytes = blob.download_as_bytes()
-                return bytes, file["originalFileName"]
+                return io.BytesIO(bytes), file["originalFileName"]
             else:
                 user_folder_path = os.path.join(Config.USER_FOLDER, file_root[1:])
                 file_save_path = os.path.join(user_folder_path, virtual_document_name)
                 with open(file_save_path, 'rb') as file_handle:
-                    return file_handle.read(), file["originalFileName"]
+                    file_bytes = file_handle.read()
+                    return io.BytesIO(file_bytes), file["originalFileName"]
                     
         except Exception as e:
             Common.exception_details("MyDocumentsService.get_file_contents", e)

@@ -1,6 +1,6 @@
 import base64
 import json
-
+import io
 from bson import json_util
 
 from app.utils.common import Common
@@ -65,6 +65,9 @@ def cursor_to_dict(cursor):
 
 def get_base64_encoding(file):
     try:
+        if isinstance(file, io.BytesIO):
+            file = file.getvalue()  # Convert BytesIO to bytes
+        
         encoded_string = base64.b64encode(file)
         base64_message = encoded_string.decode("utf-8")
 
