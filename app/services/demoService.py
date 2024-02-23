@@ -4,7 +4,7 @@ from app.config import Config
 from app.models.mongoClient import MongoClient
 from app.utils import constants as Constants
 from app.utils.common import Common
-from app.utils.email_helper import EmailHelper
+from app.utils.email_helper import send_mail
 from app.utils.formatter import get_formatted_response
 
 # Demo request
@@ -55,7 +55,7 @@ def send_email_to_admin(demo_data: dict):
 
         receivers = Config.ADMIN_EMAIL_ADDRESSES
 
-        success = EmailHelper.send_mail(
+        success = send_mail(
             Constants.NEW_DEMO_REQUEST_MAILSUBJECT, mailBody, receivers, None
         )
 
@@ -72,7 +72,7 @@ def send_email_to_user(demo_data: dict):
         receivers = []
         receivers.append({"name": demo_data["name"], "email": demo_data["email"]})
 
-        success = EmailHelper.send_mail(
+        success = send_mail(
             Constants.DEMO_REQUEST_CONFIRMATION_MAILSUBJECT, mailBody, receivers, None
         )
 

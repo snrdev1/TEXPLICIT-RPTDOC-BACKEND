@@ -1,5 +1,8 @@
+import base64
 import json
+
 from bson import json_util
+
 from app.utils.common import Common
 
 
@@ -58,3 +61,15 @@ def cursor_to_dict(cursor):
 
     except Exception as e:
         Common.exception_details("common.py : cursor_to_dict", e)
+
+
+def get_base64_encoding(file):
+    try:
+        encoded_string = base64.b64encode(file)
+        base64_message = encoded_string.decode("utf-8")
+
+        return base64_message
+    
+    except Exception as e:
+        Common.exception_details("get_base64_encoding", e)
+        return None

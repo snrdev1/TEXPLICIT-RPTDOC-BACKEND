@@ -1,5 +1,6 @@
 import concurrent.futures
 import datetime
+import io
 import os
 import shutil
 from typing import List
@@ -18,16 +19,20 @@ from sumy.summarizers.text_rank import TextRankSummarizer
 
 from app.config import Config
 from app.models.mongoClient import MongoClient
+from app.services.userService import UserService
 from app.utils.common import Common
-from app.utils.formatter import cursor_to_dict
+from app.utils.email_helper import send_mail
+from app.utils.formatter import cursor_to_dict, get_base64_encoding
 from app.utils.llm.llm_highlights import generate_highlights
 from app.utils.pipelines import PipelineStages
 from app.utils.production import Production
-from app.utils.socket import socket_error, socket_info, socket_success, emit_document_upload_status
+from app.utils.socket import (emit_document_upload_status, socket_error,
+                              socket_info, socket_success)
 from app.utils.vectorstore.document_loaders import DocumentLoader
 
 
 class MyDocumentsService:
+    
     @staticmethod
     def upload_document(logged_in_user, file, path: str, upload_id: str):
         """
@@ -344,6 +349,26 @@ class MyDocumentsService:
         response = m_db[Config.MONGO_DOCUMENT_MASTER_COLLECTION].aggregate(pipeline)
 
         return cursor_to_dict(response)[0]
+    
+    def get_files(self, file_ids):
+        """
+        The function `get_file` retrieves files from a MongoDB database based on their IDs.
+
+        Args:
+        file_ids: The `file_ids` parameter is a list of unique identifiers of the files that you want to
+        retrieve from the database.
+
+        Returns:
+        A list of documents that match the given file_ids.
+        """
+        m_db = MongoClient.connect()
+
+        pipeline = [
+            PipelineStages.stage_match({"_id": {"$in": [ObjectId(file_id) for file_id in file_ids]}})
+        ] + MyDocumentsService._get_my_documents_pipeline()
+
+        response = m_db[Config.MONGO_DOCUMENT_MASTER_COLLECTION].aggregate(pipeline)
+        return cursor_to_dict(response)
 
     def rename_document(self, _id, rename_value, user_id):
         """
@@ -1770,67 +1795,47 @@ class MyDocumentsService:
 
         return bool(user_access_update_response.modified_count)
 
-    def modify_document_shared_users(self, user_id, document_id, target_user_ids=[]):
+    def modify_document_shared_users(self, user_id, document_ids, target_user_ids=[]):
         """
-        The function modifies the shared users of a document by adding target user IDs to the
+        The function modifies the shared users of multiple documents by adding target user IDs to the
         usersWithAccess array.
 
         Args:
-          user_id: The user_id parameter is the ID of the user who is modifying the document.
-          document_id: The `document_id` parameter is the unique identifier of the document that you
+        user_id: The user_id parameter is the ID of the user who is modifying the documents.
+        document_ids: The `document_ids` parameter is a list of unique identifiers of the documents that you
         want to modify the shared users for.
-          target_user_ids: The `target_user_ids` parameter is a list of user IDs that you want to add to
-        the shared users list of a document.
+        target_user_ids: The `target_user_ids` parameter is a list of user IDs that you want to add to
+        the shared users list of the documents.
 
         Returns:
-          the number of documents modified in the database.
+        the number of documents modified in the database.
         """
         m_db = MongoClient.connect()
-        # Check whether file or folder
-        query = {"_id": ObjectId(document_id), "createdBy._id": ObjectId(user_id)}
-        doc = m_db[Config.MONGO_DOCUMENT_MASTER_COLLECTION].find_one(query)
+        modified_count = 0
 
-        if doc["type"] == "File":
-            query = {
-                "_id": ObjectId(document_id),
-                "createdBy._id": ObjectId(user_id),
-                "usersWithAccess": {
-                    "$nin": [
-                        ObjectId(target_user_id) for target_user_id in target_user_ids
-                    ]
-                },
-            }
+        for document_id in document_ids:
+            query = {"_id": ObjectId(document_id), "createdBy._id": ObjectId(user_id)}
+            doc = m_db[Config.MONGO_DOCUMENT_MASTER_COLLECTION].find_one(query)
 
-            # Update the usersWithAccess array of the document with the target_user_id
-            response = m_db[Config.MONGO_DOCUMENT_MASTER_COLLECTION].update_one(
-                query,
-                {
+            if doc:
+                update_query = {
+                    "_id": ObjectId(document_id),
+                    "createdBy._id": ObjectId(user_id),
+                    "usersWithAccess": {"$nin": [ObjectId(target_user_id) for target_user_id in target_user_ids]},
+                }
+
+                update_statement = {
                     "$addToSet": {
                         "usersWithAccess": {
-                            "$each": [
-                                ObjectId(target_user_id)
-                                for target_user_id in target_user_ids
-                            ]
+                            "$each": [ObjectId(target_user_id) for target_user_id in target_user_ids]
                         }
                     }
-                },
-            )
-            return response.modified_count
-        else:
-            update_folder = m_db[Config.MONGO_DOCUMENT_MASTER_COLLECTION].update_one(
-                query,
-                {
-                    "$addToSet": {
-                        "usersWithAccess": {
-                            "$each": [
-                                ObjectId(target_user_id)
-                                for target_user_id in target_user_ids
-                            ]
-                        }
-                    }
-                },
-            )
-            return update_folder.modified_count
+                }
+
+                response = m_db[Config.MONGO_DOCUMENT_MASTER_COLLECTION].update_one(update_query, update_statement)
+                modified_count += response.modified_count
+
+        return modified_count
 
     @staticmethod
     def _get_my_documents_pipeline():
@@ -2184,3 +2189,52 @@ class MyDocumentsService:
         except Exception as e:
             print("An error occurred:", e)
             return None
+
+    def share_document_via_email(self, user_id, document_ids, email_ids, subject, message):
+        try:
+            files = self.get_files(document_ids)
+            virtual_file_names = [file["virtualFileName"] for file in files]
+            user = UserService().get_user_by_id(user_id)
+            file_details = [MyDocumentsService().get_file_contents(virtual_file_name) for virtual_file_name in virtual_file_names]
+            file_contents, file_names = zip(*file_details) 
+            attachments = [{"content": get_base64_encoding(file_content), "name": file_name} for (file_content, file_name) in zip(file_contents, file_names)]
+            recipients = [{"name": None, "email": email_id} for email_id in email_ids]
+                        
+            email_response = send_mail(
+                subject = subject, 
+                htmlMailBody = message, 
+                recipients = recipients,
+                sender = {"name": user["name"], "email": user["email"]},
+                attachments = attachments
+            )
+            
+            return email_response
+                
+        except Exception as e:
+            Common.exception_details("MyDocumentsService.share_document_via_email", e)
+            return False
+    
+    @staticmethod
+    def get_file_contents(virtual_document_name):
+        try:
+            file = MyDocumentsService().get_file_by_virtual_name(virtual_document_name)
+            file_created_by = str(file["createdBy"]["_id"])
+            file_root = str(file["root"])
+
+            if Config.GCP_PROD_ENV:
+                bucket = Production.get_users_bucket()
+                path = file_root[1:] + ("/" if file_root != f"/{file_created_by}/" else "")
+                blob = bucket.blob(path + virtual_document_name)
+                bytes = blob.download_as_bytes()
+                return bytes, file["originalFileName"]
+            else:
+                user_folder_path = os.path.join(Config.USER_FOLDER, file_root[1:])
+                file_save_path = os.path.join(user_folder_path, virtual_document_name)
+                with open(file_save_path, 'rb') as file_handle:
+                    return file_handle.read(), file["originalFileName"]
+                    
+        except Exception as e:
+            Common.exception_details("MyDocumentsService.get_file_contents", e)
+            return None, None
+            
+        
