@@ -1,5 +1,5 @@
 import asyncio
-import json
+import io
 import os
 import re
 import urllib
@@ -11,12 +11,15 @@ from bson import ObjectId
 
 from app.config import Config
 from app.models.mongoClient import MongoClient
+from app.services.userService import UserService
 from app.utils.audio import AudioGenerator
 from app.utils.common import Common
+from app.utils.email_helper import send_mail
 from app.utils.enumerator import Enumerator
-from app.utils.files_and_folders import get_report_directory
-from app.utils.formatter import cursor_to_dict
+from app.utils.files_and_folders import get_report_directory, get_report_path
+from app.utils.formatter import cursor_to_dict, get_base64_encoding
 from app.utils.llm_researcher.llm_researcher import research
+from app.utils.production import Production
 from app.utils.response import Response
 from app.utils.socket import emit_report_status
 
@@ -270,7 +273,7 @@ def get_report_directory(url):
     return reconstructed_url
 
 
-def get_reports_from_db(
+def get_all_reports_from_db(
     user_id: Union[str, ObjectId],
     limit: int = 10,
     offset: int = 0,
@@ -372,24 +375,57 @@ def get_report_from_db(reportid):
         return None
 
 
+def get_multiple_reports_from_db(reportids):
+    """
+    The function `get_reports_from_db` retrieves reports from a MongoDB database based on the
+    provided list of report IDs.
+
+    Args:
+      reportids: A list of report IDs for the reports that you want to retrieve from the database.
+
+    Returns:
+      A list of dictionaries, each containing the report information retrieved from the database.
+    """
+    m_db = MongoClient.connect()
+    response = m_db[Config.MONGO_REPORTS_MASTER_COLLECTION].aggregate(
+        [
+            {
+                "$match": {
+                    "_id": {"$in": [ObjectId(reportid) for reportid in reportids]}
+                }
+            },
+            {
+                "$addFields": {
+                    "_id": {"$toString": "$_id"},
+                    "createdBy._id": {"$toString": "$createdBy._id"},
+                    "createdOn": {"$dateToString": {"date": "$createdOn"}},
+                }
+            },
+        ]
+    )
+
+    response = cursor_to_dict(response)
+    return response
+
+
 def extract_text_before_h2(markdown_string):
     # Split the string into lines
-    lines = markdown_string.split('\n')
-    
+    lines = markdown_string.split("\n")
+
     # Initialize variables to store the text
-    text_before_first_h2 = ''
-    text_before_second_h2 = ''
-    
+    text_before_first_h2 = ""
+    text_before_second_h2 = ""
+
     # Flag to track if we have encountered the first h2 header
     first_h2_found = False
-    
+
     # Iterate over the lines
     for line in lines:
         # Check if the line is an H1 or H2 header
-        if re.match(r'^#{1,2} ', line):
+        if re.match(r"^#{1,2} ", line):
             if not first_h2_found:
-                if line.startswith('# '):  # H1 header
-                    text_before_first_h2 = ''
+                if line.startswith("# "):  # H1 header
+                    text_before_first_h2 = ""
                 else:  # H2 header
                     text_before_first_h2 = text_before_first_h2.strip()
                     first_h2_found = True
@@ -399,12 +435,12 @@ def extract_text_before_h2(markdown_string):
         else:
             # Append the line to the appropriate text variable
             if not first_h2_found:
-                text_before_first_h2 += line + '\n'
+                text_before_first_h2 += line + "\n"
             else:
-                text_before_second_h2 += line + '\n'
-    
+                text_before_second_h2 += line + "\n"
+
     # Return the extracted text
-    if text_before_first_h2.strip() == '':
+    if text_before_first_h2.strip() == "":
         return text_before_second_h2.strip()
     else:
         return text_before_first_h2.strip()
@@ -626,3 +662,62 @@ def delete_failed_reports_from_db(user_id: Union[str, ObjectId]) -> dict:
 
     except Exception as e:
         return {"deleted_count": 0}
+
+
+def get_file_contents(report_document):
+    try:
+        file_path = get_report_path(report_document)
+
+        print(f"file_path : {file_path}")
+        file_name = get_report_download_filename(
+            report_document["report_type"],
+            report_document["task"],
+            report_document["createdOn"],
+        )
+
+        if Config.GCP_PROD_ENV:
+            user_bucket = Production.get_users_bucket()
+            blob = user_bucket.blob(file_path)
+            bytes = blob.download_as_bytes()
+            return io.BytesIO(bytes), file_name
+        else:
+            if os.path.exists(file_path):
+                with open(file_path, 'rb') as file_handle:
+                    file_bytes = file_handle.read()
+                    return io.BytesIO(file_bytes), file_name
+
+    except Exception as e:
+        Common.exception_details("reportGeneratorService.get_file_contents", e)
+        return None, None
+
+
+def share_reports_via_email(user_id, report_ids, email_ids, subject: str = "Sharing Report from TexplicitRW", message:str ="Check out these report(s) from TexplicitRW"):
+    try:
+        report_documents = get_multiple_reports_from_db(report_ids)
+        user = UserService().get_user_by_id(user_id)
+        report_details = [
+            get_file_contents(report_document) for report_document in report_documents
+        ]
+        report_contents, report_names = zip(*report_details)
+        attachments = [
+            {
+                "content": get_base64_encoding(report_content),
+                "name": report_name + "." + ("pdf" if report_document["format"] == "pdf" else "docx")
+            }
+            for (report_content, report_name, report_document) in zip(report_contents, report_names, report_documents)
+        ]
+        
+        recipients = [{"name": None, "email": email_id} for email_id in email_ids]
+        email_response = send_mail(
+            subject=subject or Config.DEFAULT_REPORT_EMAIL_SUBJECT,
+            htmlMailBody=message or Config.DEFAULT_REPORT_EMAIL_MESSAGE,
+            recipients=recipients,
+            sender={"name": user["name"], "email": user["email"]},
+            attachments=attachments,
+        )
+
+        return email_response
+
+    except Exception as e:
+        Common.exception_details("reportGeneratorService.share_reports_via_email", e)
+        return None

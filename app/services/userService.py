@@ -8,7 +8,7 @@ from app.config import Config
 from app.models.mongoClient import MongoClient
 from app.utils import constants as Constants
 from app.utils.common import Common
-from app.utils.email_helper import EmailHelper
+from app.utils.email_helper import send_mail
 from app.utils.enumerator import Enumerator
 from app.utils.parser import Parser
 from app.utils.pipelines import PipelineStages
@@ -212,7 +212,7 @@ class UserService:
             receivers = []
             receivers.append({"name": user_name, "email": user_email})
 
-            success = EmailHelper.send_mail(
+            success = send_mail(
                 Constants.PASSWORD_RESET_REQUEST_MAILSUBJECT, mailBody, receivers, None
             )
 

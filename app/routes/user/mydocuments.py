@@ -8,7 +8,6 @@ import os
 import threading
 
 from flask import Blueprint, request, send_file
-from google.cloud import storage
 
 from app import socketio
 from app.auth.userauthorization import authorized
@@ -534,46 +533,11 @@ def get_my_documents_highlights_summary_excel(logged_in_user):
 @authorized
 def my_documents_download(logged_in_user, virtual_document_name):
     try:
-        if Config.GCP_PROD_ENV:
-            bucket = Production.get_users_bucket()
-
-        # The document name provided in the url is the virtual file name
-        file = MyDocumentsService().get_file_by_virtual_name(virtual_document_name)
-        file_created_by = str(file["createdBy"]["_id"])
-        file_root = str(file["root"])
-        if Config.GCP_PROD_ENV:
-            # if params == "":
-            if file_root == f"/{file_created_by}/":
-                path = file_root[1:]
-            else:
-                path = file_root[1:] + "/"
-            print("\nPATH : ", path + virtual_document_name)
-            blob = bucket.blob(path + virtual_document_name)
-            # blob.download_to_filename(file["originalFileName"])
-            bytes = blob.download_as_bytes()
-            download_file = io.BytesIO(bytes)
-
-            print(f"File {virtual_document_name} downloaded!")
-            return send_file(
-                download_file,
-                as_attachment=True,
-                download_name=file["originalFileName"],
-            )
+        file, name = MyDocumentsService().get_file_contents(virtual_document_name)
+        if file and name:
+            return send_file(file, as_attachment=True, download_name=name)
         else:
-            print("\nFile root : ", file_root)
-            # file_path = MyDocumentsService.get_file_save_path(
-            #     virtual_document_name, logged_in_user["_id"], file_root
-            # )
-            # print("File path : ", file_path)
-            user_folder_path = os.path.join(Config.USER_FOLDER, file_root[1:])
-            file_save_path = os.path.join(user_folder_path, virtual_document_name)
-            print("\n\nFile save path returned :", file_save_path)
-            original_filename = file["originalFileName"]
-
-            # We have to replace the virtual document name with the original filename
-            return send_file(
-                file_save_path, as_attachment=True, download_name=original_filename
-            )
+            return Response.custom_response([], Messages.ERROR_FILE_RETRIEVE, False, 400)
 
     except Exception as e:
         Common.exception_details("mydocuments.py : my_documents_download", e)
@@ -587,7 +551,7 @@ def share_document(logged_in_user):
         request_params = request.get_json()
 
         # Required parameters
-        required_params = ["documentId", "usersWithAccess"]
+        required_params = ["documentIds"]
 
         # Check if all required parameters are present in the request params
         if not all(
@@ -596,14 +560,25 @@ def share_document(logged_in_user):
         ):
             return Response.missing_parameters()
 
-        document_id = request_params.get("documentId")
+        document_ids = request_params.get("documentIds")
         targets_user_ids = request_params.get("usersWithAccess", [])
+        share_type = request_params.get("shareType", "internal")
+        email_ids = request_params.get("emailIds", [])
+        subject = request_params.get("subject", "")
+        message = request_params.get("message", "")
+
         user_id = logged_in_user["_id"]
 
         # Add the target_user_id to the "shared" field of the document
-        response = MyDocumentsService().modify_document_shared_users(
-            user_id, document_id, targets_user_ids
-        )
+        myDocumentsService = MyDocumentsService()
+        if share_type == "internal":
+            response = myDocumentsService.modify_document_shared_users(
+                user_id, document_ids, targets_user_ids
+            )
+        else:
+            response = myDocumentsService.share_document_via_email(
+                user_id, document_ids, email_ids, subject, message
+            )
 
         if response:
             return Response.custom_response(
@@ -626,9 +601,7 @@ def rename_docs(logged_in_user, _id):
         user_id = str(logged_in_user["_id"])
         request_params = request.get_json()
         rename_value = request_params["renameValue"]
-        print("Request parameters : ", request_params)
-        print("")
-
+        
         # Check if rename_value is present in the request params
         if rename_value == "" or rename_value == None or rename_value == []:
             return Response.missing_parameters()
