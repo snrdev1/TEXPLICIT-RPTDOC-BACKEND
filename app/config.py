@@ -119,3 +119,11 @@ class Config(object):
         {"name": "Prabir Aditya", "email": "prabir@springandriver.com"},
         {"name": "Prateep Kumar Guha", "email": "prateep.guha@springandriver.com"}
     ]
+    
+    # Sharing Documents via email
+    DEFAULT_DOCUMENT_EMAIL_SUBJECT = "Sharing document from TexplicitRW"
+    DEFAULT_DOCUMENT_EMAIL_MESSAGE = "Take a look at this document shared from TexplicitRW."
+    
+    # Sharing Reports via email
+    DEFAULT_REPORT_EMAIL_SUBJECT = "Sharing report generated using TexplicitRW"
+    DEFAULT_REPORT_EMAIL_MESSAGE = "Take a look at this report I generated using TexplicitRW."

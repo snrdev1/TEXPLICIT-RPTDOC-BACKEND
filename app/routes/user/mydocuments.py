@@ -601,9 +601,7 @@ def rename_docs(logged_in_user, _id):
         user_id = str(logged_in_user["_id"])
         request_params = request.get_json()
         rename_value = request_params["renameValue"]
-        print("Request parameters : ", request_params)
-        print("")
-
+        
         # Check if rename_value is present in the request params
         if rename_value == "" or rename_value == None or rename_value == []:
             return Response.missing_parameters()

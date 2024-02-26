@@ -2190,7 +2190,7 @@ class MyDocumentsService:
             print("An error occurred:", e)
             return None
 
-    def share_document_via_email(self, user_id, document_ids, email_ids, subject, message):
+    def share_document_via_email(self, user_id, document_ids, email_ids, subject: str, message: str):
         try:
             files = self.get_files(document_ids)
             virtual_file_names = [file["virtualFileName"] for file in files]
@@ -2201,8 +2201,8 @@ class MyDocumentsService:
             recipients = [{"name": None, "email": email_id} for email_id in email_ids]
                         
             email_response = send_mail(
-                subject = subject, 
-                htmlMailBody = message, 
+                subject = subject or Config.DEFAULT_DOCUMENT_EMAIL_SUBJECT,
+                htmlMailBody = message or Config.DEFAULT_DOCUMENT_EMAIL_MESSAGE,
                 recipients = recipients,
                 sender = {"name": user["name"], "email": user["email"]},
                 attachments = attachments

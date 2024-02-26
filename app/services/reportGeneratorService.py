@@ -691,7 +691,7 @@ def get_file_contents(report_document):
         return None, None
 
 
-def share_reports_via_email(user_id, report_ids, email_ids, subject, message):
+def share_reports_via_email(user_id, report_ids, email_ids, subject: str = "Sharing Report from TexplicitRW", message:str ="Check out these report(s) from TexplicitRW"):
     try:
         report_documents = get_multiple_reports_from_db(report_ids)
         user = UserService().get_user_by_id(user_id)
@@ -709,8 +709,8 @@ def share_reports_via_email(user_id, report_ids, email_ids, subject, message):
         
         recipients = [{"name": None, "email": email_id} for email_id in email_ids]
         email_response = send_mail(
-            subject=subject,
-            htmlMailBody=message,
+            subject=subject or Config.DEFAULT_REPORT_EMAIL_SUBJECT,
+            htmlMailBody=message or Config.DEFAULT_REPORT_EMAIL_MESSAGE,
             recipients=recipients,
             sender={"name": user["name"], "email": user["email"]},
             attachments=attachments,
