@@ -26,7 +26,7 @@ class ChatService:
     def __init__(self, user_id):
         self.user_id = user_id
 
-    def get_chat_response(self, chat_type, question: str, chatId: str):
+    def get_chat_response(self, chat_type:int, question: str, chatId: str):
         try:
             default_chat_response = "Sorry, I am unable to answer your question at the moment. Try again later."
             if chat_type == int(Enumerator.ChatType.External.value):
@@ -51,7 +51,7 @@ class ChatService:
                 question=question,
                 response=response,
                 sources = [],
-                chatType=int(Enumerator.ChatType.External.value),
+                chatType=chat_type,
                 chatId=chatId
             )
             

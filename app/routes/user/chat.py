@@ -37,12 +37,8 @@ def get_chat(logged_in_user):
     user_id = logged_in_user["_id"]
 
     request_body = request.get_json()
-    prompt = Common.get_field_value_or_default(
-        request_body.get("params"), "prompt", None
-    )
-    chat_type = Common.get_field_value_or_default(
-        request_body.get("params"), "chatType", int(Enumerator.ChatType.External.value)
-    )
+    prompt = request_body.get("prompt")
+    chat_type = request_body.get("chatType", int(Enumerator.ChatType.External.value))
     chatId = request_body.get("chatId", f"{user_id}_{datetime.utcnow()}")
 
     # Getting chat response and emitting it in a separate non-blocking thread
