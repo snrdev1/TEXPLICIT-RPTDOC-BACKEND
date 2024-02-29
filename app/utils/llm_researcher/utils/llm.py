@@ -10,6 +10,8 @@ from colorama import Fore, Style
 from langchain.adapters import openai as lc_openai
 from ..master.prompts import auto_agent_instructions
 from ..config.config import Config
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import HumanMessage, SystemMessage
 
 CFG = Config()
 
@@ -42,17 +44,55 @@ async def create_chat_completion(
         raise ValueError(f"Max tokens cannot be more than 8001, but got {max_tokens}")
 
     # create response
-    for attempt in range(10):  # maximum of 10 attempts
-        response = await send_chat_completion_request(
-            messages, model, temperature, max_tokens, stream, llm_provider, websocket
-        )
+    for _ in range(10):  # maximum of 10 attempts
+        if llm_provider=="Google":
+            response = await send_google_chat_completion_request(
+                messages, model, temperature, max_tokens, stream, llm_provider, websocket
+            )
+        else:
+            response = await send_oepnai_chat_completion_request(
+                messages, model, temperature, max_tokens, stream, llm_provider, websocket
+            )
+        
         return response
 
     logging.error("Failed to get response from OpenAI API")
     raise RuntimeError("Failed to get response from OpenAI API")
 
+def convert_messages(messages):
+    """
+    The function `convert_messages` converts messages based on their role into either SystemMessage or
+    HumanMessage objects.
+    
+    :param messages: It seems like the code snippet you provided is a function called `convert_messages`
+    that takes a list of messages as input and converts each message based on its role into either a
+    `SystemMessage` or a `HumanMessage`. However, the definition of `SystemMessage` and `HumanMessage`
+    classes
+    :return: The `convert_messages` function is returning a list of converted messages where each
+    message is an instance of either `SystemMessage` or `HumanMessage` based on the role specified in
+    the input messages.
+    """
+    converted_messages = []
+    for message in messages:
+        if message["role"] == "system":
+            converted_messages.append(SystemMessage(content=message["content"]))
+        elif message["role"] == "user":
+            converted_messages.append(HumanMessage(content=message["content"]))
+            
+    return converted_messages
 
-async def send_chat_completion_request(
+async def send_google_chat_completion_request(
+    messages, model, temperature, max_tokens, stream, llm_provider, websocket=None
+):
+    print(f"🤖 Calling {model}...")
+    
+    llm = ChatGoogleGenerativeAI(model=model, convert_system_message_to_human=True, temperature=temperature, max_output_tokens=max_tokens)
+    converted_messages = convert_messages(messages)
+    result = llm.invoke(converted_messages)
+    
+    return result.content
+
+async def send_oepnai_chat_completion_request(
     messages, model, temperature, max_tokens, stream, llm_provider, websocket=None
 ):
     print(f"🤖 Calling {model}...")
@@ -175,3 +215,4 @@ async def llm_process_subtopics(task: str, subtopics: list) -> list:
     except Exception as e:
         print("Exception in parsing subtopics : ", e)
         return subtopics
+
