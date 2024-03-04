@@ -440,8 +440,11 @@ class ResearchAgent:
                     f"🌐 Looking for tables to extract...\n",
                     self.websocket,
                 )
-            tasks = [timeout_handler([], 5, self.tables_extractor.extract_tables, url) for url in urls]
-            tables = await asyncio.gather(*tasks)
+            
+            # Scraping data tables from urls
+            tables = []
+            for url in urls:
+                tables.append(timeout_handler([], 5, self.tables_extractor.extract_tables, url))
             
             for result in tables:
                 table, url = result

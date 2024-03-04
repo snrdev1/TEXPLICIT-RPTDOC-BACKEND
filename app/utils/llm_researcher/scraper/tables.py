@@ -40,7 +40,7 @@ class TableExtractor:
             os.makedirs(os.path.dirname(self.tables_path), exist_ok=True)
             write_to_file(self.tables_path, str(self.tables))
 
-    async def extract_tables(self, url: str) -> list:
+    def extract_tables(self, url: str) -> list:
         """
         Extract tables from a given URL excluding those with hyperlinks in values.
 
