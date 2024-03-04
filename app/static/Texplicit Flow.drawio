@@ -1,0 +1,269 @@
+<mxfile host="app.diagrams.net" modified="2024-03-04T11:24:25.094Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" etag="qIxKmmloJZJM1n5Vk_KA" version="24.0.1" type="device">
+  <diagram name="Page-1" id="hvAmPYKnctJs__Q6j3h9">
+    <mxGraphModel dx="1800" dy="1662" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="1200" background="#FFFFFF" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="79bZvjMdwzhUgqt72546-34" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;curved=1;" edge="1" parent="1" source="Ap7LF9hm4Bev1nf1LY7q-2" target="79bZvjMdwzhUgqt72546-1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="370" y="-665" />
+              <mxPoint x="470" y="-665" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Ap7LF9hm4Bev1nf1LY7q-2" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;Task / Topic&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="295" y="-800" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-32" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-1" target="79bZvjMdwzhUgqt72546-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-35" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-1" target="79bZvjMdwzhUgqt72546-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-1" value="&lt;span style=&quot;font-size: 18px;&quot;&gt;Research Queries Generator&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=46;" vertex="1" parent="1">
+          <mxGeometry x="310" y="-590" width="360" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-67" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-2" target="79bZvjMdwzhUgqt72546-55">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="260" y="-310" />
+              <mxPoint x="490" y="-310" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-2" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;Query #1&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="185" y="-440" width="150" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-65" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-3" target="79bZvjMdwzhUgqt72546-55">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-3" value="&lt;span style=&quot;font-size: 18px;&quot;&gt;Query #2&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="415" y="-440" width="150" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-66" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-4" target="79bZvjMdwzhUgqt72546-55">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="720" y="-310" />
+              <mxPoint x="490" y="-310" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-4" value="&lt;span style=&quot;font-size: 18px;&quot;&gt;Query ...n&amp;nbsp;&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="645" y="-440" width="150" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-5" value="" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="200" y="280" width="90" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-6" value="" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="210" y="290" width="90" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-7" value="" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="220" y="300" width="90" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-8" value="" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="230" y="310" width="90" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-42" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-9" target="79bZvjMdwzhUgqt72546-23">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="285" y="585" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-9" value="Research Documents #1" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="240" y="320" width="90" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-10" value="" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="445" y="290" width="90" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-11" value="" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="455" y="300" width="90" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-15" value="" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="465" y="310" width="90" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-16" value="" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="475" y="320" width="90" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-26" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-17" target="79bZvjMdwzhUgqt72546-23">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="525" y="620" />
+              <mxPoint x="525" y="620" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-17" value="Research Documents #2&amp;nbsp;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="485" y="330" width="90" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-18" value="" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="685" y="290" width="90" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-19" value="" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="695" y="300" width="90" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-20" value="" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="705" y="310" width="90" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-21" value="" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="715" y="320" width="90" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-43" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-22" target="79bZvjMdwzhUgqt72546-23">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="770" y="585" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-22" value="Research Documents ...n" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="725" y="330" width="90" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-45" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-23">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="530" y="720" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-23" value="&lt;span style=&quot;font-size: 18px;&quot;&gt;Research Agent (LLM)&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=46;direction=west;" vertex="1" parent="1">
+          <mxGeometry x="365" y="540" width="330" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-36" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.4;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-1" target="79bZvjMdwzhUgqt72546-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-121" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-37">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="190" y="320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-37" value="&lt;h1&gt;&lt;font style=&quot;font-size: 24px;&quot;&gt;Research Outcomes&lt;/font&gt;&lt;/h1&gt;&lt;p&gt;&lt;font style=&quot;font-size: 18px;&quot;&gt;The research outcomes from various sources &lt;b style=&quot;&quot;&gt;urls&lt;/b&gt; / &lt;b style=&quot;&quot;&gt;documents&lt;/b&gt; are aggregated into a &lt;i style=&quot;&quot;&gt;vectorstore&lt;/i&gt;.&lt;/font&gt;&lt;/p&gt;&lt;p&gt;&lt;font size=&quot;3&quot;&gt;And based on relevance to the input task essential chunks are fetched and fed into the LLM for final report generation.&lt;/font&gt;&lt;/p&gt;&lt;p&gt;&lt;font size=&quot;3&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;/p&gt;&lt;p&gt;&lt;font size=&quot;3&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;/p&gt;" style="text;html=1;spacing=25;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;fillColor=default;spacingLeft=15;spacingBottom=15;spacingRight=15;" vertex="1" parent="1">
+          <mxGeometry x="-470" y="-7.5" width="350" height="285" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-44" value="&lt;b&gt;&lt;font style=&quot;font-size: 36px;&quot;&gt;Final Report&lt;/font&gt;&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fillColor=default;" vertex="1" parent="1">
+          <mxGeometry x="400" y="740" width="280" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-51" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-46">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="735" y="-560" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="795" y="-560" />
+              <mxPoint x="795" y="-560" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-46" value="&lt;h1&gt;Research Queries&lt;/h1&gt;&lt;p&gt;&lt;span style=&quot;font-size: 18px;&quot;&gt;Based on the input task, an LLM is used to generate multiple related &lt;i&gt;research queries &lt;/i&gt;which are used to conduct research.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot;font-size: 18px;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot;font-size: 18px;&quot;&gt;Currently using :&amp;nbsp;&lt;b&gt;OpenAI&amp;nbsp;&lt;/b&gt;&lt;/span&gt;&lt;span style=&quot;background-color: initial; font-size: 18px;&quot;&gt;&lt;b&gt;gpt-4-1106-preview&lt;/b&gt;&lt;/span&gt;&lt;/p&gt;" style="text;html=1;spacing=25;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;fillColor=default;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="-650" width="430" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-52" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;Source&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="535" y="-800" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-57" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-55" target="79bZvjMdwzhUgqt72546-56">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-58" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-55" target="79bZvjMdwzhUgqt72546-59">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="749.9999999999995" y="-20" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-55" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;If Source==&quot;External&quot;&lt;/font&gt;" style="rhombus;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="345" y="-260" width="290" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-71" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-56">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="255" y="270" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="255" y="230" />
+              <mxPoint x="255" y="230" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-92" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-56">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="490" y="280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-93" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-56" target="79bZvjMdwzhUgqt72546-19">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-56" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;INTERNET&lt;/font&gt;" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="170" width="170" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-80" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-59">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="740" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-94" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-59">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="260" y="270" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-95" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-59">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="500" y="280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-59" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;DOCUMENTS REPOSITORY&lt;/font&gt;" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="665" width="150" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-60" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.588;entryY=0.013;entryDx=0;entryDy=0;entryPerimeter=0;curved=1;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-52" target="79bZvjMdwzhUgqt72546-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-68" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;&lt;b&gt;YES&lt;/b&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="280" y="-197" width="60" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-69" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;&lt;b&gt;NO&lt;/b&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="670" y="-197" width="50" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-98" value="Query #1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;rotation=90;" vertex="1" parent="1">
+          <mxGeometry x="240" y="165" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-100" value="Query #2" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;rotation=40;" vertex="1" parent="1">
+          <mxGeometry x="355" y="165" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-101" value="Query ...n" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;rotation=25;" vertex="1" parent="1">
+          <mxGeometry x="405" y="135" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-102" value="Query #1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;rotation=-21;" vertex="1" parent="1">
+          <mxGeometry x="520" y="120" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-103" value="Query #2" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;rotation=-40;" vertex="1" parent="1">
+          <mxGeometry x="575" y="165" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-104" value="Query ...n" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;rotation=-90;" vertex="1" parent="1">
+          <mxGeometry x="695" y="165" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-107" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-106" target="79bZvjMdwzhUgqt72546-56">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-106" value="&lt;h1&gt;&lt;font style=&quot;font-size: 24px;&quot;&gt;Scraping the Internet&lt;/font&gt;&lt;/h1&gt;&lt;div&gt;&lt;font style=&quot;font-size: 18px;&quot;&gt;Each query is passed to &lt;b&gt;SerpAPI&lt;/b&gt; and the top &lt;i&gt;urls &lt;/i&gt;are scraped.&lt;/font&gt;&lt;/div&gt;&lt;p&gt;&lt;font style=&quot;font-size: 18px;&quot;&gt;&lt;b&gt;Newspaper3k &lt;/b&gt;library is being used for scraping urls.&lt;/font&gt;&lt;/p&gt;" style="text;html=1;spacing=25;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;fillColor=default;" vertex="1" parent="1">
+          <mxGeometry x="-470" y="-377" width="350" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-109" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-108" target="79bZvjMdwzhUgqt72546-23">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="700" y="600" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-108" value="&lt;h1&gt;&lt;font style=&quot;font-size: 24px;&quot;&gt;Report Generator&lt;/font&gt;&lt;/h1&gt;&lt;p&gt;&lt;span style=&quot;font-size: 18px;&quot;&gt;Currently using :&amp;nbsp;&lt;b&gt;OpenAI&amp;nbsp;&lt;/b&gt;&lt;/span&gt;&lt;span style=&quot;background-color: initial; font-size: 18px;&quot;&gt;&lt;b&gt;gpt-4-1106-preview&lt;/b&gt;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;" style="text;html=1;spacing=25;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;fillColor=default;" vertex="1" parent="1">
+          <mxGeometry x="-150" y="620" width="420" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-112" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-111" target="79bZvjMdwzhUgqt72546-59">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-111" value="&lt;h1&gt;Vectorization of User Documents&lt;/h1&gt;&lt;p&gt;&lt;font style=&quot;font-size: 18px;&quot;&gt;Each document uploaded by the user is converted into numerical vectors for easier processing. These vectors are stored and used to retrieve relevant parts of the documents for report generation.&lt;/font&gt;&lt;/p&gt;&lt;p&gt;&lt;font style=&quot;font-size: 18px;&quot;&gt;Currently using &lt;b&gt;FAISS&lt;/b&gt; as vectorstore.&lt;/font&gt;&lt;/p&gt;&lt;p&gt;&lt;font style=&quot;font-size: 18px;&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;/p&gt;" style="text;html=1;spacing=25;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;fillColor=default;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="-80" width="440" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-114" value="&lt;h1 style=&quot;font-size: 33px;&quot;&gt;&lt;font style=&quot;font-size: 33px;&quot;&gt;Base Dependencies&lt;/font&gt;&lt;/h1&gt;&lt;div style=&quot;font-size: 33px;&quot;&gt;&lt;ul&gt;&lt;li&gt;&lt;font style=&quot;font-size: 33px;&quot;&gt;Language : &lt;b&gt;Python&lt;/b&gt;&lt;/font&gt;&lt;/li&gt;&lt;li&gt;&lt;font style=&quot;font-size: 33px;&quot;&gt;Framework : &lt;b&gt;Langchain&lt;/b&gt;&lt;/font&gt;&lt;/li&gt;&lt;li&gt;&lt;font style=&quot;font-size: 33px;&quot;&gt;Web Search : &lt;b&gt;SerpAPI / Tavily API&lt;/b&gt;&lt;/font&gt;&lt;/li&gt;&lt;li&gt;&lt;font style=&quot;font-size: 33px;&quot;&gt;Web Scraping : &lt;b&gt;Newspaper3k&lt;/b&gt;&lt;/font&gt;&lt;/li&gt;&lt;li&gt;&lt;font style=&quot;font-size: 33px;&quot;&gt;LLM : &lt;b&gt;OpenAI GPT4&lt;/b&gt;&lt;/font&gt;&lt;/li&gt;&lt;li&gt;&lt;font style=&quot;font-size: 33px;&quot;&gt;Vectorstore : &lt;b style=&quot;&quot;&gt;FAISS&lt;/b&gt;&lt;/font&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 33px;&quot;&gt;&lt;br&gt;&lt;/div&gt;" style="text;html=1;spacing=25;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;fillColor=default;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="425" width="670" height="380" as="geometry" />
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-123" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="79bZvjMdwzhUgqt72546-120">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="189.99999999999977" y="330" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="79bZvjMdwzhUgqt72546-120" value="&lt;h1&gt;&lt;font style=&quot;font-size: 24px;&quot;&gt;Data Table Extraction&lt;/font&gt;&lt;/h1&gt;&lt;p&gt;&lt;font style=&quot;font-size: 18px;&quot;&gt;If the report is an&amp;nbsp;&lt;i style=&quot;&quot;&gt;external&amp;nbsp;&lt;/i&gt;report. Then this stage also includes searching and scraping of any&amp;nbsp;&lt;b style=&quot;&quot;&gt;data tables&lt;/b&gt;&amp;nbsp;that may be present in the urls.&lt;/font&gt;&lt;br&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot;font-size: 18px;&quot;&gt;Using&amp;nbsp;&lt;/span&gt;&lt;b style=&quot;background-color: initial; font-size: 18px;&quot;&gt;BeautifulSoup&lt;/b&gt;&lt;span style=&quot;background-color: initial; font-size: 18px;&quot;&gt;&lt;b&gt;&amp;nbsp;&lt;/b&gt;&lt;/span&gt;&lt;span style=&quot;background-color: initial; font-size: 18px;&quot;&gt;for custom data table extraction.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;font style=&quot;font-size: 18px;&quot;&gt;&lt;/font&gt;&lt;/p&gt;&lt;p&gt;&lt;br&gt;&lt;/p&gt;" style="text;html=1;spacing=25;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;fillColor=default;" vertex="1" parent="1">
+          <mxGeometry x="-470" y="320" width="350" height="270" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
