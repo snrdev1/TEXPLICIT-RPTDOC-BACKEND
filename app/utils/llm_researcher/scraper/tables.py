@@ -197,14 +197,14 @@ class TableExtractor:
                     if filter_tables(table_struct):
                         extracted_tables.append(table_struct)
                         
-            return extracted_tables, url
+            return extracted_tables
 
         except requests.RequestException as e:
             print(f"🚩 Request Exception when scraping tables : {e}")
-            return [], url
+            return []
         except Exception as e:
             Common.exception_details("TableExtractor.extract_tables", e)
-            return [], url
+            return []
 
     def tables_to_html(self, list_of_tables: list, url: str) -> str:
         try:
