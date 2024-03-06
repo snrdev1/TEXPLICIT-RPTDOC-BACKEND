@@ -1,7 +1,8 @@
 import tiktoken
-from langchain_community.embeddings import HuggingFaceEmbeddings, OpenAIEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_openai import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI
 from app.config import Config
 from app.utils.common import Common
 
