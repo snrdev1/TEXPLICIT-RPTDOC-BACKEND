@@ -435,21 +435,20 @@ class ResearchAgent:
                 f"💎 Found {len(self.tables_extractor.tables)} EXISTING table/s\n,"
             )
         elif len(urls):
-            await stream_output(
+            # Extract all tables from search urls
+            for url in urls:
+                if url.endswith(".pdf"):
+                    continue
+
+                await stream_output(
                     "logs",
-                    f"🌐 Looking for tables to extract...\n",
+                    f"🌐 Looking for tables to extract from {url}...\n",
                     self.websocket,
                 )
-            
-            # Scraping data tables from urls
-            tables = []
-            for url in urls:
-                tables.append(timeout_handler([], 5, self.tables_extractor.extract_tables, url))
-            
-            for result in tables:
-                table, url = result
-                if table:
-                    new_tables = {"tables": table, "url": url}
+
+                new_table = timeout_handler([], 5, self.tables_extractor.extract_tables, url)
+                if len(new_table):
+                    new_tables = {"tables": new_table, "url": url}
                     print(f"💎 Found table/s from {url}")
                     self.tables_extractor.tables.append(new_tables)
 
