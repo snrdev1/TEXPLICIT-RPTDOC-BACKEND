@@ -1,5 +1,4 @@
-from langchain_community.embeddings import OpenAIEmbeddings
-
+from langchain_openai import OpenAIEmbeddings
 
 class Memory:
     def __init__(self, **kwargs):

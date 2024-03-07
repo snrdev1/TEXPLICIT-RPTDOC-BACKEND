@@ -16,156 +16,170 @@ from app.utils.llm_utils import load_fast_llm
 from app.utils.pipelines import PipelineStages
 from app.utils.vectorstore.base import VectorStore
 from app.utils.timer import timeout_handler
-from langchain.memory import ConversationBufferWindowMemory
-
-
-openai.api_key = Config.OPENAI_API_KEY
+from app.services.myDocumentsService import MyDocumentsService
 
 
 class ChatService:
     def __init__(self, user_id):
         self.user_id = user_id
 
-    def get_chat_response(self, chat_type:int, question: str, chatId: str):
+    def get_chat_response(self, chat_type: int, question: str, chatId: str):
         try:
             default_chat_response = "Sorry, I am unable to answer your question at the moment. Try again later."
             if chat_type == int(Enumerator.ChatType.External.value):
-                response = timeout_handler(
-                    default_chat_response, 
-                    60, 
-                    self._get_external_chat_response, 
-                    question, 
-                    chatId
+                response, sources = timeout_handler(
+                    default_chat_response,
+                    60,
+                    self._get_external_chat_response,
+                    question,
+                    chatId,
                 )
             else:
-                response = timeout_handler(
-                    default_chat_response, 
-                    60, 
-                    self._get_document_chat_response, 
-                    question, 
-                    chatId
+                response, sources = timeout_handler(
+                    default_chat_response,
+                    60,
+                    self._get_document_chat_response,
+                    question,
+                    chatId,
                 )
-            
+
             # Prepare final chat_dict with complete response
             chat_dict = self._get_chat_dict(
                 question=question,
                 response=response,
-                sources = [],
+                sources=sources,
                 chatType=chat_type,
-                chatId=chatId
+                chatId=chatId,
             )
-            
+
             if response == default_chat_response:
                 # Emit chat chunk through chat stream socket
-                self._emit_chat_stream(
-                    chat_dict
-                )
-                    
+                self._emit_chat_stream(chat_dict)
+
             # Update user chat history
             self._update_user_chat_info(chat_dict)
 
         except Exception as e:
             Common.exception_details("ChatSerice.get_chat_response", e)
-            self._emit_chat_stream({
-                "prompt": question,
-                "response": "Failed to get chat response....try again after some time...",
-                "sources": [],
-                "timestamp": datetime.utcnow().strftime("%d-%m-%Y %H:%M:%S"),
-                "chatType": int(Enumerator.ChatType.External.value),
-                "chatId": chatId
-            })
+            self._emit_chat_stream(
+                {
+                    "prompt": question,
+                    "response": "Failed to get chat response....try again after some time...",
+                    "sources": [],
+                    "timestamp": datetime.utcnow().strftime("%d-%m-%Y %H:%M:%S"),
+                    "chatType": int(Enumerator.ChatType.External.value),
+                    "chatId": chatId,
+                }
+            )
 
     def _get_external_chat_response(self, question: str, chatId: str):
         try:
-            chat = load_fast_llm()            
-            template = ChatPromptTemplate.from_messages([
-                ("system", "You are a helpful assistant. Answer all questions to the best of your ability in MARKDOWN."),
-                ("human", "{question}"),
-            ])
-            messages = template.format_messages(
-                question=question
+            chat = load_fast_llm()
+            template = ChatPromptTemplate.from_messages(
+                [
+                    (
+                        "system",
+                        "You are a helpful assistant. Answer all questions to the best of your ability in MARKDOWN.",
+                    ),
+                    ("human", "{question}"),
+                ]
             )
+            messages = template.format_messages(question=question)
 
             response = ""
             for chunk in chat.stream(messages):
                 # Keep on appending chunks to construct the entire response
                 response = response + chunk.content
                 print(chunk.content, end="", flush=True)
-                
+
                 # Prepare chat_dict
                 chat_dict = self._get_chat_dict(
                     question=question,
                     response=chunk.content,
                     sources=[],
                     chatType=int(Enumerator.ChatType.External.value),
-                    chatId=chatId
+                    chatId=chatId,
                 )
-                
+
                 # Emit chat chunk through chat stream socket
-                self._emit_chat_stream(
-                    chat_dict
-                )
-                
-            return response
-        
+                self._emit_chat_stream(chat_dict)
+
+            return response, []
+
         except Exception as e:
             Common.exception_details("ChatSerice._get_external_chat_response", e)
             return ""
-            
+
     def _get_document_chat_response(self, question: str, chatId: str):
-        try:  
+        
+        def format_docs(docs):
+            return "\n\n".join(doc.page_content for doc in docs)
+        
+        try:
             vectorstore = VectorStore(self.user_id)
             chat = load_fast_llm()
             prompt = self.get_document_prompt()
             db = vectorstore.get_document_vectorstore()
-            rag_chain = (
-                {"context": db.as_retriever(), "question": RunnablePassthrough()}
+
+            rag_chain_from_docs = (
+                RunnablePassthrough.assign(
+                    context=(lambda x: format_docs(x["context"]))
+                )
                 | prompt
                 | chat
                 | StrOutputParser()
             )
+
+            rag_chain_with_source = RunnableParallel(
+                {"context": db.as_retriever(), "question": RunnablePassthrough()}
+            ).assign(answer=rag_chain_from_docs)
+                
             response = ""
-            for chunk in rag_chain.stream(question):
-                # Keep on appending chunks to construct the entire response
-                response = response + chunk
-                print(chunk, end="", flush=True)
-                
-                # Prepare chat_dict
-                chat_dict = self._get_chat_dict(
-                    question=question,
-                    response=chunk,
-                    sources=[],
-                    chatType=int(Enumerator.ChatType.Document.value),
-                    chatId=chatId
-                )
-                
-                # Emit chat chunk through chat stream socket
-                self._emit_chat_stream(
-                    chat_dict
-                )
-                
-            return response
-        
+            sources = []
+            for chunk in rag_chain_with_source.stream(question):                
+                if "answer" in chunk.keys():
+                    response = response + chunk["answer"]
+                    
+                    # Prepare chat_dict
+                    chat_dict = self._get_chat_dict(
+                        question=question,
+                        response=chunk["answer"],
+                        sources=sources,
+                        chatType=int(Enumerator.ChatType.Document.value),
+                        chatId=chatId,
+                    )
+
+                    # Emit chat chunk through chat stream socket
+                    self._emit_chat_stream(chat_dict)
+                    
+                if "context" in chunk.keys():
+                    virtual_source_names = [doc.metadata.get('source', '') for doc in chunk["context"]]
+                    sources = MyDocumentsService().get_all_files_by_virtual_name(self.user_id, virtual_source_names)
+                    
+            return response, sources
+
         except Exception as e:
             Common.exception_details("ChatSerice._get_document_chat_response", e)
             return ""
-            
-    def _emit_chat_stream(self, chat_dict: dict):       
+
+    def _emit_chat_stream(self, chat_dict: dict):
         chat_event = "chat_" + str(self.user_id)
         socketio.emit(chat_event, [chat_dict])
-        
+
         return chat_dict
-    
-    def _get_chat_dict(self, question: str, response: str, sources, chatType, chatId: str):
+
+    def _get_chat_dict(
+        self, question: str, response: str, sources, chatType, chatId: str
+    ):
         chat_dict = {
             "prompt": question,
             "response": response,
             "sources": sources,
             "timestamp": datetime.utcnow().strftime("%d-%m-%Y %H:%M:%S"),
             "chatType": chatType,
-            "chatId": chatId
+            "chatId": chatId,
         }
-        
+
         return chat_dict
 
     def get_all_user_related_chat(self, limit=10, offset=0):
