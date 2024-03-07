@@ -33,7 +33,6 @@ from ..utils.document import add_hyperlink
 
 class SummaryService:
     # PUNKT_SENTENCE_TOKENIZER = nltk.data.load("app/models/english.pickle")
-    openai.api_key = Config.OPENAI_API_KEY
     # nltk.download('punkt')
     # nltk.download('stopwords')
     tokenizer = pickle.load(open(("app/models/sentenceTokenizer.pkl"), "rb"))

@@ -2,8 +2,6 @@ import json
 
 from newspaper import Article
 
-from app.utils.llm.llm_summarizer import summarize_text
-
 
 class WebScraper:
 

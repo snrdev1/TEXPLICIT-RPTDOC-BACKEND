@@ -152,7 +152,6 @@ class MyDocumentsService:
             )
             emit_document_upload_status(user_id, upload_id, f"Successfully uploaded {uploaded_documents_num} documents!", 100)
 
-
     @staticmethod
     def get_file_save_path(filename, user, path):
         """
@@ -489,26 +488,31 @@ class MyDocumentsService:
 
     def get_all_files_by_virtual_name(self, user_id, virtual_file_names):
         """
-        The function retrieves all files with a given virtual file name for a specific user.
-
-        Args:
-          user_id: The user ID is a unique identifier for a user in the system. It is used to identify
-        the user who created the documents.
-          virtual_file_names: A list of virtual file names that you want to search for.
-
-        Returns:
-          the result of the query as a list of dictionaries.
+        The function retrieves all files by virtual name for a specific user from a MongoDB collection.
+        
+        :param user_id: The `user_id` parameter is the unique identifier of the user for whom we want to
+        retrieve files. It is used to filter the files based on the user who created them
+        :param virtual_file_names: The `virtual_file_names` parameter is a list of virtual file names
+        that you want to retrieve from the database for a specific user identified by `user_id`. The
+        function `get_all_files_by_virtual_name` uses these parameters to query the database and return
+        the documents that match the criteria specified in the
+        :return: The function `get_all_files_by_virtual_name` is returning the result of the MongoDB
+        aggregation query performed on the collection specified in
+        `Config.MONGO_DOCUMENT_MASTER_COLLECTION`. The result is being converted from a cursor to a
+        dictionary before being returned.
         """
         m_db = MongoClient.connect()
 
-        documents = m_db[Config.MONGO_DOCUMENT_MASTER_COLLECTION].find(
-            {
+        pipeline = [
+            PipelineStages.stage_match({
                 "createdBy._id": ObjectId(user_id),
                 "virtualFileName": {"$in": virtual_file_names},
-            }
-        )
+            })
+        ] + MyDocumentsService._get_my_documents_pipeline()
 
-        return cursor_to_dict(documents)
+        response = m_db[Config.MONGO_DOCUMENT_MASTER_COLLECTION].aggregate(pipeline)
+
+        return cursor_to_dict(response)
 
     def get_file_by_virtual_name(self, virtual_name):
         """
