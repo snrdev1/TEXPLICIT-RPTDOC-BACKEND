@@ -1,22 +1,30 @@
 from datetime import datetime
+from operator import itemgetter
 
-import openai
 from bson import ObjectId
+from langchain.memory import ConversationBufferMemory
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
-from langchain_core.runnables import RunnableParallel, RunnablePassthrough
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    MessagesPlaceholder,
+    PromptTemplate,
+)
+from langchain_core.runnables import (
+    RunnableLambda,
+    RunnableParallel,
+    RunnablePassthrough,
+)
 
 from app import socketio
 from app.config import Config
 from app.models.mongoClient import MongoClient
+from app.services.myDocumentsService import MyDocumentsService
 from app.utils.common import Common
 from app.utils.enumerator import Enumerator
 from app.utils.formatter import cursor_to_dict
 from app.utils.llm_utils import load_fast_llm
-from app.utils.pipelines import PipelineStages
-from app.utils.vectorstore.base import VectorStore
 from app.utils.timer import timeout_handler
-from app.services.myDocumentsService import MyDocumentsService
+from app.utils.vectorstore.base import VectorStore
 
 
 class ChatService:
@@ -25,6 +33,9 @@ class ChatService:
 
     def get_chat_response(self, chat_type: int, question: str, chatId: str):
         try:
+            # Get chat memory
+            memory = self.get_chat_memory()
+
             default_chat_response = "Sorry, I am unable to answer your question at the moment. Try again later."
             if chat_type == int(Enumerator.ChatType.External.value):
                 response, sources = timeout_handler(
@@ -33,6 +44,7 @@ class ChatService:
                     self._get_external_chat_response,
                     question,
                     chatId,
+                    memory,
                 )
             else:
                 response, sources = timeout_handler(
@@ -41,6 +53,7 @@ class ChatService:
                     self._get_document_chat_response,
                     question,
                     chatId,
+                    memory,
                 )
 
             # Prepare final chat_dict with complete response
@@ -72,22 +85,51 @@ class ChatService:
                 }
             )
 
-    def _get_external_chat_response(self, question: str, chatId: str):
+    def get_chat_memory(self):
+        memory = ConversationBufferMemory(return_messages=True)
+        chats = self.get_all_user_related_chat(limit=10).get("chat", [])
+
+        for user_chat, agent_chat in zip(chats[::2], chats[1::2]):
+            memory.save_context(
+                {"input": user_chat["content"]}, {"output": agent_chat["content"]}
+            )
+
+        return memory
+
+    def _get_external_chat_response(
+        self,
+        question: str,
+        chatId: str,
+        memory: ConversationBufferMemory = ConversationBufferMemory(
+            return_messages=True
+        ),
+    ):
         try:
-            chat = load_fast_llm()
-            template = ChatPromptTemplate.from_messages(
+            llm = load_fast_llm()
+            prompt = ChatPromptTemplate.from_messages(
                 [
                     (
                         "system",
                         "You are a helpful assistant. Answer all questions to the best of your ability in MARKDOWN.",
                     ),
-                    ("human", "{question}"),
+                    MessagesPlaceholder(variable_name="history"),
+                    ("human", "{input}"),
                 ]
             )
-            messages = template.format_messages(question=question)
+
+            chain = (
+                RunnablePassthrough.assign(
+                    history=RunnableLambda(memory.load_memory_variables)
+                    | itemgetter("history")
+                )
+                | prompt
+                | llm
+            )
+
+            inputs = {"input": question}
 
             response = ""
-            for chunk in chat.stream(messages):
+            for chunk in chain.stream(inputs):
                 # Keep on appending chunks to construct the entire response
                 response = response + chunk.content
                 print(chunk.content, end="", flush=True)
@@ -110,11 +152,18 @@ class ChatService:
             Common.exception_details("ChatSerice._get_external_chat_response", e)
             return ""
 
-    def _get_document_chat_response(self, question: str, chatId: str):
-        
+    def _get_document_chat_response(
+        self,
+        question: str,
+        chatId: str,
+        memory: ConversationBufferMemory = ConversationBufferMemory(
+            return_messages=True
+        ),
+    ):
+
         def format_docs(docs):
             return "\n\n".join(doc.page_content for doc in docs)
-        
+
         try:
             vectorstore = VectorStore(self.user_id)
             chat = load_fast_llm()
@@ -133,13 +182,13 @@ class ChatService:
             rag_chain_with_source = RunnableParallel(
                 {"context": db.as_retriever(), "question": RunnablePassthrough()}
             ).assign(answer=rag_chain_from_docs)
-                
+
             response = ""
             sources = []
-            for chunk in rag_chain_with_source.stream(question):                
+            for chunk in rag_chain_with_source.stream(question):
                 if "answer" in chunk.keys():
                     response = response + chunk["answer"]
-                    
+
                     # Prepare chat_dict
                     chat_dict = self._get_chat_dict(
                         question=question,
@@ -151,11 +200,15 @@ class ChatService:
 
                     # Emit chat chunk through chat stream socket
                     self._emit_chat_stream(chat_dict)
-                    
+
                 if "context" in chunk.keys():
-                    virtual_source_names = [doc.metadata.get('source', '') for doc in chunk["context"]]
-                    sources = MyDocumentsService().get_all_files_by_virtual_name(self.user_id, virtual_source_names)
-                    
+                    virtual_source_names = [
+                        doc.metadata.get("source", "") for doc in chunk["context"]
+                    ]
+                    sources = MyDocumentsService().get_all_files_by_virtual_name(
+                        self.user_id, virtual_source_names
+                    )
+
             return response, sources
 
         except Exception as e:
@@ -184,31 +237,36 @@ class ChatService:
 
     def get_all_user_related_chat(self, limit=10, offset=0):
         """
-        The function `get_all_user_related_chat` retrieves chat data related to a specific user from a
-        MongoDB database.
+        This function retrieves user-related chat messages from a MongoDB collection based on specified
+        limits and offsets.
 
         Args:
-          limit: The `limit` parameter specifies the maximum number of chat records to retrieve. By
-        default, it is set to 10, but you can change it to any positive integer value to retrieve a
-        different number of records. Defaults to 10
-          offset: The offset parameter is used to specify the starting point of the query results. It
-        determines how many documents to skip before returning the results. By default, the offset is
-        set to 0, meaning it starts from the beginning of the collection. Defaults to 0
+          limit: The `limit` parameter in the `get_all_user_related_chat` function specifies the maximum
+        number of chat documents to be returned in the result set. By default, it is set to 10 if not
+        explicitly provided when calling the function. This parameter allows you to control the number
+        of chat documents that. Defaults to 10
+          offset: The `offset` parameter in the `get_all_user_related_chat` function is used to specify
+        the number of documents to skip before returning the results. It helps in paginating through a
+        large set of documents by allowing you to retrieve results starting from a specific position in
+        the result set. Defaults to 0
 
         Returns:
-          a dictionary containing the chat related to the specified user. If no chat is found, it
-        returns None.
+          the first chat document related to the user specified by the user_id. If there are chat
+        documents found based on the query criteria, the function returns the first chat document as a
+        dictionary. If no chat documents are found or an exception occurs during the process, the
+        function returns None.
         """
         try:
             m_db = MongoClient.connect()
-            project_keys = ["chat"]
-            unset_keys = ["_id"]
             pipeline = [
-                PipelineStages.stage_match(
-                    {"user._id": ObjectId(self.user_id), "user.ref": "user"}
-                ),
-                PipelineStages.stage_project(project_keys),
-                PipelineStages.stage_unset(unset_keys),
+                {"$match": {"user._id": ObjectId(self.user_id), "user.ref": "user"}},
+                {"$sort": {"date": -1}},  # Sort by date in descending order
+                {"$skip": offset},  # Skip offset number of documents
+                {
+                    "$limit": limit
+                },  # Limit the result to the specified number of documents
+                {"$sort": {"date": 1}},  # Re-Sort by date in correct order
+                {"$project": {"chat": 1, "_id": 0}},
             ]
 
             result = m_db[Config.MONGO_CHAT_MASTER_COLLECTION].aggregate(pipeline)
