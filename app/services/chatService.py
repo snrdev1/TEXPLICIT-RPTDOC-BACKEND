@@ -163,7 +163,7 @@ class ChatService:
 
         def format_docs(docs):
             return "\n\n".join(doc.page_content for doc in docs)
-        
+
         def contextualized_question(input: dict):
             if input.get("chat_history"):
                 return contextualize_q_chain
@@ -175,7 +175,7 @@ class ChatService:
             llm = load_fast_llm()
             db = vectorstore.get_document_vectorstore()
             chat_history = memory.load_memory_variables({}).get("history", [])
-            
+
             qa_system_prompt = """You are an assistant for question-answering tasks. \
             Use the following pieces of retrieved context to answer the question. \
             If you don't know the answer, just say that you don't know. \
@@ -188,7 +188,7 @@ class ChatService:
                     ("human", "{question}"),
                 ]
             )
-            
+
             contextualize_q_system_prompt = """Given a chat history and the latest user question \
             which might reference context in the chat history, formulate a standalone question \
             which can be understood without the chat history. Do NOT answer the question, \
@@ -211,15 +211,19 @@ class ChatService:
                 | StrOutputParser()
             )
 
-            rag_chain_with_source = RunnableParallel({
-                "context": contextualized_question | db.as_retriever(), 
-                "question": RunnableLambda(lambda x: x["question"]),
-                "chat_history": RunnableLambda(lambda x: x["chat_history"]),
-            }).assign(answer=rag_chain_from_docs)
+            rag_chain_with_source = RunnableParallel(
+                {
+                    "context": contextualized_question | db.as_retriever(),
+                    "question": RunnableLambda(lambda x: x["question"]),
+                    "chat_history": RunnableLambda(lambda x: x["chat_history"]),
+                }
+            ).assign(answer=rag_chain_from_docs)
 
             response = ""
             sources = []
-            for chunk in rag_chain_with_source.stream({"question": question, "chat_history": chat_history}):
+            for chunk in rag_chain_with_source.stream(
+                {"question": question, "chat_history": chat_history}
+            ):
                 if "answer" in chunk.keys():
                     response = response + chunk["answer"]
 
@@ -294,13 +298,19 @@ class ChatService:
             m_db = MongoClient.connect()
             pipeline = [
                 {"$match": {"user._id": ObjectId(self.user_id), "user.ref": "user"}},
-                {"$sort": {"date": -1}},  # Sort by date in descending order
-                {"$skip": offset},  # Skip offset number of documents
+                {"$unwind": {"path": "$chat"}},
+                {"$sort": {"chat.timestamp": -1, "chat.role": -1}},
+                {"$skip": offset},
+                {"$limit": limit},
+                {"$sort": {"chat.timestamp": 1, "chat.role": -1}},
                 {
-                    "$limit": limit
-                },  # Limit the result to the specified number of documents
-                {"$sort": {"date": 1}},  # Re-Sort by date in correct order
-                {"$project": {"chat": 1, "_id": 0}},
+                    "$group": {
+                        "_id": "$_id",
+                        "user": {"$first": "$user"},
+                        "chat": {"$push": "$chat"},
+                    }
+                },
+                {"$project": {"user": 1, "chat": 1, "_id": 0}},
             ]
 
             result = m_db[Config.MONGO_CHAT_MASTER_COLLECTION].aggregate(pipeline)
