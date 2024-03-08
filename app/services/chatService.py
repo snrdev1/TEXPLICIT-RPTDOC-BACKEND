@@ -150,7 +150,7 @@ class ChatService:
 
         except Exception as e:
             Common.exception_details("ChatSerice._get_external_chat_response", e)
-            return ""
+            return "", []
 
     def _get_document_chat_response(
         self,
@@ -163,29 +163,63 @@ class ChatService:
 
         def format_docs(docs):
             return "\n\n".join(doc.page_content for doc in docs)
+        
+        def contextualized_question(input: dict):
+            if input.get("chat_history"):
+                return contextualize_q_chain
+            else:
+                return input["question"]
 
         try:
             vectorstore = VectorStore(self.user_id)
-            chat = load_fast_llm()
-            prompt = self.get_document_prompt()
+            llm = load_fast_llm()
             db = vectorstore.get_document_vectorstore()
+            chat_history = memory.load_memory_variables({}).get("history", [])
+            
+            qa_system_prompt = """You are an assistant for question-answering tasks. \
+            Use the following pieces of retrieved context to answer the question. \
+            If you don't know the answer, just say that you don't know. \
+
+            {context}"""
+            qa_prompt = ChatPromptTemplate.from_messages(
+                [
+                    ("system", qa_system_prompt),
+                    MessagesPlaceholder(variable_name="chat_history"),
+                    ("human", "{question}"),
+                ]
+            )
+            
+            contextualize_q_system_prompt = """Given a chat history and the latest user question \
+            which might reference context in the chat history, formulate a standalone question \
+            which can be understood without the chat history. Do NOT answer the question, \
+            just reformulate it if needed and otherwise return it as is."""
+            contextualize_q_prompt = ChatPromptTemplate.from_messages(
+                [
+                    ("system", contextualize_q_system_prompt),
+                    MessagesPlaceholder(variable_name="chat_history"),
+                    ("human", "{question}"),
+                ]
+            )
+            contextualize_q_chain = contextualize_q_prompt | llm | StrOutputParser()
 
             rag_chain_from_docs = (
                 RunnablePassthrough.assign(
                     context=(lambda x: format_docs(x["context"]))
                 )
-                | prompt
-                | chat
+                | qa_prompt
+                | llm
                 | StrOutputParser()
             )
 
-            rag_chain_with_source = RunnableParallel(
-                {"context": db.as_retriever(), "question": RunnablePassthrough()}
-            ).assign(answer=rag_chain_from_docs)
+            rag_chain_with_source = RunnableParallel({
+                "context": contextualized_question | db.as_retriever(), 
+                "question": RunnableLambda(lambda x: x["question"]),
+                "chat_history": RunnableLambda(lambda x: x["chat_history"]),
+            }).assign(answer=rag_chain_from_docs)
 
             response = ""
             sources = []
-            for chunk in rag_chain_with_source.stream(question):
+            for chunk in rag_chain_with_source.stream({"question": question, "chat_history": chat_history}):
                 if "answer" in chunk.keys():
                     response = response + chunk["answer"]
 
@@ -213,7 +247,7 @@ class ChatService:
 
         except Exception as e:
             Common.exception_details("ChatSerice._get_document_chat_response", e)
-            return ""
+            return "", []
 
     def _emit_chat_stream(self, chat_dict: dict):
         chat_event = "chat_" + str(self.user_id)
