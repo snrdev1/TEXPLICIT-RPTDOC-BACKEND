@@ -45,7 +45,7 @@ class ResearchAgent:
         self.agent = None
         self.role = None
 
-        # Refernce to report config
+        # Reference to report config
         self.cfg = Config()
 
         # Type of report
@@ -62,6 +62,9 @@ class ResearchAgent:
 
         # Get research retriever
         self.retriever = get_retriever(self.cfg.retriever)
+        
+        # Get the url scraper
+        self.scraper = self.cfg.scraper
 
         # Source of report: external(web) or my_documents
         self.source = source
@@ -158,43 +161,29 @@ class ResearchAgent:
 
     async def get_context_by_search(self, query):
         """
-           Generates the context for the research task by searching the query and scraping the results
-        Returns:
-            context: List of context
+        Generates the context for the research task by searching the query and scraping the results
+        Returns: context: List of context
         """
         context = []
+        sub_queries = [query] if self.report_type != "subtopic_report" else [f"{self.parent_query} - {query}"]
 
-        # Generate Sub-Queries including original query (if report type is not subtopic_report)
-        sub_queries = []
-        if self.report_type == "subtopic_report":
-            sub_queries = [f"{self.parent_query} - {query}"]
-        else:
-            sub_queries = await get_sub_queries(query, self.role, self.cfg) + [query]
+        if self.report_type != "subtopic_report":
+            sub_queries.extend(await get_sub_queries(query, self.role, self.cfg))
 
-        await stream_output(
-            "logs",
-            f"🧠 I will conduct my research based on the following queries: {sub_queries}...",
-            self.websocket,
-        )
+        await stream_output("logs", f"🧠 I will conduct my research based on the following queries: {', '.join(sub_queries)}...", self.websocket)
 
-        # Run Sub-Queries
         for sub_query in sub_queries:
-            emit_report_status(self.user_id, self.report_generation_id,  f"🔎 Running research for '{sub_query}'...")
-            await stream_output(
-                "logs", f"\n🔎 Running research for '{sub_query}'...", self.websocket
-            )
-            scraped_sites = await self.scrape_sites_by_query(sub_query)
+            emit_report_status(self.user_id, self.report_generation_id, f"🔎 Running research for '{sub_query}'...")
+            await stream_output("logs", f"\n🔎 Running research for '{sub_query}'...", self.websocket)
 
-            content = await self.get_similar_content_by_query(sub_query, scraped_sites)
-            if content:
-                await stream_output("logs", f"📃 {content}", self.websocket)
-            else:
-                await stream_output(
-                    "logs",
-                    f"Failed to gather content for : {sub_query}",
-                    self.websocket,
-                )
-            context.append(content)
+            scraped_sites = await self.scrape_sites_by_query(sub_query)
+            if scraped_sites:
+                content = await self.get_similar_content_by_query(sub_query, scraped_sites)
+                if content:
+                    await stream_output("logs", f"📃 {content}", self.websocket)
+                    context.append(content)
+                else:
+                    await stream_output("logs", f"Failed to gather content for : {sub_query}", self.websocket)
 
         return context
 
@@ -239,6 +228,10 @@ class ResearchAgent:
             search_results = retriever.search(
                 max_results=self.cfg.max_search_results_per_query
             )
+            
+            if not search_results:
+                emit_report_status(self.user_id, self.report_generation_id, f"🚩 Failed to get search results for : {sub_query}")
+                return ""
 
             new_search_urls = await self.get_new_urls(
                 [url.get("href") or url.get("link") or "" for url in search_results]
@@ -258,6 +251,8 @@ class ResearchAgent:
 
         except Exception as e:
             Common.exception_details("scrape_sites_by_query", e)
+            emit_report_status(self.user_id, self.report_generation_id, "🚩 Failed to get search results...")
+            return ""
 
     async def get_new_urls(self, url_set_input):
         """Gets the new urls from the given url set.

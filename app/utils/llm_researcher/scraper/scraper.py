@@ -2,10 +2,14 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from functools import partial
 
 import requests
-from bs4 import BeautifulSoup
-from langchain_community.document_loaders import PyMuPDFLoader
-from langchain_community.retrievers import ArxivRetriever
-from newspaper import Article
+
+from .scraper import (
+    ArxivScraper,
+    BeautifulSoupScraper,
+    NewspaperScraper,
+    PyMuPDFScraper,
+    WebBaseLoaderScraper,
+)
 
 
 class Scraper:
@@ -13,7 +17,7 @@ class Scraper:
     Scraper class to extract the content from the links
     """
 
-    def __init__(self, urls, user_agent):
+    def __init__(self, urls, user_agent, scraper):
         """
         Initialize the Scraper class.
         Args:
@@ -22,6 +26,7 @@ class Scraper:
         self.urls = urls
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": user_agent})
+        self.scraper = scraper
 
     def run(self):
         """
@@ -39,13 +44,9 @@ class Scraper:
         """
         content = ""
         try:
-            if link.endswith(".pdf"):
-                content = self.scrape_pdf_with_pymupdf(link)
-            elif "arxiv.org" in link:
-                doc_num = link.split("/")[-1]
-                content = self.scrape_pdf_with_arxiv(doc_num)
-            elif link:
-                content = self.scrape_url_with_newspaper(link)
+            Scraper = self.get_scraper(link)
+            scraper = Scraper(link, session)
+            content = scraper.scrape()
 
             if len(content) < 100:
                 return {"url": link, "raw_content": None}
@@ -54,82 +55,42 @@ class Scraper:
             print("Exception in extract_data_from_link : ", e)
             return {"url": link, "raw_content": None}
 
-    def scrape_url_with_newspaper(self, url: str) -> str:
-        try:
-            article = Article(
-                url,
-                language="en",
-                memoize_articles=False,
-                fetch_images=False,
-                # request_timeout=15,
-            )
-            article.download()
-            article.parse()
-
-            title = article.title
-            text = article.text
-
-            # If title, summary are not present then return None
-            if not (title and text):
-                return ""
-
-            return f"{title} : {text}"
-
-        except Exception as e:
-            print("Error! : " + str(e))
-            return ""
-
-    def scrape_text_with_bs(self, link, session):
-        response = session.get(link, timeout=4)
-        soup = BeautifulSoup(response.content, "lxml", from_encoding=response.encoding)
-
-        for script_or_style in soup(["script", "style"]):
-            script_or_style.extract()
-
-        raw_content = self.get_content_from_url(soup)
-        lines = (line.strip() for line in raw_content.splitlines())
-        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-        content = "\n".join(chunk for chunk in chunks if chunk)
-        return content
-
-    def scrape_pdf_with_pymupdf(self, url) -> str:
-        """Scrape a pdf with pymupdf
-
-        Args:
-            url (str): The url of the pdf to scrape
-
-        Returns:
-            str: The text scraped from the pdf
+    def get_scraper(self, link):
         """
-        loader = PyMuPDFLoader(url)
-        doc = loader.load()
-        return str(doc)
-
-    def scrape_pdf_with_arxiv(self, query) -> str:
-        """Scrape a pdf with arxiv
-        default document length of 70000 about ~15 pages or None for no limit
-
+        The function `get_scraper` determines the appropriate scraper class based on the provided link
+        or a default scraper if none matches.
+        
         Args:
-            query (str): The query to search for
-
+          link: The `get_scraper` method takes a `link` parameter which is a URL link to a webpage or a
+        PDF file. Based on the type of content the link points to, the method determines the appropriate
+        scraper class to use for extracting data from that content.
+        
         Returns:
-            str: The text scraped from the pdf
+          The `get_scraper` method returns the scraper class based on the provided link. The method
+        checks the link to determine the appropriate scraper class to use based on predefined mappings
+        in the `SCRAPER_CLASSES` dictionary. If the link ends with ".pdf", it selects the
+        `PyMuPDFScraper` class. If the link contains "arxiv.org", it selects the `ArxivScraper
         """
-        retriever = ArxivRetriever(load_max_docs=2, doc_content_chars_max=None)
-        docs = retriever.get_relevant_documents(query=query)
-        return docs[0].page_content
 
-    def get_content_from_url(self, soup):
-        """Get the text from the soup
+        SCRAPER_CLASSES = {
+            "pdf": PyMuPDFScraper,
+            "arxiv": ArxivScraper,
+            "newspaper": NewspaperScraper,
+            "bs": BeautifulSoupScraper,
+            "web_base_loader": WebBaseLoaderScraper,
+        }
 
-        Args:
-            soup (BeautifulSoup): The soup to get the text from
+        scraper_key = None
 
-        Returns:
-            str: The text from the soup
-        """
-        text = ""
-        tags = ["p", "h1", "h2", "h3", "h4", "h5"]
-        for element in soup.find_all(tags):  # Find all the <p> elements
-            text += element.text + "\n"
-        return text
+        if link.endswith(".pdf"):
+            scraper_key = "pdf"
+        elif "arxiv.org" in link:
+            scraper_key = "arxiv"
+        else:
+            scraper_key = self.scraper
+
+        scraper_class = SCRAPER_CLASSES.get(scraper_key)
+        if scraper_class is None:
+            raise Exception("Scraper not found.")
+
+        return scraper_class

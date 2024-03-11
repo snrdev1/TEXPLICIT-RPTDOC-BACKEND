@@ -36,8 +36,8 @@ class Config(object):
     TESTING = eval(os.getenv("TESTING", "False"))
     
     # LLM models used
-    FAST_LLM_MODEL = os.getenv("FAST_LLM_MODEL", "gpt-3.5-turbo-1106")
-    SMART_LLM_MODEL = os.getenv("SMART_LLM_MODEL", "gpt-4-1106-preview")
+    FAST_LLM_MODEL = os.getenv("FAST_LLM_MODEL", "gpt-3.5-turbo-0125")
+    SMART_LLM_MODEL = os.getenv("SMART_LLM_MODEL", "gpt-4-0125-preview")
 
     # REPORT GENERATION
     REPORT_DEBUG_MODE = False
@@ -64,6 +64,8 @@ class Config(object):
     REPORT_MAX_SEARCH_RESULTS_PER_QUERY = int(os.getenv('MAX_SEARCH_RESULTS_PER_QUERY', 5))
     REPORT_TOTAL_WORDS = int(os.getenv('TOTAL_WORDS', 1000))
     REPORT_SEARCH_RETRIEVER = os.getenv("SEARCH_RETRIEVER", "serpapi")
+    # The scaper to use. One of ["newspaper", "web_base_loader", "bs"]
+    REPORT_SCRAPER = os.getenv("REPORT_SCRAPER", "newspaper")
 
     # MongoDB
     MONGO_DATABASE = "TEXPLICIT2_B2C_RPTDOC"

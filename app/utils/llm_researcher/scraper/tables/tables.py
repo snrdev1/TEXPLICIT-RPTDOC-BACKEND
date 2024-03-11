@@ -7,12 +7,13 @@ from bs4 import BeautifulSoup
 from docx import Document
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.shared import Pt
+
 from app.config import Config as GlobalConfig
 from app.utils.common import Common
 from app.utils.production import Production
 
-from ...document import add_hyperlink
-from ..utils.text import *
+from ....document import add_hyperlink
+from ...utils.text import *
 
 
 class TableExtractor:
@@ -61,9 +62,12 @@ class TableExtractor:
             Returns:
             - str: Processed title of the table.
             """
+
             def process_table_title(title):
                 # Removing Table numberings like "Table 1:", "Table1-", etc.
-                cleaned_title = re.sub(r"^\s*Table\s*\d+\s*[:\-]\s*", "", title, flags=re.IGNORECASE)
+                cleaned_title = re.sub(
+                    r"^\s*Table\s*\d+\s*[:\-]\s*", "", title, flags=re.IGNORECASE
+                )
                 return cleaned_title.strip()
 
             title = ""
@@ -73,7 +77,9 @@ class TableExtractor:
                 title = table_caption.get_text(strip=True)
             else:
                 # If no caption, look at previous tags like h1, h2, etc.
-                previous_tag = table.find_previous(["h1", "h2", "h3", "h4", "h5", "h6", "p"])
+                previous_tag = table.find_previous(
+                    ["h1", "h2", "h3", "h4", "h5", "h6", "p"]
+                )
                 if previous_tag:
                     title = previous_tag.get_text(strip=True)
 
@@ -100,9 +106,13 @@ class TableExtractor:
                 if header_row:
                     # Extract header names from thead
                     header_cells = header_row.find_all(["th", "td"])
-                    header_names = [cell.text.strip() for cell in header_cells if cell.text.strip()]
+                    header_names = [
+                        cell.text.strip() for cell in header_cells if cell.text.strip()
+                    ]
                     # Assuming the header row contains unique names for keys
-                    header_dict = {index: name for index, name in enumerate(header_names)}
+                    header_dict = {
+                        index: name for index, name in enumerate(header_names)
+                    }
 
             if header_dict:
                 table_data.append(header_dict)
@@ -118,7 +128,14 @@ class TableExtractor:
                     row_data[str(idx)] = cell_text
 
                     # Check if cell_text is valid (not in exclusion list)
-                    if cell_text and cell_text not in ["NA", "n/a", "na", "-", "", "NaN"]:
+                    if cell_text and cell_text not in [
+                        "NA",
+                        "n/a",
+                        "na",
+                        "-",
+                        "",
+                        "NaN",
+                    ]:
                         valid_row = True
 
                 if valid_row:
@@ -137,10 +154,12 @@ class TableExtractor:
             - bool: True if hyperlinks are found, False otherwise.
             """
             for row in table_data:
-                
+
                 for value in row:
                     # Check if the value contains an <a> tag
-                    if isinstance(value, str) and re.search(r'<a\s+(?:[^>]*?\s+)?href=[\'"]([^\'"]*)[\'"]', value):
+                    if isinstance(value, str) and re.search(
+                        r'<a\s+(?:[^>]*?\s+)?href=[\'"]([^\'"]*)[\'"]', value
+                    ):
                         return True
             return False
 
@@ -148,7 +167,7 @@ class TableExtractor:
             """
             The function `filter_tables` filters out tables based on specific criteria such as blank
             values, hyperlinks, titles, and column names.
-            
+
             :param table: The `filter_tables` function takes a `table` parameter, which is expected to
             be a dictionary representing a table. The dictionary should have the following keys:
             :return: The function `filter_tables` returns a boolean value - `True` if the table passes
@@ -159,30 +178,33 @@ class TableExtractor:
                 # Exlcude tables where value field is blank
                 if len(table["values"]) in [0, 1]:
                     return False
-                
+
                 # Exclude tables with hyperlinks
                 if has_hyperlinks(table["values"]):
                     return False
-                
+
                 # Exclude tables with specific titles
-                if table["title"].lower() in ["", "information related to the various screen readers"]:
+                if table["title"].lower() in [
+                    "",
+                    "information related to the various screen readers",
+                ]:
                     return False
-                
+
                 # Exclude tables with specific column names
                 for column_name in table["values"][0].values():
                     if column_name.lower() in ["download"]:
                         return False
-                
+
                 return True
-            
+
             except Exception as e:
                 Common.exception_details("TableExtractor.filter_tables", e)
                 return False
-            
+
         try:
             if url.endswith(".pdf"):
                 return [], url
-            
+
             response = requests.get(url)
             response.raise_for_status()
             soup = BeautifulSoup(response.content, "html.parser")
@@ -193,10 +215,10 @@ class TableExtractor:
                 nested_tables = table.find_all("table")
                 if not nested_tables:
                     table_struct = extract_table_data(table)
-                    
+
                     if filter_tables(table_struct):
                         extracted_tables.append(table_struct)
-                        
+
             return extracted_tables
 
         except requests.RequestException as e:
