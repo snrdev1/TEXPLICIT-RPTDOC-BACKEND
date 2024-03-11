@@ -78,10 +78,11 @@ class CompleteReport:
         ) = await self.create_report("detailed_report")
 
         report_markdown = (
-            outline_report_markdown
-            + "\n\n\n\n"
+            "#OUTLINE REPORT\n\n"
+            + outline_report_markdown
+            + "\n\n\n\n#SUMMARY REPORT\n\n"
             + resource_report_markdown
-            + "\n\n\n\n"
+            + "\n\n\n\n#DETAILED REPORT\n\n"
             + detailed_report_markdown
         )
         report_markdown = report_markdown.strip()
