@@ -59,7 +59,7 @@ class SerpApiSearch():
             results = search.get_dict().get("organic_results", [])        # If there are no search results then return empty list
             if not results:
                 print("🚩 Serp API failed to get search results!")
-                return json.dumps(search_results)
+                return json.loads(json.dumps(search_results))
 
             total_added = 0
             for i in results:
