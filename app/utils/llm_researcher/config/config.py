@@ -31,6 +31,7 @@ class Config:
         self.total_words = ApplicationConfig.REPORT_TOTAL_WORDS 
         self.agent_role =  ApplicationConfig.REPORT_AGENT_ROLE
         self.retriever =ApplicationConfig.REPORT_SEARCH_RETRIEVER
+        self.scraper = ApplicationConfig.REPORT_SCRAPER
 
         # Initialize the OpenAI API client
         openai.api_key = self.openai_api_key

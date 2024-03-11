@@ -108,17 +108,7 @@ async def stream_output(type, output, websocket=None, logging=True):
         await websocket.send_json({"type": type, "output": output})
 
 
-def scrape_urls(urls, cfg=None):
-    """
-    Scrapes the urls
-    Args:
-        urls: List of urls
-        cfg: Config (optional)
-
-    Returns:
-        text: str
-
-    """
+def scrape_urls(urls, cfg):
     content = []
     user_agent = (
         cfg.user_agent
@@ -126,7 +116,7 @@ def scrape_urls(urls, cfg=None):
         else "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0"
     )
     try:
-        content = Scraper(urls, user_agent).run()
+        content = Scraper(urls, user_agent, cfg.scraper).run()
     except Exception as e:
         print(f"{Fore.RED}Error in scrape_urls: {e}{Style.RESET_ALL}")
     return content
