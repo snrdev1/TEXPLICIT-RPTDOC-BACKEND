@@ -323,11 +323,11 @@ class ChatService:
             if len(response) > 0:
                 return response[0]
             else:
-                return None
+                return {"chat": []}
 
         except Exception as e:
             Common.exception_details("chatService.get_all_user_related_chat", e)
-            return None
+            return {"chat": []}
 
     def delete_chats(self):
         """
