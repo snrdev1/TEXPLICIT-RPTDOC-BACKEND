@@ -7,14 +7,9 @@ from datetime import datetime
 
 from flask import Blueprint, request
 
-from app.auth.userauthorization import authorized
-from app.services.chatService import ChatService
-from app.utils import Response
-from app.utils.common import Common
-from app.utils.enumerator import Enumerator
-from app.utils.messages import Messages
-
-from ...services import userService as UserService
+from ...auth import authorized
+from ...services import ChatService
+from ...utils import Subscription, Response, Common, Enumerator, Messages
 
 chat = Blueprint("chat", __name__, url_prefix="/chat")
 
@@ -44,7 +39,9 @@ def get_chat(logged_in_user):
     chat_type = request_body.get("chatType", int(Enumerator.ChatType.External.value))
     chatId = request_body.get("chatId", f"{user_id}_{datetime.utcnow()}")
 
-    subscription_validity = UserService.check_subscription_duration(user_id)
+    # Check subscription validity before using chat
+    subscription = Subscription(user_id)
+    subscription_validity = subscription.check_subscription_duration() and subscription.check_subscription_chat()
     if not subscription_validity:
         return Response.subscription_invalid()
 

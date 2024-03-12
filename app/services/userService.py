@@ -8,13 +8,10 @@ from flask import request
 from app.config import Config
 from app.models.mongoClient import MongoClient
 from app.utils import constants as Constants
-from app.utils.common import Common
 from app.utils.email_helper import send_mail
-from app.utils.enumerator import Enumerator
 from app.utils.formatter import cursor_to_dict
-from app.utils.parser import Parser
-from app.utils.pipelines import PipelineStages
-from app.utils.production import Production
+
+from ..utils import Common, Enumerator, Parser, PipelineStages, Production
 
 
 def get_image_path(image_name):
@@ -206,7 +203,8 @@ def send_mail_with_reset_token(user_id, user_name, user_email):
         # If user found, generate token
         token = Parser.get_encoded_token(user_id)
 
-        resetPasswordLink = request.environ["HTTP_ORIGIN"] + "/reset-password/" + token
+        resetPasswordLink = request.environ["HTTP_ORIGIN"] + \
+            "/reset-password/" + token
 
         mailBody = Constants.PASSWORD_RESET_REQUEST_MAILBODY.format(
             name=user_name,
@@ -224,7 +222,8 @@ def send_mail_with_reset_token(user_id, user_name, user_email):
         return success, token
 
     except Exception as e:
-        Common.exception_details("UserService.send_mail_with_reset_token : ", e)
+        Common.exception_details(
+            "UserService.send_mail_with_reset_token : ", e)
         return None, None
 
 
@@ -266,7 +265,8 @@ def get_base_users():
             ),
             PipelineStages.stage_sort({"_id": -1}),
         ] + _common_user_pipeline()
-        response = m_db[Config.MONGO_USER_MASTER_COLLECTION].aggregate(pipeline)
+        response = m_db[Config.MONGO_USER_MASTER_COLLECTION].aggregate(
+            pipeline)
 
         return cursor_to_dict(response)
 
@@ -371,7 +371,8 @@ def get_user_by_email(email):
     """
     m_db = MongoClient.connect()
 
-    response = m_db[Config.MONGO_USER_MASTER_COLLECTION].find_one({"email": email})
+    response = m_db[Config.MONGO_USER_MASTER_COLLECTION].find_one({
+                                                                  "email": email})
 
     return response
 
@@ -420,7 +421,7 @@ def update_user_info(user_id, update_dict) -> int:
     """
     The function `update_user_info` updates user information in a MongoDB collection and returns the
     count of modified documents.
-    
+
     Args:
       user_id: The `user_id` parameter in the `update_user_info` function is expected to be a unique
     identifier for the user whose information is being updated. It is used to locate the specific user
@@ -429,7 +430,7 @@ def update_user_info(user_id, update_dict) -> int:
     containing the fields and values that need to be updated for a specific user in the database. The
     keys in the dictionary represent the fields to be updated, and the corresponding values are the new
     values that will replace the existing
-    
+
     Returns:
       The function `update_user_info` is returning an integer value, specifically the number of
     documents that were modified as a result of the update operation in the MongoDB database. If the
@@ -473,7 +474,8 @@ def update_password(user_id, new_password_hash):
 
     query = {"_id": ObjectId(user_id), "isActive": True}
     new_values = {"$set": {"passwordHash": new_password_hash}}
-    response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(query, new_values)
+    response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(
+        query, new_values)
 
     if response:
         return str(response.modified_count)
@@ -515,7 +517,8 @@ def save_or_update_image(user_id, image):
 
         query = {"_id": ObjectId(user_id), "isActive": True}
         value = {"$set": {"image": str(filename)}}
-        response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(query, value)
+        response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(
+            query, value)
 
         if response:
             return str(response.modified_count)
@@ -628,8 +631,18 @@ def create_new_user_permission(menu: list = []) -> dict:
                 "end_date": datetime.utcnow(),
             },
             "report": {
-                "allowed": {"total": 0, "summary": 0, "detailed": 0, "complete": 0},
-                "used": {"total": 0, "summary": 0, "detailed": 0, "complete": 0},
+                "allowed": {
+                    "total": 0,
+                    Enumerator.ReportType.ResearchReport.value: 0,
+                    Enumerator.ReportType.DetailedReport.value: 0,
+                    Enumerator.ReportType.CompleteReport.value: 0
+                },
+                "used": {
+                    "total": 0,
+                    Enumerator.ReportType.ResearchReport.value: 0,
+                    Enumerator.ReportType.DetailedReport.value: 0,
+                    Enumerator.ReportType.CompleteReport.value: 0
+                },
             },
             "document": {
                 "allowed": {
@@ -651,46 +664,3 @@ def create_new_user_permission(menu: list = []) -> dict:
     except Exception as e:
         Common.exception_details("userService._create_new_user_permission", e)
         return {}
-
-
-def check_subscription_duration(user_id: Union[str, ObjectId]) -> bool:
-    """
-    The function `check_subscription_duration` checks if a user's subscription is active based on the
-    start and end dates.
-    
-    Args:
-      user_id (Union[str, ObjectId]): The `user_id` parameter in the `check_subscription_duration`
-    function is expected to be a string or an `ObjectId` type. It is used to identify a specific user
-    for whom we want to check the subscription duration.
-    
-    Returns:
-      The function `check_subscription_duration` returns a boolean value. It returns `True` under the
-    following conditions:
-    1. If the user information is retrieved successfully and the subscription duration is valid (current
-    date falls within the start and end dates of the subscription).
-    2. If the subscription duration is missing, it updates the user information and returns `True`.
-    """
-    # Get user info dict
-    user_dict = get_user_by_id(user_id)
-    # Get the current date
-    current_date = datetime.utcnow()
-    
-    if user_dict:
-        subscription_duration = user_dict.get("subscription_duration", None)
-
-        if not subscription_duration:
-            print("Updating user!")
-            user_dict["permissions"] = create_new_user_permission(
-                user_dict["permissions"]["menu"]
-            )
-            del user_dict['_id']
-            update_user_info(user_id, user_dict)
-            return True
-
-        start_date = subscription_duration.get("start_date", None)
-        end_date = subscription_duration.get("end_date", None)
-        if start_date and end_date:
-            if current_date >= start_date and current_date <= end_date:
-                return True
-
-    return False

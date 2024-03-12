@@ -103,7 +103,10 @@ def report_generate(
         if (
             not len(report_folder)
             or not len(report_text)
-            or report_type not in ["research_report", "detailed_report"]
+            or report_type not in [
+                Enumerator.ReportType.ResearchReport.value, 
+                Enumerator.ReportType.DetailedReport.value
+            ]
         ):
             return {"exists": False, "text": "", "path": ""}
 

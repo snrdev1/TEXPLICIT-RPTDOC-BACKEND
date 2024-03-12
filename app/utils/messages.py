@@ -77,7 +77,8 @@ class Messages:
     INVALID_NEW_PASSWORD = "Invalid! New password cannot be same as old password!"
     INVALID_EMAIL = "Email address does not exist!"
     INVALID_TOKEN = "Token is invalid!"
-    INVALID_SUBSCRIPTION = "Subscription is invalid! Please check plan details!"
+    INVALID_SUBSCRIPTION = "Subscription expired! Please check plan details!"
+    INVALID_REPORT_TYPE = "Invalid report type!"
 
     # MISSING_
     MISSING_REQUIRED_PARAMETERS = "Missing Required Parameters"

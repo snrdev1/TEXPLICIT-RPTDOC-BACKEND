@@ -32,7 +32,7 @@ class ResearchAgent:
         query: str,
         source: str,
         format: str,
-        report_type: str = "research_report",
+        report_type: str = Enumerator.ReportType.ResearchReport.value,
         websocket=None,
         parent_query="",
         subtopics=[],

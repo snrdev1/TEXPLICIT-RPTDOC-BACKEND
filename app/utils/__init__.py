@@ -10,6 +10,7 @@ from .messages import Messages
 from .parser import Parser
 from .pipelines import PipelineStages
 from .production import Production
+from .subscription.subscription import Subscription
 from .timer import timeout_handler
 from .web_scraper import WebScraper
 
@@ -34,4 +35,5 @@ __all__ = [
     "socket",
     "timeout_handler",
     "WebScraper",
+    "Subscription",
 ]

@@ -1,5 +1,4 @@
 from . import (
-    chatService,
     demoService,
     feedbackService,
     menuService,
@@ -11,9 +10,10 @@ from . import (
     userManagementService,
 )
 from . import userService as UserService
+from .chatService import ChatService
 
 __all__ = [
-    "chatService",
+    "ChatService",
     "demoService",
     "feedbackService",
     "menuService",

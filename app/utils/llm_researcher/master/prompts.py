@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from ....utils import Enumerator
 
 def generate_search_queries_prompt(question: str, max_iterations: int = 3) -> str:
     return (
@@ -110,11 +110,11 @@ def generate_outline_report_prompt(
 
 def get_report_by_type(report_type):
     report_type_mapping = {
-        "research_report": generate_report_prompt,
-        "resource_report": generate_resource_report_prompt,
-        "outline_report": generate_outline_report_prompt,
-        "custom_report": generate_custom_report_prompt,
-        "subtopic_report": generate_subtopic_report_prompt,
+        Enumerator.ReportType.ResearchReport.value: generate_report_prompt,
+        Enumerator.ReportType.ResourceReport.value: generate_resource_report_prompt,
+        Enumerator.ReportType.ResourceReport.value: generate_outline_report_prompt,
+        Enumerator.ReportType.CustomReport.value: generate_custom_report_prompt,
+        Enumerator.ReportType.SubtopicReport.value: generate_subtopic_report_prompt,
     }
 
     return report_type_mapping[report_type]

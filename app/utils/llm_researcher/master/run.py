@@ -4,6 +4,8 @@ from typing import Union
 
 from bson import ObjectId
 
+from app.utils import Enumerator
+
 
 class AgentExecutor:
     def __init__(
@@ -11,7 +13,7 @@ class AgentExecutor:
         user_id: Union[ObjectId, str],
         task: str,
         websearch: bool = True,
-        report_type: str = "research_report",
+        report_type: str = Enumerator.ReportType.ResearchReport.value,
         source: str = "external",
         format: str = "pdf",
         report_generation_id: str = "",
@@ -32,11 +34,11 @@ class AgentExecutor:
 
     def get_report_executor(self):
         match self.report_type:
-            case "detailed_report":
+            case Enumerator.ReportType.DetailedReport.value:
                 from ..report_types import DetailedReport
 
                 executor = DetailedReport
-            case "complete_report":
+            case Enumerator.ReportType.CompleteReport.value:
                 from ..report_types import CompleteReport
 
                 executor = CompleteReport
