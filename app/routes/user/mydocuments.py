@@ -117,7 +117,7 @@ def upload_documents(logged_in_user):
         A custom response
     """
     try:
-        files = request.files.getlist("files[]")
+        files = request.files.getlist("files")
         path = request.form.get("path")
         upload_id = request.form.get("uploadId")
 
