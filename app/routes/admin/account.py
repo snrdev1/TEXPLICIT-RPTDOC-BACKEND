@@ -1,6 +1,6 @@
 from flask import Blueprint, request
 
-from app.services.userService import UserService
+from app.services import UserService
 from app.utils.common import Common
 from app.utils.messages import Messages
 from app.utils.parser import Parser
@@ -27,7 +27,7 @@ def admin_login():
         password = request_params["password"]
 
         # Check email in DB
-        existing_user = UserService().get_user_by_email(email)
+        existing_user = UserService.get_user_by_email(email)
 
         # If user not found
         if not existing_user:

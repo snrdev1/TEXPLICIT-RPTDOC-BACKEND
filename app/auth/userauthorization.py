@@ -3,7 +3,7 @@ from functools import wraps
 
 from flask import Response, request
 
-from app.services.userService import UserService
+from app.services import UserService
 from app.utils.common import Common
 from app.utils.messages import Messages
 from app.utils.parser import Parser
@@ -67,7 +67,7 @@ def authorized(f):
                     [], Messages.ERROR_TOKEN_EXPIRED, True, 401
                 )
 
-            logged_in_user = UserService().get_user_by_id(decoded_token["id"])
+            logged_in_user = UserService.get_user_by_id(decoded_token["id"])
 
             if not logged_in_user:
                 return Response.unauthorized()
@@ -135,7 +135,7 @@ def anonymous(f):
             if current_time > expiry_time:
                 return f(None, *args, **kwargs)
 
-            logged_in_user = UserService().get_user_by_id(decoded_token["id"])
+            logged_in_user = UserService.get_user_by_id(decoded_token["id"])
 
         except Exception as e:
             Common.exception_details("anonymous", e)

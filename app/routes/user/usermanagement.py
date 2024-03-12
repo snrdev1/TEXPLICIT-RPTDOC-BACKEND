@@ -7,7 +7,7 @@ from flask import Blueprint, request
 
 from app.auth.userauthorization import authorized
 from app.services.userManagementService import UserManagementService
-from app.services.userService import UserService
+from app.services import UserService
 from app.utils.common import Common
 from app.utils.messages import Messages
 from app.utils.response import Response
@@ -48,7 +48,7 @@ def add_user(logged_in_user):
         }
         print("User Data:", user_data)
 
-        existing_user = UserService().get_user_by_email(user_data["email"])
+        existing_user = UserService.get_user_by_email(user_data["email"])
 
         if existing_user:
             return Response.custom_response([], Messages.DUPLICATE_USER, False, 400)

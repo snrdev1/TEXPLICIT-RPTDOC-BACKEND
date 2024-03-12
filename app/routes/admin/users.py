@@ -4,7 +4,7 @@
 from flask import Blueprint, request
 
 from app.auth.userauthorization import admin, authorized
-from app.services.userService import UserService
+from app.services import UserService
 from app.utils.common import Common
 from app.utils.enumerator import Enumerator
 from app.utils.messages import Messages
@@ -19,7 +19,7 @@ admin_users = Blueprint("admin_users", __name__, url_prefix="/admin/user")
 @admin
 def admin_users_for_approval(logged_in_user):
     try:
-        response = UserService().get_base_users()
+        response = UserService.get_base_users()
         return Response.custom_response(response, Messages.OK_USER_RETRIEVAL, True, 200)
 
     except Exception as e:
@@ -48,13 +48,13 @@ def admin_user_status_change(logged_in_user):
         user_id = request_params.get("userId")
 
         # Check if target user is existing
-        existing_user = UserService().get_user_by_id(user_id)
+        existing_user = UserService.get_user_by_id(user_id)
 
         if not existing_user:
             return Response.custom_response([], Messages.NOT_FOUND_USER, False, 400)
 
         if existing_user["isActive"] == False:
-            response = UserService().activate_user(user_id)
+            response = UserService.activate_user(user_id)
             if response:
                 return Response.custom_response(
                     response, Messages.OK_USER_ACTIVATED, True, 200
@@ -64,7 +64,7 @@ def admin_user_status_change(logged_in_user):
                     response, Messages.ERROR_USER_ACTIVATED, False, 400
                 )
         else:
-            response = UserService().deactivate_user(user_id)
+            response = UserService.deactivate_user(user_id)
             if response:
                 return Response.custom_response(
                     response, Messages.OK_USER_DEACTIVATED, True, 200
@@ -111,14 +111,14 @@ def admin_add_update_user(logged_in_user):
         if "userId" in request_params:
             # Update existing user
             target_user_id = request_params.get("userId")
-            response = UserService().update_user_info(target_user_id, user_info)
+            response = UserService.update_user_info(target_user_id, user_info)
 
             if response:
                 return Response.custom_response([], Messages.OK_USER_UPDATE, True, 200)
 
         else:
             # Check if user exists with same email id
-            existing_user = UserService().get_user_by_email(user_info["email"])
+            existing_user = UserService.get_user_by_email(user_info["email"])
 
             if existing_user:
                 return Response.custom_response(
@@ -136,7 +136,7 @@ def admin_add_update_user(logged_in_user):
                 subscription=user_info["subscription"],
                 menu=user_info["permissions"]["menu"],
             )
-            response = UserService().create_user(new_user_info)
+            response = UserService.create_user(new_user_info)
 
             if response:
                 user_id = response

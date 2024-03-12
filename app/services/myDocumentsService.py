@@ -19,7 +19,7 @@ from sumy.summarizers.text_rank import TextRankSummarizer
 
 from app.config import Config
 from app.models.mongoClient import MongoClient
-from app.services.userService import UserService
+from . import userService as UserService
 from app.utils.common import Common
 from app.utils.email_helper import send_mail
 from app.utils.formatter import cursor_to_dict, get_base64_encoding
@@ -2198,7 +2198,7 @@ class MyDocumentsService:
         try:
             files = self.get_files(document_ids)
             virtual_file_names = [file["virtualFileName"] for file in files]
-            user = UserService().get_user_by_id(user_id)
+            user = UserService.get_user_by_id(user_id)
             file_details = [MyDocumentsService().get_file_contents(virtual_file_name) for virtual_file_name in virtual_file_names]
             file_contents, file_names = zip(*file_details) 
             attachments = [{"content": get_base64_encoding(file_content), "name": file_name} for (file_content, file_name) in zip(file_contents, file_names)]

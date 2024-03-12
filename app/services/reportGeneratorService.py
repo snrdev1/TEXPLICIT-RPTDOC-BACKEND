@@ -11,7 +11,7 @@ from bson import ObjectId
 
 from app.config import Config
 from app.models.mongoClient import MongoClient
-from app.services.userService import UserService
+from . import userService as UserService
 from app.utils.audio import AudioGenerator
 from app.utils.common import Common
 from app.utils.email_helper import send_mail
@@ -694,7 +694,7 @@ def get_file_contents(report_document):
 def share_reports_via_email(user_id, report_ids, email_ids, subject: str = "Sharing Report from TexplicitRW", message:str ="Check out these report(s) from TexplicitRW"):
     try:
         report_documents = get_multiple_reports_from_db(report_ids)
-        user = UserService().get_user_by_id(user_id)
+        user = UserService.get_user_by_id(user_id)
         report_details = [
             get_file_contents(report_document) for report_document in report_documents
         ]

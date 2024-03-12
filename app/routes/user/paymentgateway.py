@@ -10,7 +10,7 @@ from app.utils.common import Common
 from app.utils.messages import Messages
 from app.utils.response import Response
 from app.services import paymentGatewayService
-from app.services.userService import UserService
+from app.services import UserService
 
 payment_gateway = Blueprint("payment_gateway", __name__, url_prefix="/payment")
 

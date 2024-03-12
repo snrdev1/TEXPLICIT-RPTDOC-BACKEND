@@ -32,20 +32,22 @@ def create_app():
 
 app, socketio = create_app()
 
-from app.routes.admin.account import admin_account
-from app.routes.admin.users import admin_users
-from app.routes.user.account import account
-from app.routes.user.chat import chat
-from app.routes.user.feedback import feedback
-from app.routes.user.menu import menu
-from app.routes.user.mydocuments import mydocuments
-from app.routes.user.news import news
-from app.routes.user.report_generator import report_generator
-from app.routes.user.summary import summary
-from app.routes.user.usermanagement import usermanagement
-from app.routes.user.users import users
-from app.routes.user.paymentgateway import payment_gateway
-from app.routes.user.demo import demo
+from app.routes import (
+    account,
+    admin_account,
+    admin_users,
+    chat,
+    demo,
+    feedback,
+    menu,
+    mydocuments,
+    news,
+    payment_gateway,
+    report_generator,
+    summary,
+    usermanagement,
+    users,
+)
 
 # Admin routes
 app.register_blueprint(admin_account)

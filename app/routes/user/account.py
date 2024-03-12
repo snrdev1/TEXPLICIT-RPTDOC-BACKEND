@@ -8,7 +8,7 @@ from flask import Blueprint, request, send_file
 
 from app.auth.userauthorization import authorized
 from app.config import Config
-from app.services.userService import UserService
+from app.services import UserService
 from app.utils.common import Common
 from app.utils.enumerator import Enumerator
 from app.utils.messages import Messages
@@ -64,12 +64,12 @@ def account_signup():
             menu=request_params.get("menu", []),
         )
 
-        existing_user = UserService().get_user_by_email(user_data["email"])
+        existing_user = UserService.get_user_by_email(user_data["email"])
 
         if existing_user:
             return Response.custom_response([], Messages.DUPLICATE_EMAIL, False, 400)
 
-        response = UserService().create_user(user_data)
+        response = UserService.create_user(user_data)
 
         if response:
             return Response.custom_response(
@@ -109,7 +109,7 @@ def account_login():
         password = request_params["password"]
 
         # Check email in DB
-        existing_user = UserService().get_user_by_email(email)
+        existing_user = UserService.get_user_by_email(email)
 
         # If user not found
         if not existing_user:
@@ -225,7 +225,7 @@ def account_update(logged_in_user):
             )
         }
 
-        response = UserService().update_user_info(user_id, update_dict)
+        response = UserService.update_user_info(user_id, update_dict)
         if response:
             return Response.custom_response([], Messages.OK_USER_UPDATE, True, 200)
         else:
@@ -252,7 +252,7 @@ def account_get_user_by_id(user_id):
             A json object containing the user details
     """
     try:
-        user_data = UserService().get_user_by_id(user_id)
+        user_data = UserService.get_user_by_id(user_id)
         if user_data:
             return Response.custom_response(
                 user_data, Messages.OK_USER_RETRIEVAL, True, 200
@@ -283,7 +283,7 @@ def account_get_current_user(logged_in_user):
     """
     try:
         user_id = str(logged_in_user["_id"])
-        user_data = UserService().get_user_by_id(user_id)
+        user_data = UserService.get_user_by_id(user_id)
         if user_data:
             return Response.custom_response(
                 user_data, Messages.OK_USER_RETRIEVAL, True, 200
@@ -360,7 +360,7 @@ def account_update_user_image(logged_in_user):
             return Response.missing_parameters()
 
         image = request_files["image"]
-        response = UserService().save_or_update_image(user_id, image)
+        response = UserService.save_or_update_image(user_id, image)
         if response:
             return Response.custom_response(
                 response, Messages.OK_USER_IMAGE_UPDATE, True, 200
@@ -392,7 +392,7 @@ def account_reset_password_generate_token():
         email = request_params["email"]
 
         # Check email in DB
-        existing_user = UserService().get_user_by_email(email)
+        existing_user = UserService.get_user_by_email(email)
 
         # If user not found, return a response
         if not existing_user:
@@ -441,7 +441,7 @@ def account_reset_password_check_token_validity(token):
                 [{"validity": False}], Messages.INVALID_TOKEN, False, 400
             )
 
-        existing_user = UserService().get_user_by_id(decoded_token["id"])
+        existing_user = UserService.get_user_by_id(decoded_token["id"])
         current_time = datetime.utcnow()
         expiry_time = datetime.utcfromtimestamp(decoded_token["exp"])
 
@@ -500,7 +500,7 @@ def account_reset_password_update_password():
                 [{"token_validity": False}], Messages.INVALID_TOKEN, False, 400
             )
 
-        existing_user = UserService().get_user_by_id(decoded_token["id"])
+        existing_user = UserService.get_user_by_id(decoded_token["id"])
 
         if not existing_user:
             return Response.custom_response([], Messages.NOT_FOUND_USER, False, 404)
@@ -510,14 +510,14 @@ def account_reset_password_update_password():
         new_password_hash = Common.encrypt_password(new_password)
 
         # Old password and new password cannot be same
-        current_password_hash = UserService().get_password(user_id)
+        current_password_hash = UserService.get_password(user_id)
 
         if Common.check_password(current_password_hash, new_password):
             return Response.custom_response(
                 [], Messages.INVALID_NEW_PASSWORD, False, 400
             )
 
-        response = UserService().update_password(user_id, new_password_hash)
+        response = UserService.update_password(user_id, new_password_hash)
 
         if response:
             return Response.custom_response([], Messages.OK_PASSWORD_UPDATE, True, 200)
