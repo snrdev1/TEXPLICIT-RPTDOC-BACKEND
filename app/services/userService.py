@@ -416,17 +416,25 @@ def create_user(user_data):
     return None
 
 
-def update_user_info(user_id, update_dict):
+def update_user_info(user_id, update_dict) -> int:
     """
-    The update_user_info function updates the user information in the database.
-
+    The function `update_user_info` updates user information in a MongoDB collection and returns the
+    count of modified documents.
+    
     Args:
-        self: Represent the instance of the class
-        user_id: Identify the user to be updated
-        update_dict: Update the user information in the database
-
+      user_id: The `user_id` parameter in the `update_user_info` function is expected to be a unique
+    identifier for the user whose information is being updated. It is used to locate the specific user
+    document in the MongoDB collection based on its `_id` field.
+      update_dict: The `update_dict` parameter in the `update_user_info` function is a dictionary
+    containing the fields and values that need to be updated for a specific user in the database. The
+    keys in the dictionary represent the fields to be updated, and the corresponding values are the new
+    values that will replace the existing
+    
     Returns:
-        The number of documents modified by the update
+      The function `update_user_info` is returning an integer value, specifically the number of
+    documents that were modified as a result of the update operation in the MongoDB database. If the
+    update operation is successful, it will return the count of modified documents. If there is an
+    exception during the update process, it will return 0.
     """
     try:
         m_db = MongoClient.connect()
@@ -437,13 +445,13 @@ def update_user_info(user_id, update_dict):
         )
 
         if response:
-            return str(response.modified_count)
+            return response.modified_count
 
-        return None
+        return 0
 
     except Exception as e:
         Common.exception_details("userService.update_user_info : ", e)
-        return None
+        return 0
 
 
 def update_password(user_id, new_password_hash):
@@ -646,16 +654,43 @@ def create_new_user_permission(menu: list = []) -> dict:
 
 
 def check_subscription_duration(user_id: Union[str, ObjectId]) -> bool:
-    user_info = get_user_by_id(user_id)
-    print("user_info : ", user_info)
+    """
+    The function `check_subscription_duration` checks if a user's subscription is active based on the
+    start and end dates.
     
+    Args:
+      user_id (Union[str, ObjectId]): The `user_id` parameter in the `check_subscription_duration`
+    function is expected to be a string or an `ObjectId` type. It is used to identify a specific user
+    for whom we want to check the subscription duration.
+    
+    Returns:
+      The function `check_subscription_duration` returns a boolean value. It returns `True` under the
+    following conditions:
+    1. If the user information is retrieved successfully and the subscription duration is valid (current
+    date falls within the start and end dates of the subscription).
+    2. If the subscription duration is missing, it updates the user information and returns `True`.
+    """
+    # Get user info dict
+    user_dict = get_user_by_id(user_id)
+    # Get the current date
     current_date = datetime.utcnow()
-    if user_info:
-        subscription_duration = user_info.get("subscription_duration", None)
-        if subscription_duration:
-            start_date = subscription_duration.get("start_date", None)
-            end_date = subscription_duration.get("end_date", None)
-            if start_date and end_date:
-                if current_date >= start_date and current_date <= end_date:
-                    return True
+    
+    if user_dict:
+        subscription_duration = user_dict.get("subscription_duration", None)
+
+        if not subscription_duration:
+            print("Updating user!")
+            user_dict["permissions"] = create_new_user_permission(
+                user_dict["permissions"]["menu"]
+            )
+            del user_dict['_id']
+            update_user_info(user_id, user_dict)
+            return True
+
+        start_date = subscription_duration.get("start_date", None)
+        end_date = subscription_duration.get("end_date", None)
+        if start_date and end_date:
+            if current_date >= start_date and current_date <= end_date:
+                return True
+
     return False
