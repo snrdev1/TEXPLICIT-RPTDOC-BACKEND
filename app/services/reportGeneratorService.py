@@ -599,14 +599,14 @@ def _update_document_in_db(query: dict, update_data: dict) -> dict:
         return {"updated_count": 0}
 
 
-def _delete_document_from_db(reportid: str) -> dict:
+def delete_report_from_db(reportid: str) -> dict:
     """
-    The function `_delete_document_from_db` deletes a document from a MongoDB database based on its
+    The function `_delete_report_from_db` deletes a report from a MongoDB database based on its
     report ID.
 
     Args:
       reportid (str): The `reportid` parameter is a string that represents the unique identifier of
-    the document to be deleted from the database.
+    the report to be deleted from the database.
 
     Returns:
       a dictionary with the key "deleted_count" and the value being the number of documents deleted

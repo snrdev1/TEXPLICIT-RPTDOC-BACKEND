@@ -561,7 +561,7 @@ def construct_user_data(
             "recommends": recommends,
             "isActive": True,
             "createdOn": datetime.utcnow(),
-            "permissions": create_new_user_permission(menu),
+            "permissions": _create_new_user_permission(menu),
         }
 
         return user_data
@@ -611,11 +611,11 @@ def _common_user_pipeline():
     return pipeline
 
 
-def create_new_user_permission(menu: list = []):
+def _create_new_user_permission(menu: list = []):
     try:
         permissions = {
             "menu": menu,
-            "duration": {
+            "subscription_duration": {
                 "start_date": datetime.utcnow(),
                 "end_date": datetime.utcnow(),
             },
@@ -634,11 +634,12 @@ def create_new_user_permission(menu: list = []):
                 },
             },
             "chat": {"allowed": {"chat_count": 0}, "used": {"chat_count": 0}},
-            "balance": {"spent": 0.0, "balance": 0.0},
+            "amount": {"spent": 0, "balance": 0, "total": 0},
+            "activePlan": {"planId": None}
         }
 
         return permissions
 
     except Exception as e:
-        Common.exception_details("userPermissions.create_new_user", e)
+        Common.exception_details("userService._create_new_user_permission", e)
         return {}
