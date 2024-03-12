@@ -1,13 +1,13 @@
 import datetime
 from functools import wraps
 
-from flask import Response, request
+from flask import request
 
 from app.services import UserService
 from app.utils.common import Common
 from app.utils.messages import Messages
 from app.utils.parser import Parser
-from app.utils.response import Response
+from app.utils import Response
 
 
 def authorized(f):

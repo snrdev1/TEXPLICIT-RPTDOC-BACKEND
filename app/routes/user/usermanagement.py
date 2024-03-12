@@ -10,7 +10,7 @@ from app.services.userManagementService import UserManagementService
 from app.services import UserService
 from app.utils.common import Common
 from app.utils.messages import Messages
-from app.utils.response import Response
+from app.utils import Response
 from app.utils.enumerator import Enumerator
 
 usermanagement = Blueprint("usermanagement", __name__, url_prefix="/user-management")

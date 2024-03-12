@@ -4,7 +4,7 @@ from app.auth.userauthorization import authorized
 from app.services import UserService
 from app.utils.common import Common
 from app.utils.messages import Messages
-from app.utils.response import Response
+from app.utils import Response
 
 users = Blueprint("users", __name__, url_prefix="/users")
 

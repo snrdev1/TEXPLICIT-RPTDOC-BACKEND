@@ -8,7 +8,7 @@ from app.services import UserService
 from app.utils.common import Common
 from app.utils.enumerator import Enumerator
 from app.utils.messages import Messages
-from app.utils.response import Response
+from app.utils import Response
 
 admin_users = Blueprint("admin_users", __name__, url_prefix="/admin/user")
 

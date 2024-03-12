@@ -11,7 +11,7 @@ from bson import ObjectId
 
 from app.config import Config
 from app.models.mongoClient import MongoClient
-from . import userService as UserService
+from app.utils import Response
 from app.utils.audio import AudioGenerator
 from app.utils.common import Common
 from app.utils.email_helper import send_mail
@@ -20,8 +20,9 @@ from app.utils.files_and_folders import get_report_directory, get_report_path
 from app.utils.formatter import cursor_to_dict, get_base64_encoding
 from app.utils.llm_researcher.llm_researcher import research
 from app.utils.production import Production
-from app.utils.response import Response
 from app.utils.socket import emit_report_status
+
+from . import userService as UserService
 
 
 def report_generate(

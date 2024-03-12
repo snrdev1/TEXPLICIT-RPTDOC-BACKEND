@@ -3,7 +3,7 @@ from typing import Union
 from bson import ObjectId
 
 from app import socketio
-from app.utils.response import Response
+from app.utils import Response
 
 # On connection
 

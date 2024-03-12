@@ -4,7 +4,7 @@ from app.services import UserService
 from app.utils.common import Common
 from app.utils.messages import Messages
 from app.utils.parser import Parser
-from app.utils.response import Response
+from app.utils import Response
 
 admin_account = Blueprint("admin_account", __name__, url_prefix="/admin")
 

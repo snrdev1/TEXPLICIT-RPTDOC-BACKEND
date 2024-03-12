@@ -14,7 +14,7 @@ from app.utils.enumerator import Enumerator
 from app.utils.messages import Messages
 from app.utils.parser import Parser
 from app.utils.production import Production
-from app.utils.response import Response
+from app.utils import Response
 
 account = Blueprint("account", __name__, url_prefix="/account")
 

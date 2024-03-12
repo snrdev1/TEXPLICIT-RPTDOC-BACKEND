@@ -16,7 +16,7 @@ from app.services.myDocumentsService import MyDocumentsService
 from app.utils.common import Common
 from app.utils.messages import Messages
 from app.utils.production import Production
-from app.utils.response import Response
+from app.utils import Response
 from app.utils.vectorstore.base import VectorStore
 
 mydocuments = Blueprint("mydocuments", __name__, url_prefix="/my-documents")

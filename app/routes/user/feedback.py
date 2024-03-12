@@ -7,7 +7,7 @@ from flask import Blueprint, request
 from app.services.feedbackService import FeedbackService
 from app.utils.common import Common
 from app.utils.messages import Messages
-from app.utils.response import Response
+from app.utils import Response
 
 feedback = Blueprint("feedback", __name__, url_prefix='/feedback')
 

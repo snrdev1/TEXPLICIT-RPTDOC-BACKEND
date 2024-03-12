@@ -25,7 +25,7 @@ from app.utils.common import Common
 from app.utils.files_and_folders import get_report_audio_path
 from app.utils.messages import Messages
 from app.utils.production import Production
-from app.utils.response import Response
+from app.utils import Response
 
 report_generator = Blueprint("report_generator", __name__, url_prefix="/report")
 

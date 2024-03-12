@@ -561,7 +561,7 @@ def construct_user_data(
             "recommends": recommends,
             "isActive": True,
             "createdOn": datetime.utcnow(),
-            "permissions": _create_new_user_permission(menu),
+            "permissions": create_new_user_permission(menu),
         }
 
         return user_data
@@ -571,7 +571,7 @@ def construct_user_data(
         return {}
 
 
-def _common_user_pipeline():
+def _common_user_pipeline() -> list:
     """
     The _common_user_pipeline function is used to create a pipeline for the user collection.
     It will be used in many different places, so it's best to have it as a function.
@@ -611,7 +611,7 @@ def _common_user_pipeline():
     return pipeline
 
 
-def _create_new_user_permission(menu: list = []):
+def create_new_user_permission(menu: list = []) -> dict:
     try:
         permissions = {
             "menu": menu,
@@ -635,7 +635,7 @@ def _create_new_user_permission(menu: list = []):
             },
             "chat": {"allowed": {"chat_count": 0}, "used": {"chat_count": 0}},
             "amount": {"spent": 0, "balance": 0, "total": 0},
-            "activePlan": {"planId": None}
+            "activePlan": {"planId": None},
         }
 
         return permissions
@@ -643,3 +643,19 @@ def _create_new_user_permission(menu: list = []):
     except Exception as e:
         Common.exception_details("userService._create_new_user_permission", e)
         return {}
+
+
+def check_subscription_duration(user_id: Union[str, ObjectId]) -> bool:
+    user_info = get_user_by_id(user_id)
+    print("user_info : ", user_info)
+    
+    current_date = datetime.utcnow()
+    if user_info:
+        subscription_duration = user_info.get("subscription_duration", None)
+        if subscription_duration:
+            start_date = subscription_duration.get("start_date", None)
+            end_date = subscription_duration.get("end_date", None)
+            if start_date and end_date:
+                if current_date >= start_date and current_date <= end_date:
+                    return True
+    return False
