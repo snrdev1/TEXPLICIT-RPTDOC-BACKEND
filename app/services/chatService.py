@@ -4,42 +4,35 @@ from operator import itemgetter
 from bson import ObjectId
 from langchain.memory import ConversationBufferMemory
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import (
-    ChatPromptTemplate,
-    MessagesPlaceholder,
-    PromptTemplate,
-)
-from langchain_core.runnables import (
-    RunnableLambda,
-    RunnableParallel,
-    RunnablePassthrough,
-)
+from langchain_core.prompts import (ChatPromptTemplate, MessagesPlaceholder,
+                                    PromptTemplate)
+from langchain_core.runnables import (RunnableLambda, RunnableParallel,
+                                      RunnablePassthrough)
 
 from app import socketio
 from app.config import Config
 from app.models.mongoClient import MongoClient
 from app.services.myDocumentsService import MyDocumentsService
-from app.utils.common import Common
-from app.utils.enumerator import Enumerator
 from app.utils.formatter import cursor_to_dict
 from app.utils.llm_utils import load_fast_llm
-from app.utils.timer import timeout_handler
-from app.utils.vectorstore.base import VectorStore
+from ..utils import timeout_handler, Enumerator, Common
+
+from ..services import userService as UserService
 
 
 class ChatService:
     def __init__(self, user_id):
         self.user_id = user_id
+        self.default_chat_response = "Sorry, I am unable to answer your question at the moment. Try again later."
 
     def get_chat_response(self, chat_type: int, question: str, chatId: str):
         try:
             # Get chat memory
             memory = self.get_chat_memory()
 
-            default_chat_response = "Sorry, I am unable to answer your question at the moment. Try again later."
             if chat_type == int(Enumerator.ChatType.External.value):
                 response, sources = timeout_handler(
-                    default_chat_response,
+                    self.default_chat_response,
                     60,
                     self._get_external_chat_response,
                     question,
@@ -48,7 +41,7 @@ class ChatService:
                 )
             else:
                 response, sources = timeout_handler(
-                    default_chat_response,
+                    self.default_chat_response,
                     60,
                     self._get_document_chat_response,
                     question,
@@ -64,8 +57,12 @@ class ChatService:
                 chatType=chat_type,
                 chatId=chatId,
             )
+            
+            # Update user subscription
+            if response:
+                UserService.update_chat_subscription(self.user_id)
 
-            if response == default_chat_response:
+            if response == self.default_chat_response:
                 # Emit chat chunk through chat stream socket
                 self._emit_chat_stream(chat_dict)
 
@@ -77,7 +74,7 @@ class ChatService:
             self._emit_chat_stream(
                 {
                     "prompt": question,
-                    "response": "Failed to get chat response....try again after some time...",
+                    "response": self.default_chat_response,
                     "sources": [],
                     "timestamp": datetime.utcnow().strftime("%d-%m-%Y %H:%M:%S"),
                     "chatType": int(Enumerator.ChatType.External.value),
@@ -91,7 +88,8 @@ class ChatService:
 
         for user_chat, agent_chat in zip(chats[::2], chats[1::2]):
             memory.save_context(
-                {"input": user_chat["content"]}, {"output": agent_chat["content"]}
+                {"input": user_chat["content"]}, {
+                    "output": agent_chat["content"]}
             )
 
         return memory
@@ -149,7 +147,8 @@ class ChatService:
             return response, []
 
         except Exception as e:
-            Common.exception_details("ChatSerice._get_external_chat_response", e)
+            Common.exception_details(
+                "ChatSerice._get_external_chat_response", e)
             return "", []
 
     def _get_document_chat_response(
@@ -250,7 +249,8 @@ class ChatService:
             return response, sources
 
         except Exception as e:
-            Common.exception_details("ChatSerice._get_document_chat_response", e)
+            Common.exception_details(
+                "ChatSerice._get_document_chat_response", e)
             return "", []
 
     def _emit_chat_stream(self, chat_dict: dict):
@@ -297,7 +297,8 @@ class ChatService:
         try:
             m_db = MongoClient.connect()
             pipeline = [
-                {"$match": {"user._id": ObjectId(self.user_id), "user.ref": "user"}},
+                {"$match": {"user._id": ObjectId(
+                    self.user_id), "user.ref": "user"}},
                 {"$unwind": {"path": "$chat"}},
                 {"$sort": {"chat.timestamp": -1, "chat.role": -1}},
                 {"$skip": offset},
@@ -313,7 +314,8 @@ class ChatService:
                 {"$project": {"user": 1, "chat": 1, "_id": 0}},
             ]
 
-            result = m_db[Config.MONGO_CHAT_MASTER_COLLECTION].aggregate(pipeline)
+            result = m_db[Config.MONGO_CHAT_MASTER_COLLECTION].aggregate(
+                pipeline)
 
             response = []
             if result:
@@ -326,7 +328,8 @@ class ChatService:
                 return {"chat": []}
 
         except Exception as e:
-            Common.exception_details("chatService.get_all_user_related_chat", e)
+            Common.exception_details(
+                "chatService.get_all_user_related_chat", e)
             return {"chat": []}
 
     def delete_chats(self):

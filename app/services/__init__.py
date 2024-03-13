@@ -2,7 +2,6 @@ from . import (
     demoService,
     feedbackService,
     menuService,
-    myDocumentsService,
     newsService,
     paymentGatewayService,
     reportGeneratorService,
@@ -11,13 +10,14 @@ from . import (
 )
 from . import userService as UserService
 from .chatService import ChatService
+from .myDocumentsService import MyDocumentsService
 
 __all__ = [
     "ChatService",
     "demoService",
     "feedbackService",
     "menuService",
-    "myDocumentsService",
+    "MyDocumentsService",
     "newsService",
     "paymentGatewayService",
     "reportGeneratorService",

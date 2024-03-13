@@ -2,14 +2,11 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from functools import partial
 
 import requests
-
-from .scraper import (
-    ArxivScraper,
-    BeautifulSoupScraper,
-    NewspaperScraper,
-    PyMuPDFScraper,
-    WebBaseLoaderScraper,
-)
+from .arxiv import ArxivScraper
+from .beautiful_soup import BeautifulSoupScraper
+from .pymupdf import PyMuPDFScraper
+from .web_base_loader import WebBaseLoaderScraper
+from .newspaper import NewspaperScraper
 
 
 class Scraper:

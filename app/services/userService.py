@@ -664,3 +664,75 @@ def create_new_user_permission(menu: list = []) -> dict:
     except Exception as e:
         Common.exception_details("userService._create_new_user_permission", e)
         return {}
+
+
+def update_report_subscription(user_id: Union[ObjectId, str], report_type: str) -> int:
+    try:
+        
+        m_db = MongoClient.connect()
+        query = {"_id": ObjectId(user_id)}
+        
+        pipeline = [
+            {
+                "$set": {
+                    "permissions.report.used.total": {"$sum": ["$permissions.report.used.total", 1]},
+                    "permissions.report.used.research_report": {"$sum": [f"$permissions.report.used.{report_type}", 1]},
+                }
+            }
+        ]
+        
+        response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(
+            query, pipeline
+        )
+        
+        if response:
+            return response.modified_count
+
+        return 0
+    
+    except Exception as e:
+        Common.exception_details("userService.update_report_subscription", e)
+        return 0
+    
+
+def update_chat_subscription(user_id: Union[ObjectId, str]) -> int:
+    """
+    The function `update_chat_subscription` updates the chat count for a user in a MongoDB collection
+    and returns the number of modified documents.
+    
+    Args:
+      user_id (Union[ObjectId, str]): The `user_id` parameter in the `update_chat_subscription` function
+    is used to identify the user whose chat subscription needs to be updated. It can be either an
+    `ObjectId` or a `str` type, representing the unique identifier of the user in the database.
+    
+    Returns:
+      The function `update_chat_subscription` is returning an integer value, which is the modified count
+    from the update operation on the MongoDB collection. If the update operation is successful, it will
+    return the number of documents that were modified. If there is an exception during the update
+    operation, it will return 0.
+    """
+    try:
+        
+        m_db = MongoClient.connect()
+        query = {"_id": ObjectId(user_id)}
+        
+        pipeline = [
+            {
+                "$set": {
+                    "permissions.chat.used.chat_count": {"$sum": ["$permissions.chat.used.chat_count", 1]}
+                }
+            }
+        ]
+        
+        response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(
+            query, pipeline
+        )
+        
+        if response:
+            return response.modified_count
+
+        return 0
+    
+    except Exception as e:
+        Common.exception_details("userService.update_report_subscription", e)
+        return 0

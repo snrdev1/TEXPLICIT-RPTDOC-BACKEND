@@ -7,22 +7,17 @@ from datetime import datetime, timedelta
 from typing import Tuple, Union
 from urllib.parse import unquote, urlparse, urlunparse
 
+from ..services import userService as UserService
 from bson import ObjectId
 
 from app.config import Config
 from app.models.mongoClient import MongoClient
-from app.utils import Response
-from app.utils.audio import AudioGenerator
-from app.utils.common import Common
+from ..utils import Response, AudioGenerator, Common, send_mail, Enumerator, Production
 from app.utils.email_helper import send_mail
-from app.utils.enumerator import Enumerator
 from app.utils.files_and_folders import get_report_directory, get_report_path
 from app.utils.formatter import cursor_to_dict, get_base64_encoding
 from app.utils.llm_researcher.llm_researcher import research
-from app.utils.production import Production
 from app.utils.socket import emit_report_status
-
-from . import userService as UserService
 
 
 def report_generate(
@@ -38,7 +33,8 @@ def report_generate(
 
     def transform_data(report_document, report_id: Union[ObjectId, str] = ""):
         report_document["_id"] = (
-            str(report_id) if report_id else str(report_document.get("_id", ""))
+            str(report_id) if report_id else str(
+                report_document.get("_id", ""))
         )
 
         if "createdBy" in report_document and "_id" in report_document["createdBy"]:
@@ -49,7 +45,8 @@ def report_generate(
         if "createdOn" in report_document:
             # Convert UTC time to string in the desired format
             report_document["createdOn"] = (
-                report_document["createdOn"].strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+                report_document["createdOn"].strftime(
+                    "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
             )
 
         return report_document
@@ -104,7 +101,7 @@ def report_generate(
             not len(report_folder)
             or not len(report_text)
             or report_type not in [
-                Enumerator.ReportType.ResearchReport.value, 
+                Enumerator.ReportType.ResearchReport.value,
                 Enumerator.ReportType.DetailedReport.value
             ]
         ):
@@ -173,7 +170,8 @@ def report_generate(
         # Update report document in db
         update_count = update_report_document_in_db(report_document)
         # Transform the report data to suitable format before emitting
-        report_document_for_emitting = transform_data(report_document, report_id)
+        report_document_for_emitting = transform_data(
+            report_document, report_id)
 
         if not update_count:
             Response.socket_reponse(
@@ -229,6 +227,9 @@ def report_generate(
                 report_generation_time,
                 int(Enumerator.ReportStep.Success.value),
             )
+
+            # Update user subscription
+            UserService.update_report_subscription(user_id, report_type)
         else:
             emit_and_save_report(
                 report_id,
@@ -567,7 +568,8 @@ def _insert_document_into_db(report_document: dict) -> dict:
       a dictionary with the key "inserted_id" and the value being the id of the document that was inserted.
     """
     m_db = MongoClient.connect()
-    response = m_db[Config.MONGO_REPORTS_MASTER_COLLECTION].insert_one(report_document)
+    response = m_db[Config.MONGO_REPORTS_MASTER_COLLECTION].insert_one(
+        report_document)
 
     print("Inserted _id : ", str(response.inserted_id))
 
@@ -695,7 +697,7 @@ def get_file_contents(report_document):
         return None, None
 
 
-def share_reports_via_email(user_id, report_ids, email_ids, subject: str = "Sharing Report from TexplicitRW", message:str ="Check out these report(s) from TexplicitRW"):
+def share_reports_via_email(user_id, report_ids, email_ids, subject: str = "Sharing Report from TexplicitRW", message: str = "Check out these report(s) from TexplicitRW"):
     try:
         report_documents = get_multiple_reports_from_db(report_ids)
         user = UserService.get_user_by_id(user_id)
@@ -710,8 +712,9 @@ def share_reports_via_email(user_id, report_ids, email_ids, subject: str = "Shar
             }
             for (report_content, report_name, report_document) in zip(report_contents, report_names, report_documents)
         ]
-        
-        recipients = [{"name": None, "email": email_id} for email_id in email_ids]
+
+        recipients = [{"name": None, "email": email_id}
+                      for email_id in email_ids]
         email_response = send_mail(
             subject=subject or Config.DEFAULT_REPORT_EMAIL_SUBJECT,
             htmlMailBody=message or Config.DEFAULT_REPORT_EMAIL_MESSAGE,
@@ -723,5 +726,6 @@ def share_reports_via_email(user_id, report_ids, email_ids, subject: str = "Shar
         return email_response
 
     except Exception as e:
-        Common.exception_details("reportGeneratorService.share_reports_via_email", e)
+        Common.exception_details(
+            "reportGeneratorService.share_reports_via_email", e)
         return None

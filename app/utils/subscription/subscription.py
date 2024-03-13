@@ -95,7 +95,9 @@ class Subscription:
 
     def update_user_permissions(self):
         print("Updating user permissions!")
+
         self.user_info["permissions"] = UserService.create_new_user_permission(
-            self.user_info["permissions"]["menu"])
-        del self.user_info['_id']
+            self.user_info["permissions"]["menu"]
+        )
+        self.user_info.pop('_id', None)
         UserService.update_user_info(self.user_id, self.user_info)

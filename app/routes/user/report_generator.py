@@ -43,9 +43,9 @@ def generate_report(logged_in_user):
         report_generation_id = request_params.get("report_generation_id", None)
         websearch = request_params.get("websearch", False)
         subtopics = request_params.get("subtopics", [])
-        
+                
         # Check if the report_type is valid
-        if not isinstance(report_type, Enumerator.ReportType):
+        if report_type not in [item.value for item in Enumerator.ReportType]:
             return Response.custom_response([], Messages.INVALID_REPORT_TYPE, False, 400) 
 
         # Check subscription validity before generating report
