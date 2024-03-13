@@ -70,10 +70,10 @@ def report_generate(
         insert_response = _insert_document_into_db(document_data)
 
         # Also emit the new document inserted as pending
-        Response.socket_reponse(
+        Response.socket_response(
             event=f"{user_id}_report_pending",
             data=transform_data(document_data),
-            message="Report generation successully started!",
+            message="Report generation successfully started!",
             success=True,
             status=200,
         )
@@ -174,7 +174,7 @@ def report_generate(
             report_document, report_id)
 
         if not update_count:
-            Response.socket_reponse(
+            Response.socket_response(
                 event=f"{user_id}_report",
                 data=report_document_for_emitting,
                 message="Failed to update report in db!",
@@ -183,15 +183,15 @@ def report_generate(
             )
 
         if status == int(Enumerator.ReportStep.Success.value):
-            Response.socket_reponse(
+            Response.socket_response(
                 event=f"{user_id}_report",
                 data=report_document_for_emitting,
-                message="Report successully generated!",
+                message="Report successfully generated!",
                 success=True,
                 status=200,
             )
         else:
-            Response.socket_reponse(
+            Response.socket_response(
                 event=f"{user_id}_report",
                 data=report_document_for_emitting,
                 message="Failed to generate report!",
@@ -244,7 +244,7 @@ def report_generate(
 
     except Exception as e:
         Common.exception_details("generate_report", e)
-        Response.socket_reponse(
+        Response.socket_response(
             event=f"{user_id}_report",
             data={"report_generation_id": report_generation_id},
             message="Failed to generate report!",

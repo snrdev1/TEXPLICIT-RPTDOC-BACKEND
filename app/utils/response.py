@@ -22,7 +22,7 @@ def custom_response(data="", message="", success=True, status=200):
     return jsonify({"data": data, "message": message, "success": success}), status
 
 
-def socket_reponse(
+def socket_response(
     event: str,
     data: any = [],
     message: str = "",
@@ -30,7 +30,7 @@ def socket_reponse(
     status: int = 200,
 ) -> None:
     """
-    The function `socket_reponse` emits a socket event with a message, data, success status, and
+    The function `socket_response` emits a socket event with a message, data, success status, and
     status code.
     Args:
       event (str): The event parameter is a string that represents the name of the event that you
