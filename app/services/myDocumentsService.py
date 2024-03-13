@@ -30,7 +30,6 @@ from app.utils.socket import (emit_document_upload_status, socket_error,
                               socket_info, socket_success)
 from app.utils.vectorstore.document_loaders import DocumentLoader
 
-
 class MyDocumentsService:
     
     @staticmethod
@@ -137,7 +136,7 @@ class MyDocumentsService:
         emit_document_upload_status(user_id, upload_id, f"Parsing documents and getting them ready for chat...", 70)
         for inserted_id in uploaded_documents_ids:
             file = MyDocumentsService().get_file(inserted_id)
-            print("MyDocumentsService file : ", file)
+            # print("MyDocumentsService file : ", file)
             virtual_file_name = file["virtualFileName"]
             filepath = MyDocumentsService().get_file_save_path(
                 virtual_file_name, user_id, path
@@ -2060,7 +2059,7 @@ class MyDocumentsService:
         """
 
         try:
-            print("File : ", file)
+            # print("File : ", file)
             document = Document(file)
             print("document : ", document)
             title = document.paragraphs[0].text.strip()
@@ -2076,7 +2075,7 @@ class MyDocumentsService:
                 title, data, filename, user, root
             )
 
-            print("File data  : ", file_data)
+            # print("File data  : ", file_data)
 
             m_db = MongoClient.connect()
             response = m_db[Config.MONGO_DOCUMENT_MASTER_COLLECTION].insert_one(

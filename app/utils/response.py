@@ -134,3 +134,24 @@ def subscription_invalid():
         ),
         400,
     )
+    
+
+def subscription_invalid_operation():
+    """
+    The function `subscription_invalid_operation` returns a JSON response indicating an invalid
+    subscription operation with a status code of 400.
+    
+    Returns:
+      A tuple is being returned containing a JSON response with data, message, and success fields, along
+    with an HTTP status code of 400.
+    """
+    return (
+        jsonify(
+            {
+                "data": [],
+                "message": Messages.INVALID_SUBSCRIPTION_OPERATION,
+                "success": False,
+            }
+        ),
+        400,
+    )

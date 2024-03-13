@@ -93,6 +93,42 @@ class Subscription:
 
         return False
 
+    def check_subscription_document(self) -> bool:
+        if not self.user_info:
+            return False
+
+        subscription_document = self.user_info.get("document", None)
+
+        if not subscription_document:
+            self.update_user_permissions()
+            return True
+        
+        allowed_document_size = subscription_document.get("allowed", {}).get("document_size", 0)
+        used_document_size = subscription_document.get("used", {}).get("document_size", 0)
+
+        if allowed_document_size > used_document_size:
+            return True
+
+        return False
+
+    def check_subscription_new_document(self, upload_documents_size: int = 0) -> bool:
+        if not self.user_info:
+            return False
+
+        subscription_document = self.user_info.get("document", None)
+
+        if not subscription_document:
+            self.update_user_permissions()
+            return True
+        
+        allowed_document_size = subscription_document.get("allowed", {}).get("document_size", 0)
+        used_document_size = subscription_document.get("used", {}).get("document_size", 0)
+
+        if allowed_document_size > (used_document_size + upload_documents_size):
+            return True
+
+        return False
+        
     def update_user_permissions(self):
         print("Updating user permissions!")
 

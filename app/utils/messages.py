@@ -79,6 +79,7 @@ class Messages:
     INVALID_TOKEN = "Token is invalid!"
     INVALID_SUBSCRIPTION = "Subscription expired! Please check plan details!"
     INVALID_REPORT_TYPE = "Invalid report type!"
+    INVALID_SUBSCRIPTION_OPERATION = "Your current subscription does not allow this operation or your subscription may have reached its limit. Please check plan details!"
 
     # MISSING_
     MISSING_REQUIRED_PARAMETERS = "Missing Required Parameters"
