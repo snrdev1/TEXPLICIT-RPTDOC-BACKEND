@@ -89,3 +89,17 @@ def emit_document_upload_status(
         data=[{"progress": progress}],
         message=message,
     )
+    
+    
+def emit_subscription_invalid_status(
+    user_id: Union[str, ObjectId], message: str
+) -> None:
+    print(f"🔌 Emitting Subscription Invalid Status")
+    
+    print(f"Event name : {user_id}_subscription_invalid_status")
+
+    Response.socket_reponse(
+        event=f"{user_id}_subscription_invalid_status",
+        data=[],
+        message=message,
+    )

@@ -77,9 +77,11 @@ class Messages:
     INVALID_NEW_PASSWORD = "Invalid! New password cannot be same as old password!"
     INVALID_EMAIL = "Email address does not exist!"
     INVALID_TOKEN = "Token is invalid!"
-    INVALID_SUBSCRIPTION = "Subscription expired! Please check plan details!"
     INVALID_REPORT_TYPE = "Invalid report type!"
-    INVALID_SUBSCRIPTION_OPERATION = "Your current subscription does not allow this operation or your subscription may have reached its limit. Please check plan details!"
+    INVALID_SUBSCRIPTION = "Subscription expired! Please check plan details."
+    INVALID_SUBSCRIPTION_CHAT = "Your quota for chat has expired! Please check plan details."
+    INVALID_SUBSCRIPTION_REPORT = "Your quota for generating reports has expired! Please check plan details."
+    INVALID_SUBSCRIPTION_DOCUMENT = "Total document size exceeds total allowed documents size in current plan! Please check plan details."
 
     # MISSING_
     MISSING_REQUIRED_PARAMETERS = "Missing Required Parameters"

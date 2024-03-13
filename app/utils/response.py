@@ -114,32 +114,15 @@ def server_error():
     )
 
 
-def subscription_invalid():
+def subscription_invalid(message: str = ""):
     """
-    The function `subscription_invalid` returns a JSON response indicating an invalid subscription
-    with a status code of 400.
-
-    Returns:
-      The `subscription_invalid` function is returning a tuple containing a JSON response with an
-    empty data array, a message indicating an invalid subscription, and a success status of False.
-    The second element of the tuple is the HTTP status code 400 (Bad Request).
-    """
-    return (
-        jsonify(
-            {
-                "data": [],
-                "message": Messages.INVALID_SUBSCRIPTION,
-                "success": False,
-            }
-        ),
-        400,
-    )
+    The function `subscription_invalid` returns a JSON response with a message indicating an invalid
+    subscription.
     
-
-def subscription_invalid_operation():
-    """
-    The function `subscription_invalid_operation` returns a JSON response indicating an invalid
-    subscription operation with a status code of 400.
+    Args:
+      message (str): The `message` parameter in the `subscription_invalid` function is a string
+    parameter that represents a custom message to be included in the response. If no message is
+    provided, it will default to a predefined message constant `Messages.INVALID_SUBSCRIPTION`.
     
     Returns:
       A tuple is being returned containing a JSON response with data, message, and success fields, along
@@ -149,7 +132,7 @@ def subscription_invalid_operation():
         jsonify(
             {
                 "data": [],
-                "message": Messages.INVALID_SUBSCRIPTION_OPERATION,
+                "message": message or Messages.INVALID_SUBSCRIPTION,
                 "success": False,
             }
         ),

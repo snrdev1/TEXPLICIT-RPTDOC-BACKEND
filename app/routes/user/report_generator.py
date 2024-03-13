@@ -52,7 +52,7 @@ def generate_report(logged_in_user):
         subscription = Subscription(user_id)
         subscription_validity = subscription.check_subscription_duration() and subscription.check_subscription_report(report_type)
         if not subscription_validity:
-            return Response.subscription_invalid()
+            return Response.subscription_invalid(Messages.INVALID_SUBSCRIPTION_REPORT)
 
         # Getting response and emitting it in a separate non-blocking thread
         t1 = threading.Thread(

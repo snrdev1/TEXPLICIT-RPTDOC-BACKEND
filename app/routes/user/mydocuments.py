@@ -13,9 +13,7 @@ from app import socketio
 from app.auth.userauthorization import authorized
 from app.config import Config
 from app.services.myDocumentsService import MyDocumentsService
-from app.utils.common import Common
-from app.utils.messages import Messages
-from app.utils import Subscription
+from app.utils import Subscription, Messages, Common
 from app.utils import Response, files_and_folders
 from app.utils.vectorstore.base import VectorStore
 
@@ -132,7 +130,7 @@ def upload_documents(logged_in_user):
         upload_files_size = files_and_folders.get_size(files)
         subscription_validity = subscription.check_subscription_new_document(upload_files_size)
         if not subscription_validity:
-            return Response.subscription_invalid_operation()
+            return Response.subscription_invalid(Messages.INVALID_SUBSCRIPTION_DOCUMENT)
 
         # Upload files
         MyDocumentsService.upload_documents(logged_in_user, files, path, upload_id)

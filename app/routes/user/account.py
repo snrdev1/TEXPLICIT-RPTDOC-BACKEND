@@ -14,7 +14,7 @@ from app.utils.enumerator import Enumerator
 from app.utils.messages import Messages
 from app.utils.parser import Parser
 from app.utils.production import Production
-from app.utils import Response
+from app.utils import Response, Subscription, socket
 
 account = Blueprint("account", __name__, url_prefix="/account")
 
@@ -137,46 +137,14 @@ def account_login():
             "token":token,
             "message": "Login Successful"
         }
+        
+        # If login is successful check if subscription is valid
+        subscription = Subscription(id)
+        subscription_valid = subscription.check_subscription_duration()
+        if not subscription_valid:
+            socket.emit_subscription_invalid_status(id, "Subscription duration exceeded! Please check plan details.")
+        
         return Response.custom_response(response_data,Messages.OK_LOGIN, True, 200)
-        # =================================================================
-        # Folder Creation
-        if Config.GCP_PROD_ENV:
-            bucket = Production.get_users_bucket()
-
-            # Name of the folder you want to create
-            folder_name = str(id) + "/"
-
-            # Check if the folder already exists
-            folder_flag = False
-            prefix = folder_name if folder_name.endswith("/") else folder_name + "/"
-            blobs = bucket.list_blobs(prefix=prefix)
-
-            for blob in blobs:
-                if blob.name.startswith(prefix):
-                    folder_flag = True
-                else:
-                    folder_flag = False
-            if folder_flag == True:
-                print("Folder already exists!")
-            else:
-                # Create an empty blob to represent the folder (blobs are like objects in GCS)
-                folder_blob = bucket.blob(folder_name)
-                # Upload an empty string to create an empty folder
-                folder_blob.upload_from_string("")
-
-                # print(f"Created folder {folder_name} in bucket {bucket_name}!")
-
-        else:
-            # Creating folder if folder doesn't exist for this user
-            folder_path = os.getcwd() + "\\assets\\users"
-            folder_path = os.path.join(folder_path, str(id))
-            isExist = os.path.exists(folder_path)
-            # print(isExist)
-            if isExist == False:
-                os.makedirs(folder_path, exist_ok=True)
-                print("Folder created for user : ", id)
-
-        return Response.custom_response({"token": token}, Messages.OK_LOGIN, True, 200)
 
     except Exception as e:
         Common.exception_details("account.py: account_login", e)
