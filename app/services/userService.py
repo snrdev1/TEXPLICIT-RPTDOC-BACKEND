@@ -736,3 +736,31 @@ def update_chat_subscription(user_id: Union[ObjectId, str]) -> int:
     except Exception as e:
         Common.exception_details("userService.update_report_subscription", e)
         return 0
+    
+    
+def update_document_subscription(user_id: Union[ObjectId, str], document_size: int = 0) -> int:
+    try:
+        
+        m_db = MongoClient.connect()
+        query = {"_id": ObjectId(user_id)}
+        
+        pipeline = [
+            {
+                "$set": {
+                    "permissions.document.used.document_size": {"$sum": ["$permissions.document.used.document_size", document_size]},
+                }
+            }
+        ]
+        
+        response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(
+            query, pipeline
+        )
+        
+        if response:
+            return response.modified_count
+
+        return 0
+    
+    except Exception as e:
+        Common.exception_details("userService.update_report_subscription", e)
+        return 0

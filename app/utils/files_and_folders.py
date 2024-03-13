@@ -112,17 +112,17 @@ def get_report_audio_path(report_document):
 
 
 def get_size(files: list) -> int:
-  """
-  This Python function calculates and returns the total size in bytes of a list of files.
-  
-  Args:
-    files (list): The `get_size` function you provided takes a list of file objects as input and
-  calculates the total size of all the files in bytes. The function iterates over each file in the
-  list, moves to the end of the file to get its size, and then moves back to the beginning for further
-  
-  Returns:
-    The function `get_size` returns the total size of all files in the input list in bytes.
-  """
+    """
+    This Python function calculates and returns the total size in bytes of a list of files.
+    
+    Args:
+      files (list): The `get_size` function you provided takes a list of file objects as input and
+    calculates the total size of all the files in bytes. The function iterates over each file in the
+    list, moves to the end of the file to get its size, and then moves back to the beginning for further
+    
+    Returns:
+      The function `get_size` returns the total size of all files in the input list in bytes.
+    """
     total_size = 0
     for file in files:
         file.seek(0, 2)  # Move to the end of the file

@@ -19,8 +19,7 @@ from sumy.summarizers.text_rank import TextRankSummarizer
 
 from app.config import Config
 from app.models.mongoClient import MongoClient
-from . import userService as UserService
-from app.utils.common import Common
+from app.utils import Common, Subscription, files_and_folders
 from app.utils.email_helper import send_mail
 from app.utils.formatter import cursor_to_dict, get_base64_encoding
 from app.utils.llm.llm_highlights import generate_highlights
@@ -29,6 +28,9 @@ from app.utils.production import Production
 from app.utils.socket import (emit_document_upload_status, socket_error,
                               socket_info, socket_success)
 from app.utils.vectorstore.document_loaders import DocumentLoader
+
+from . import userService as UserService
+
 
 class MyDocumentsService:
     
@@ -89,6 +91,11 @@ class MyDocumentsService:
 
         # Save file on disk or cloud bucket
         MyDocumentsService().save_file(file, inserted_id, logged_in_user, path)
+        
+        # After a document has been successfully uploaded change document subscription
+        print("🧾 Updating subscription: Document used...")
+        file_size = files_and_folders.get_size([file])
+        UserService.update_document_subscription(logged_in_user["_id"], file_size)
 
         return 1, inserted_id
 
