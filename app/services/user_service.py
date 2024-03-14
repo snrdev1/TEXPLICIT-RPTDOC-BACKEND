@@ -688,6 +688,8 @@ def _common_user_pipeline() -> list:
             {
                 "_id": {"$toString": "$_id"},
                 "createdOn": {"$toString": "$createdOn"},
+                "permissions.subscription_duration.start_date": { "$toString": "$permissions.subscription_duration.start_date"},
+                "permissions.subscription_duration.end_date": { "$toString": "$permissions.subscription_duration.end_date"},
                 "image": {
                     "$cond": {
                         "if": {"$ne": ["$image", ""]},
