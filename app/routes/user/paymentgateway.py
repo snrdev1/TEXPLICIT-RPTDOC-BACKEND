@@ -9,7 +9,7 @@ from app.config import Config
 from app.utils.common import Common
 from app.utils.messages import Messages
 from app.utils import Response
-from app.services import paymentGatewayService
+from app.services import payment_gateway_service
 from app.services import UserService
 
 payment_gateway = Blueprint("payment_gateway", __name__, url_prefix="/payment")
@@ -81,7 +81,7 @@ def capture_payment(logged_in_user):
         amount = float(request_params.get("amount"))
         
         # Verify payment signature
-        signature_verification = paymentGatewayService.verify_payment_signature(razorpay_order_id, razorpay_payment_id, razorpay_signature)
+        signature_verification = payment_gateway_service.verify_payment_signature(razorpay_order_id, razorpay_payment_id, razorpay_signature)
 
         # If signature verification fails return failure response
         if not signature_verification:
@@ -93,7 +93,7 @@ def capture_payment(logged_in_user):
             )
         
         # If signature verification succeeds then update records in DB
-        paymentGatewayService.add_payment_history(user_id, request_params)
+        payment_gateway_service.add_payment_history(user_id, request_params)
         UserService.update_user_balance(user_id, amount)
         
         return Response.custom_response(

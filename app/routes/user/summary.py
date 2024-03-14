@@ -10,7 +10,7 @@ from flask_socketio import emit
 from app import socketio
 from app.config import Config
 from app.auth.userauthorization import authorized
-from app.services.summaryService import SummaryService
+from app.services.summary_service import SummaryService
 from app.utils.common import Common
 from app.utils.messages import Messages
 from app.utils import Response

@@ -6,8 +6,8 @@ import logging
 from typing import List, Optional
 
 import openai
+from langchain_community.adapters import openai as lc_openai
 from colorama import Fore, Style
-from langchain.adapters import openai as lc_openai
 from ..master.prompts import auto_agent_instructions
 from ..config.config import Config
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -98,7 +98,7 @@ async def send_oepnai_chat_completion_request(
     print(f"🤖 Calling {model}...")
     
     if not stream:
-        result = lc_openai.ChatCompletion.create(
+        result = lc_openai.chat.completions.create(
             model=model,  # Change model here to use different models
             messages=messages,
             temperature=temperature,
@@ -120,7 +120,7 @@ async def stream_response(
     paragraph = ""
     response = ""
 
-    for chunk in lc_openai.ChatCompletion.create(
+    for chunk in lc_openai.chat.completions.create(
         model=model,
         messages=messages,
         temperature=temperature,
@@ -195,7 +195,8 @@ async def llm_process_subtopics(task: str, subtopics: list) -> list:
         """
 
         print(f"\n🤖 Calling {CFG.fast_llm_model}...\n")
-        response = openai.ChatCompletion.create(
+        
+        response = lc_openai.chat.completions.create(
             model=CFG.fast_llm_model,
             response_format={"type": "json_object"},
             messages=[

@@ -1486,7 +1486,7 @@ def key_phrases(para):
         }
 
     except Exception as e:
-        Common.exception_details("summaryService.key_phrases", e)
+        Common.exception_details("summary_service.key_phrases", e)
         return generate_highlights(para)
 
 # NOTE: Function to clean the text

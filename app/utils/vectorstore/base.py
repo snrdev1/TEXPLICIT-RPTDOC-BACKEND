@@ -5,7 +5,7 @@ from bson import ObjectId
 from langchain_community.vectorstores import FAISS
 
 from app.config import Config
-from app.services.myDocumentsService import MyDocumentsService
+from app.services.my_documents_service import MyDocumentsService
 from app.utils.common import Common
 from app.utils.production import Production
 
