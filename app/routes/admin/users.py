@@ -127,35 +127,26 @@ def admin_add_update_user(logged_in_user):
                 }
             }
         }
-
+        
         if "userId" in request_params:
             # Update existing user
             target_user_id = request_params.get("userId")
-            existing_user = UserService.get_user_by_id(target_user_id)
+            response = UserService.update_user_info(target_user_id, user_info)
 
-            if existing_user:
-                # Update only the fields present in user_info
-                updated_fields = {field: value for field, value in user_info.items() if value}
-                for field, value in updated_fields.items():
-                    setattr(existing_user, field, value)
-
-                # Save the updated user object
-                UserService.save_user(existing_user)
-
+            if response:
                 return Response.custom_response([], Messages.OK_USER_UPDATE, True, 200)
-            else:
-                return Response.custom_response([], Messages.USER_NOT_FOUND, False, 404)
 
         else:
-            # Check if user exists with the same email id
+            # Check if user exists with same email id
             existing_user = UserService.get_user_by_email(user_info["email"])
 
             if existing_user:
-                return Response.custom_response([], Messages.DUPLICATE_EMAIL, False, 400)
+                return Response.custom_response(
+                    [], Messages.DUPLICATE_EMAIL, False, 400
+                )
 
-            # Create a new user object with provided user_info
             user_data = User(**user_info)
-            response = UserService.create_user(user_data)
+            response = UserService.create_user(user_data.dict())
 
             if response:
                 user_id = response
@@ -173,9 +164,11 @@ def admin_add_update_user(logged_in_user):
                 return Response.custom_response(
                     response, Messages.OK_USER_CREATED, True, 200
                 )
-            else:
-                return Response.custom_response([], Messages.ERROR_USER_CREATION, False, 400)
 
+        return Response.custom_response(
+            response, Messages.ERROR_USER_UPDATE, False, 400
+        )
+        
     except Exception as e:
         Common.exception_details("admin users.py : admin_add_update_user", e)
         return Response.server_error()
