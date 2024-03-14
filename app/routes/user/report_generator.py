@@ -11,7 +11,7 @@ from flask import Blueprint, request, send_file
 from app.config import Config
 
 from ...auth import authorized
-from ...services import reportGeneratorService as ReportGeneratorService
+from ...services import report_generator_service as ReportGeneratorService
 from ...utils import Common, Messages, Production, Response, Subscription, Enumerator
 from ...utils.files_and_folders import get_report_audio_path
 

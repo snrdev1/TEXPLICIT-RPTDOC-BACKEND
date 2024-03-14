@@ -14,7 +14,7 @@ from serpapi import GoogleSearch
 
 from app.config import Config
 from app.models.mongoClient import MongoClient
-from .myDocumentsService import MyDocumentsService
+from .my_documents_service import MyDocumentsService
 from app.utils.llm.llm_summarizer import summarize_text
 from app.utils.production import Production
 from app.utils.web_scraper import WebScraper

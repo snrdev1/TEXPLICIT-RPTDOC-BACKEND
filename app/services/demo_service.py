@@ -40,7 +40,7 @@ def save_demo_request(demo_data: dict):
             return None
 
     except Exception as e:
-        Common.exception_details("demoService.save_demo_request", e)
+        Common.exception_details("demo_service.save_demo_request", e)
         return None
 
 
@@ -60,7 +60,7 @@ def send_email_to_admin(demo_data: dict):
         )
 
     except Exception as e:
-        Common.exception_details("demoService.send_email_to_admin", e)
+        Common.exception_details("demo_service.send_email_to_admin", e)
 
 
 def send_email_to_user(demo_data: dict):
@@ -77,4 +77,4 @@ def send_email_to_user(demo_data: dict):
         )
 
     except Exception as e:
-        Common.exception_details("demoService.send_email_to_user", e)
+        Common.exception_details("demo_service.send_email_to_user", e)

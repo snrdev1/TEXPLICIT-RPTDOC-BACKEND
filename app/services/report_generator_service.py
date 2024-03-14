@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from typing import Tuple, Union
 from urllib.parse import unquote, urlparse, urlunparse
 
-from ..services import userService as UserService
+from . import user_service as UserService
 from bson import ObjectId
 
 from app.config import Config
@@ -693,7 +693,7 @@ def get_file_contents(report_document):
                     return io.BytesIO(file_bytes), file_name
 
     except Exception as e:
-        Common.exception_details("reportGeneratorService.get_file_contents", e)
+        Common.exception_details("report_generator_service.get_file_contents", e)
         return None, None
 
 
@@ -727,5 +727,5 @@ def share_reports_via_email(user_id, report_ids, email_ids, subject: str = "Shar
 
     except Exception as e:
         Common.exception_details(
-            "reportGeneratorService.share_reports_via_email", e)
+            "report_generator_service.share_reports_via_email", e)
         return None

@@ -29,7 +29,7 @@ from app.utils.socket import (emit_document_upload_status, socket_error,
                               socket_info, socket_success)
 from app.utils.vectorstore.document_loaders import DocumentLoader
 
-from . import userService as UserService
+from . import user_service as UserService
 
 
 class MyDocumentsService:
@@ -224,7 +224,7 @@ class MyDocumentsService:
             return file_path
 
         except Exception as e:
-            Common.exception_details("myDocumentsService.get_file_path", e)
+            Common.exception_details("my_documents_service.get_file_path", e)
             return None
 
     def parse_document(self, logged_in_user, file, new_path):
@@ -275,7 +275,7 @@ class MyDocumentsService:
             return inserted_id
 
         except Exception as e:
-            Common.exception_details("myDocumentsService.parse_document", e)
+            Common.exception_details("my_documents_service.parse_document", e)
             return None
 
     def update_virtual_filename(self, file_id, file_extension):

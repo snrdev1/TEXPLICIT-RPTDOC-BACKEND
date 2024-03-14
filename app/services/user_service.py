@@ -451,7 +451,7 @@ def update_user_info(user_id, update_dict) -> int:
         return 0
 
     except Exception as e:
-        Common.exception_details("userService.update_user_info : ", e)
+        Common.exception_details("user_service.update_user_info : ", e)
         return 0
 
 
@@ -537,7 +537,7 @@ def update_user_balance(user_id: Union[ObjectId, str], amount: float):
         return response
 
     except Exception as e:
-        Common.exception_details("userService.update_user_balance : ", e)
+        Common.exception_details("user_service.update_user_balance : ", e)
         return None
 
 
@@ -688,7 +688,7 @@ def create_user_permission(
         return permissions
 
     except Exception as e:
-        Common.exception_details("userService._create_new_user_permission", e)
+        Common.exception_details("user_service._create_new_user_permission", e)
         return {}
 
 
@@ -744,7 +744,7 @@ def update_report_subscription(user_id: Union[ObjectId, str], report_type: str) 
         return 0
 
     except Exception as e:
-        Common.exception_details("userService.update_report_subscription", e)
+        Common.exception_details("user_service.update_report_subscription", e)
         # Handle any exceptions that may occur during the database operation
         return 0
 
@@ -788,7 +788,7 @@ def update_chat_subscription(user_id: Union[ObjectId, str]) -> int:
         return 0
 
     except Exception as e:
-        Common.exception_details("userService.update_report_subscription", e)
+        Common.exception_details("user_service.update_report_subscription", e)
         return 0
 
 
@@ -816,5 +816,5 @@ def update_document_subscription(user_id: Union[ObjectId, str], document_size: i
         return 0
 
     except Exception as e:
-        Common.exception_details("userService.update_report_subscription", e)
+        Common.exception_details("user_service.update_report_subscription", e)
         return 0

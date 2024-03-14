@@ -12,7 +12,7 @@ from flask import Blueprint, request, send_file
 from app import socketio
 from app.auth.userauthorization import authorized
 from app.config import Config
-from app.services.myDocumentsService import MyDocumentsService
+from app.services.my_documents_service import MyDocumentsService
 from app.utils import Subscription, Messages, Common
 from app.utils import Response, files_and_folders
 from app.utils.vectorstore.base import VectorStore
@@ -581,13 +581,13 @@ def share_document(logged_in_user):
         user_id = logged_in_user["_id"]
 
         # Add the target_user_id to the "shared" field of the document
-        myDocumentsService = MyDocumentsService()
+        my_documents_service = MyDocumentsService()
         if share_type == "internal":
-            response = myDocumentsService.modify_document_shared_users(
+            response = my_documents_service.modify_document_shared_users(
                 user_id, document_ids, targets_user_ids
             )
         else:
-            response = myDocumentsService.share_document_via_email(
+            response = my_documents_service.share_document_via_email(
                 user_id, document_ids, email_ids, subject, message
             )
 

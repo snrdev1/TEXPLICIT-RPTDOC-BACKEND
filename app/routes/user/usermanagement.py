@@ -8,7 +8,7 @@ from flask import Blueprint, request
 
 from app.auth.userauthorization import authorized
 from app.services import UserService
-from app.services.userManagementService import UserManagementService
+from app.services.user_management_service import UserManagementService
 from app.utils import Response
 from app.utils.common import Common
 from app.utils.enumerator import Enumerator

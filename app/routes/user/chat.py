@@ -46,9 +46,9 @@ def get_chat(logged_in_user):
         return Response.subscription_invalid(Messages.INVALID_SUBSCRIPTION_CHAT)
 
     # Getting chat response and emitting it in a separate non-blocking thread
-    chatService = ChatService(user_id)
+    chat_service = ChatService(user_id)
     t1 = threading.Thread(
-        target=chatService.get_chat_response,
+        target=chat_service.get_chat_response,
         args=(chat_type, prompt, chatId),
     )
     t1.start()

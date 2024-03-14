@@ -3,7 +3,7 @@ from typing import Union
 
 from bson import ObjectId
 
-from ...services import userService as UserService
+from ...services import user_service as UserService
 from ..enumerator import Enumerator
 
 

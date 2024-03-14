@@ -4,7 +4,7 @@
 
 from flask import Blueprint, request
 
-from app.services.feedbackService import FeedbackService
+from app.services.feedback_service import FeedbackService
 from app.utils.common import Common
 from app.utils.messages import Messages
 from app.utils import Response
