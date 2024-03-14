@@ -7,14 +7,12 @@ from datetime import datetime
 from flask import Blueprint, request, send_file
 
 from app.auth.userauthorization import authorized
-from app.config import Config
 from app.services import UserService
+from app.utils import Response, Subscription, socket
 from app.utils.common import Common
 from app.utils.enumerator import Enumerator
 from app.utils.messages import Messages
 from app.utils.parser import Parser
-from app.utils.production import Production
-from app.utils import Response, Subscription, socket
 
 account = Blueprint("account", __name__, url_prefix="/account")
 
