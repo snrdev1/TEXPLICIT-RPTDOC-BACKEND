@@ -152,7 +152,6 @@ async def generate_report(
             ],
             temperature=0,
             llm_provider=cfg.llm_provider,
-            # stream=True,
             websocket=websocket,
             max_tokens=cfg.smart_token_limit,
         )

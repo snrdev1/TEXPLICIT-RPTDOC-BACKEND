@@ -15,8 +15,9 @@ from app.models.mongoClient import MongoClient
 from app.services.my_documents_service import MyDocumentsService
 from app.utils.formatter import cursor_to_dict
 from app.utils.llm_utils import load_fast_llm
-from ..utils import timeout_handler, Enumerator, Common
+from app.utils.vectorstore.base import VectorStore
 
+from ..utils import Common, Enumerator, timeout_handler
 from . import user_service as UserService
 
 
@@ -250,7 +251,7 @@ class ChatService:
 
         except Exception as e:
             Common.exception_details(
-                "ChatSerice._get_document_chat_response", e)
+                "ChatService._get_document_chat_response", e)
             return "", []
 
     def _emit_chat_stream(self, chat_dict: dict):

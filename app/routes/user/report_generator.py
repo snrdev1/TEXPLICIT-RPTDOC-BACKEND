@@ -43,6 +43,9 @@ def generate_report(logged_in_user):
         report_generation_id = request_params.get("report_generation_id", None)
         websearch = request_params.get("websearch", False)
         subtopics = request_params.get("subtopics", [])
+        
+        print("report_type : ", report_type)
+        print("source : ", source)
                 
         # Check if the report_type is valid
         if report_type not in [item.value for item in Enumerator.ReportType]:

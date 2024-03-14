@@ -124,10 +124,10 @@ def admin_add_update_user(logged_in_user):
             menu=user_info["menu"],
             start_date=user_info["start_date"],
             end_date=user_info["end_date"],
-            report_count=user_info["report_count"],
-            document_size=user_info["document_size"],
-            document_count=user_info["document_count"],
-            chat_count=user_info["chat_count"]
+            allowed_report_count=user_info["report_count"],
+            allowed_document_size=user_info["document_size"],
+            allowed_document_count=user_info["document_count"],
+            allowed_chat_count=user_info["chat_count"]
         )
         
         if "userId" in request_params:

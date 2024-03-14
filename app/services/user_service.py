@@ -552,13 +552,28 @@ def construct_user_data(
     subscription=1,
     image="",
     invoices="",
+    
+    # Permissions
+    # menu access
     menu: list = [],
+
+    # subscription duration
     start_date: datetime = datetime.utcnow(),
     end_date: datetime = datetime.utcnow(),
-    report_count: int = 0,
-    document_size: int = 0,
-    document_count: int = 0,
-    chat_count: int = 0,
+
+    # report permissions
+    allowed_report_count: int = 0,
+    used_report_count: int = 0,
+
+    # document permissions
+    allowed_document_size: int = 0,
+    allowed_document_count: int = 0,
+    used_document_size: int = 0,
+    used_document_count: int = 0,
+
+    # chat permissions
+    allowed_chat_count: int = 0,
+    used_chat_count: int = 0
 ):
     try:
         user_data = {
@@ -578,10 +593,14 @@ def construct_user_data(
                 menu=menu,
                 start_date=start_date,
                 end_date=end_date,
-                report_count=report_count,
-                document_size=document_size,
-                document_count=document_count,
-                chat_count=chat_count
+                allowed_report_count=allowed_report_count,
+                used_report_count=used_report_count,
+                allowed_document_size=allowed_document_size,
+                allowed_document_count=allowed_document_count,
+                used_document_size=used_document_size,
+                used_document_count=used_document_count,
+                allowed_chat_count=allowed_chat_count,
+                used_chat_count=used_chat_count
             ),
         }
 
@@ -626,13 +645,26 @@ def _common_user_pipeline() -> list:
 
 
 def create_user_permission(
+    # menu access
     menu: list = [],
+
+    # subscription duration
     start_date: datetime = datetime.utcnow(),
     end_date: datetime = datetime.utcnow(),
-    report_count: int = 0,
-    document_size: int = 0,
-    document_count: int = 0,
-    chat_count: int = 0,
+
+    # report permissions
+    allowed_report_count: int = 0,
+    used_report_count: int = 0,
+
+    # document permissions
+    allowed_document_size: int = 0,
+    allowed_document_count: int = 0,
+    used_document_size: int = 0,
+    used_document_count: int = 0,
+
+    # chat permissions
+    allowed_chat_count: int = 0,
+    used_chat_count: int = 0
 ) -> dict:
     try:
         permissions = {
@@ -643,13 +675,13 @@ def create_user_permission(
             },
             "report": {
                 "allowed": {
-                    "total": report_count,
+                    "total": allowed_report_count,
                     Enumerator.ReportType.ResearchReport: 0,
                     Enumerator.ReportType.DetailedReport: 0,
                     Enumerator.ReportType.CompleteReport: 0
                 },
                 "used": {
-                    "total": 0,
+                    "total": used_report_count,
                     Enumerator.ReportType.ResearchReport: 0,
                     Enumerator.ReportType.DetailedReport: 0,
                     Enumerator.ReportType.CompleteReport: 0
@@ -657,31 +689,23 @@ def create_user_permission(
             },
             "document": {
                 "allowed": {
-                    "document_count": document_count,
-                    "document_size": document_size,
+                    "document_count": allowed_document_count,
+                    "document_size": allowed_document_size,
                 },
                 "used": {
-                    "document_count": 0,
-                    "document_size": 0,
+                    "document_count": used_document_count,
+                    "document_size": used_document_size,
                 },
             },
             "chat": {
                 "allowed":
                     {
-                        "chat_count": chat_count
+                        "chat_count": allowed_chat_count
                     },
                 "used":
                     {
-                        "chat_count": 0
+                        "chat_count": used_chat_count
                     }
-            },
-            "amount": {
-                "spent": 0,
-                "balance": 0,
-                "total": 0
-            },
-            "activePlan": {
-                "planId": None
             }
         }
 
@@ -696,7 +720,7 @@ def update_report_subscription(user_id: Union[ObjectId, str], report_type: str) 
     """
     The function `update_report_subscription` updates a user's report subscription in a MongoDB database
     based on the report type and returns the modified count.
-    
+
     Args:
       user_id (Union[ObjectId, str]): The `user_id` parameter is the unique identifier of the user for
     whom you want to update the report subscription. It can be either an `ObjectId` or a string that
@@ -705,7 +729,7 @@ def update_report_subscription(user_id: Union[ObjectId, str], report_type: str) 
     string that specifies the type of report for which the user's subscription is being updated. It can
     have values like "ResearchReport" or "DetailedReport" based on the report types defined in the
     Enumerator class.
-    
+
     Returns:
       The function `update_report_subscription` is returning an integer value, which represents the
     modified count after updating the user document in the MongoDB database. If the update operation is
@@ -730,13 +754,14 @@ def update_report_subscription(user_id: Union[ObjectId, str], report_type: str) 
             {
                 "$set": {
                     "permissions.report.used.total": {"$sum": ["$permissions.report.used.total", total]},
-                    f"$permissions.report.used.{report_type}": {"$sum": [f"$permissions.report.used.{report_type}", 1]},
+                    f"permissions.report.used.{report_type}": {"$sum": [f"$permissions.report.used.{report_type}", 1]},
                 }
             }
         ]
 
         # Update the user document in the database
-        response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(query, pipeline)
+        response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(
+            query, pipeline)
 
         # Check if the update was successful and return the modified count
         if response:
