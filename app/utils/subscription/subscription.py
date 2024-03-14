@@ -71,7 +71,7 @@ class Subscription:
             self.user_permissions.get("subscription_duration")
         )
         if not all(existing_permissions):
-            new_permissions = UserService.create_new_user_permission(self.user_permissions.get("menu", {}))
+            new_permissions = UserService.create_user_permission(self.user_permissions.get("menu", {}))
             new_permissions.pop('_id', None)
             self.user_permissions["permissions"] = new_permissions
             UserService.update_user_info(self.user_id, self.user_permissions)

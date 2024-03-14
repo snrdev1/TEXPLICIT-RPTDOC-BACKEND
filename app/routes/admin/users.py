@@ -1,14 +1,13 @@
 """
     All Admin routes for moderating users
 """
+from datetime import datetime
+
 from flask import Blueprint, request
 
 from app.auth.userauthorization import admin, authorized
 from app.services import UserService
-from app.utils.common import Common
-from app.utils.enumerator import Enumerator
-from app.utils.messages import Messages
-from app.utils import Response
+from app.utils import Common, Enumerator, Messages, Response, files_and_folders
 
 admin_users = Blueprint("admin_users", __name__, url_prefix="/admin/user")
 
@@ -95,8 +94,6 @@ def admin_add_update_user(logged_in_user):
         ):
             return Response.missing_parameters()
 
-        print("Request params : ", request_params)
-
         user_info = {
             "name": request_params.get("name", ""),
             "email": request_params.get("email", ""),
@@ -104,14 +101,39 @@ def admin_add_update_user(logged_in_user):
             "companyName": request_params.get("companyName", ""),
             "website": request_params.get("website", ""),
             "role": request_params.get("role", int(Enumerator.Role.Personal.value)),
-            "permissions": {"menu": request_params.get("menu", [])},
-            "subscription": request_params.get("subscription", 1)
+            "subscription": request_params.get("subscription", 1),
+            
+            # Permissions
+            "menu": request_params.get("menu", []),
+            "start_date": request_params.get("subscription", datetime.utcnow()),
+            "end_date": request_params.get("end_date", datetime.utcnow()),
+            # The received document size must be in megabytes
+            "document_size": files_and_folders.megabytes_to_bytes(int(request_params.get("document_size", 0))),
+            "chat_count": int(request_params.get("chat_count", 0)),
+            "report_count": int(request_params.get("report_count", 0))
         }
-
+        
+        user_data = UserService.construct_user_data(
+            name=user_info["name"],
+            mobileNumber=user_info["mobileNumber"],
+            email=user_info["email"],
+            companyName=user_info["companyName"],
+            website=user_info["website"],
+            role=user_info["role"],
+            subscription=user_info["subscription"],
+            menu=user_info["menu"],
+            start_date=user_info["start_date"],
+            end_date=user_info["end_date"],
+            report_count=user_info["report_count"],
+            document_size=user_info["document_size"],
+            document_count=user_info["document_count"],
+            chat_count=user_info["chat_count"]
+        )
+        
         if "userId" in request_params:
             # Update existing user
             target_user_id = request_params.get("userId")
-            response = UserService.update_user_info(target_user_id, user_info)
+            response = UserService.update_user_info(target_user_id, user_data)
 
             if response:
                 return Response.custom_response([], Messages.OK_USER_UPDATE, True, 200)
@@ -125,18 +147,7 @@ def admin_add_update_user(logged_in_user):
                     [], Messages.DUPLICATE_EMAIL, False, 400
                 )
 
-            # Insert new user
-            new_user_info = UserService.construct_user_data(
-                name=user_info["name"],
-                mobileNumber=user_info["mobileNumber"],
-                email=user_info["email"],
-                companyName=user_info["companyName"],
-                website=user_info["website"],
-                role=user_info["role"],
-                subscription=user_info["subscription"],
-                menu=user_info["permissions"]["menu"],
-            )
-            response = UserService.create_user(new_user_info)
+            response = UserService.create_user(user_data)
 
             if response:
                 user_id = response

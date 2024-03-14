@@ -131,3 +131,16 @@ def get_size(files: list) -> int:
         file.seek(0)
         
     return total_size
+
+
+def megabytes_to_bytes(file_size: int = 0) -> int:
+    """
+    Converts a file size in megabytes to bytes.
+
+    Args:
+        file_size (int): The file size in megabytes. Defaults to 0.
+
+    Returns:
+        int: The file size in bytes.
+    """
+    return int(file_size * 1024 * 1024)

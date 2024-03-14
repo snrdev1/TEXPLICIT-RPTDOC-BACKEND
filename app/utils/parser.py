@@ -1,24 +1,13 @@
 import datetime
-import json
-import os
-import re
-import string
-from html import unescape
-from urllib.parse import parse_qs, urlencode, urlparse, urlsplit, urlunsplit
 
 import jwt
-import requests
-import spotipy
-from bs4 import BeautifulSoup
-from dateutil.parser import parse
-from python_graphql_client import GraphqlClient
-from spotipy.oauth2 import SpotifyClientCredentials
 
 from app.config import Config
 from app.utils.common import Common
 
 
 class Parser:
+    
     @staticmethod
     def get_encoded_token(user_id, days=1):
         """Generates JWT token

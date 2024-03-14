@@ -554,7 +554,13 @@ def construct_user_data(
     invoices="",
     favourites=[],
     recommends=[],
-    menu=[],
+    menu: list = [], 
+    start_date: datetime = datetime.utcnow(),
+    end_date: datetime = datetime.utcnow(),
+    report_count: int = 0,
+    document_size: int = 0,
+    document_count: int = 0,
+    chat_count: int = 0,
 ):
     try:
         user_data = {
@@ -572,7 +578,15 @@ def construct_user_data(
             "recommends": recommends,
             "isActive": True,
             "createdOn": datetime.utcnow(),
-            "permissions": create_new_user_permission(menu),
+            "permissions": create_user_permission(
+                menu=menu,
+                start_date=start_date,
+                end_date=end_date,
+                report_count=report_count,
+                document_size=document_size,
+                document_count=document_count,
+                chat_count=chat_count
+            ),
         }
 
         return user_data
@@ -622,20 +636,28 @@ def _common_user_pipeline() -> list:
     return pipeline
 
 
-def create_new_user_permission(menu: list = []) -> dict:
+def create_user_permission(
+    menu: list = [], 
+    start_date: datetime = datetime.utcnow(),
+    end_date: datetime = datetime.utcnow(),
+    report_count: int = 0,
+    document_size: int = 0,
+    document_count: int = 0,
+    chat_count: int = 0,
+) -> dict:
     try:
         permissions = {
             "menu": menu,
             "subscription_duration": {
-                "start_date": datetime.utcnow(),
-                "end_date": datetime.utcnow(),
+                "start_date": start_date,
+                "end_date": end_date,
             },
             "report": {
                 "allowed": {
-                    "total": 0,
-                    Enumerator.ReportType.ResearchReport.value: 0,
-                    Enumerator.ReportType.DetailedReport.value: 0,
-                    Enumerator.ReportType.CompleteReport.value: 0
+                    "total": report_count,
+                    Enumerator.ReportType.ResearchReport.value: report_count,
+                    Enumerator.ReportType.DetailedReport.value: report_count,
+                    Enumerator.ReportType.CompleteReport.value: report_count
                 },
                 "used": {
                     "total": 0,
@@ -646,15 +668,15 @@ def create_new_user_permission(menu: list = []) -> dict:
             },
             "document": {
                 "allowed": {
-                    "document_count": 0,
-                    "document_size": 0,
+                    "document_count": document_count,
+                    "document_size": document_size,
                 },
                 "used": {
                     "document_count": 0,
                     "document_size": 0,
                 },
             },
-            "chat": {"allowed": {"chat_count": 0}, "used": {"chat_count": 0}},
+            "chat": {"allowed": {"chat_count": chat_count}, "used": {"chat_count": 0}},
             "amount": {"spent": 0, "balance": 0, "total": 0},
             "activePlan": {"planId": None},
         }
