@@ -6,16 +6,15 @@ from pydantic import BaseModel, Field
 from ..enumerator import Enumerator
 
 
-class Permission(BaseModel):
-    total: int = 0
-    report_permissions: Dict[str, int] = {}
-
+class ReportPermission(BaseModel):
+    allowed: Dict[str, int] = {"total": 0}
+    used: Dict[str, int] = {"total": 0}
+    
     def __init__(self, **data):
         super().__init__(**data)
-        if not self.report_permissions:
-            self.report_permissions = {
-                report_type.value: 0 for report_type in Enumerator.ReportType}
-
+        for report_type in Enumerator.ReportType:
+            self.allowed[report_type.value] = 0
+            self.used[report_type.value] = 0
 
 class SubscriptionDuration(BaseModel):
     start_date: datetime = Field(default_factory=datetime.utcnow)
@@ -40,7 +39,7 @@ class ChatPermission(BaseModel):
 class UserPermissions(BaseModel):
     menu: list = []
     subscription_duration: SubscriptionDuration = SubscriptionDuration()
-    report: Permission = Permission()
+    report: ReportPermission = ReportPermission()
     document: DocumentPermission = DocumentPermission()
     chat: ChatPermission = ChatPermission()
 
