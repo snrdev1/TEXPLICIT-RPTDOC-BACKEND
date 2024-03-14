@@ -7,7 +7,7 @@ from flask import Blueprint, request
 from app.services.demoService import save_demo_request
 from app.utils.common import Common
 from app.utils.messages import Messages
-from app.utils.response import Response
+from app.utils import Response
 
 demo = Blueprint("demo", __name__, url_prefix='/demo')
 

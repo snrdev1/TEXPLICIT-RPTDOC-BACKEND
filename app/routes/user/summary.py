@@ -13,7 +13,7 @@ from app.auth.userauthorization import authorized
 from app.services.summaryService import SummaryService
 from app.utils.common import Common
 from app.utils.messages import Messages
-from app.utils.response import JSONEncoder, Response
+from app.utils import Response
 
 summary = Blueprint("summary", __name__, url_prefix="/summary")
 

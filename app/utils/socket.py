@@ -3,7 +3,7 @@ from typing import Union
 from bson import ObjectId
 
 from app import socketio
-from app.utils.response import Response
+from app.utils import Response
 
 # On connection
 
@@ -70,7 +70,7 @@ def emit_report_status(
 ) -> None:
     print(f"🔌 Emitting Report Generation Status : {message}\n")
 
-    Response.socket_reponse(
+    Response.socket_response(
         event=f"{user_id}_report_{report_generation_id}_status",
         data=[],
         message=message,
@@ -84,8 +84,22 @@ def emit_document_upload_status(
     
     print(f"Event name : {user_id}_{upload_id}_document_upload_status")
 
-    Response.socket_reponse(
+    Response.socket_response(
         event=f"{user_id}_{upload_id}_document_upload_status",
         data=[{"progress": progress}],
+        message=message,
+    )
+    
+    
+def emit_subscription_invalid_status(
+    user_id: Union[str, ObjectId], message: str
+) -> None:
+    print(f"🔌 Emitting Subscription Invalid Status")
+    event_name = f"{user_id}_subscription_status"
+    print(f"Event name : {event_name}")
+    
+    Response.socket_response(
+        event=event_name,
+        data=[],
         message=message,
     )

@@ -2,18 +2,20 @@
     All User Management related routes
 """
 import math
+
 from bson import ObjectId
 from flask import Blueprint, request
 
 from app.auth.userauthorization import authorized
+from app.services import UserService
 from app.services.userManagementService import UserManagementService
-from app.services.userService import UserService
+from app.utils import Response
 from app.utils.common import Common
-from app.utils.messages import Messages
-from app.utils.response import Response
 from app.utils.enumerator import Enumerator
+from app.utils.messages import Messages
 
-usermanagement = Blueprint("usermanagement", __name__, url_prefix="/user-management")
+usermanagement = Blueprint("usermanagement", __name__,
+                           url_prefix="/user-management")
 
 
 # Manage Users
@@ -40,15 +42,13 @@ def add_user(logged_in_user):
             "subscription": 1,
             "image": "",
             "permissions": {
-                "menu" : request_body["menus"]
+                "menu": request_body["menus"]
             },
-            "invoices": [],
-            "favourites": [],
-            "recommends": [],
+            "invoices": []
         }
         print("User Data:", user_data)
 
-        existing_user = UserService().get_user_by_email(user_data["email"])
+        existing_user = UserService.get_user_by_email(user_data["email"])
 
         if existing_user:
             return Response.custom_response([], Messages.DUPLICATE_USER, False, 400)
@@ -93,7 +93,7 @@ def get_child_users(logged_in_user):
         modified_response = {
             "users": response,
             "totalRecs": total_recs,
-            "totalPageSize" : math.ceil(total_recs / pageSize)
+            "totalPageSize": math.ceil(total_recs / pageSize)
         }
         # print("\nModified response: ", modified_response)
         # print()
@@ -115,7 +115,8 @@ def get_child_user_by_id(logged_in_user, _id):
     Get the child user from the user id
     """
     try:
-        response = UserManagementService().get_child_users(parent_user=logged_in_user["_id"], user_id=_id)
+        response = UserManagementService().get_child_users(
+            parent_user=logged_in_user["_id"], user_id=_id)
 
         if response:
             return Response.custom_response(
@@ -161,7 +162,8 @@ def del_user(logged_in_user, user_id):
     try:
         # request_body = request.get_json()
         # print("Request body : ", request_body)
-        response = UserManagementService().delete_user(user_id, logged_in_user["_id"])
+        response = UserManagementService().delete_user(
+            user_id, logged_in_user["_id"])
 
         if response:
             return Response.custom_response(

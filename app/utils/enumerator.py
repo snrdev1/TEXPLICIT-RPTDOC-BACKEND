@@ -1,4 +1,4 @@
-import enum
+from enum import Enum
 from typing import TypeVar
 
 
@@ -6,20 +6,20 @@ class Enumerator:
     T = TypeVar("T")
 
     # The Role class is an enumeration that represents different roles.
-    class Role(enum.Enum):
+    class Role(Enum):
         Admin = 1
         Professional = 2
         Personal = 3
         Child = 4
 
     # The UserStatus class is an enumeration that represents different statuses for a user.
-    class UserStatus(enum.Enum):
+    class UserStatus(Enum):
         Active = 1
         Deactive = 2
         Blocked = 3
 
     # The `ChatType` class is an enumeration that represents different types of chat messages.
-    class ChatType(enum.Enum):
+    class ChatType(Enum):
         External = 0
         Document = 1
 
@@ -67,7 +67,7 @@ class Enumerator:
 
     # MenuItems
     # The class `MenuItems` is an enumeration that represents different menu items.
-    class MenuItems(enum.Enum):
+    class MenuItems(Enum):
         Home = 0
         MyDocuments = 1
         Reports = 2
@@ -75,7 +75,23 @@ class Enumerator:
         Admin = 4
 
     # The class "ReportStep" is an enumeration that represents different steps in a report.
-    class ReportStep(enum.Enum):
+    class ReportStep(Enum):
         Pending = 0
         Success = 1
         Failure = 2
+        
+    # The class "ReportType" is an enumeration that represents different types of reports.
+    class ReportType(Enum):
+      ResearchReport = "research_report"
+      DetailedReport = "detailed_report"
+      CompleteReport = "complete_report"
+      OutlineReport = "outline_report"
+      ResourceReport = "resource_report"
+      SubtopicReport = "subtopic_report"
+      CustomReport = "custom_report"
+  
+    class Price(Enum):
+        Chat = 0.0
+        SummaryReport = 0.0
+        DetailedReport = 0.0
+        CompleteReport = 0.0

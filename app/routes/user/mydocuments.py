@@ -13,10 +13,8 @@ from app import socketio
 from app.auth.userauthorization import authorized
 from app.config import Config
 from app.services.myDocumentsService import MyDocumentsService
-from app.utils.common import Common
-from app.utils.messages import Messages
-from app.utils.production import Production
-from app.utils.response import Response
+from app.utils import Subscription, Messages, Common
+from app.utils import Response, files_and_folders
 from app.utils.vectorstore.base import VectorStore
 
 mydocuments = Blueprint("mydocuments", __name__, url_prefix="/my-documents")
@@ -117,9 +115,22 @@ def upload_documents(logged_in_user):
         A custom response
     """
     try:
-        files = request.files.getlist("files[]")
+        files = request.files.getlist("files")
         path = request.form.get("path")
         upload_id = request.form.get("uploadId")
+        user_id = logged_in_user["_id"]
+          
+        # Check User Subscription
+        subscription = Subscription(user_id)
+        subscription_validity = subscription.check_subscription_duration() and subscription.check_subscription_document()
+        if not subscription_validity:
+            return Response.subscription_invalid()
+        
+        # Check if under current subscription the new files can be uploaded
+        upload_files_size = files_and_folders.get_size(files)
+        subscription_validity = subscription.check_subscription_new_document(upload_files_size)
+        if not subscription_validity:
+            return Response.subscription_invalid(Messages.INVALID_SUBSCRIPTION_DOCUMENT)
 
         # Upload files
         MyDocumentsService.upload_documents(logged_in_user, files, path, upload_id)

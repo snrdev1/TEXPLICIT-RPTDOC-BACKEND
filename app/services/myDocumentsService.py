@@ -19,8 +19,7 @@ from sumy.summarizers.text_rank import TextRankSummarizer
 
 from app.config import Config
 from app.models.mongoClient import MongoClient
-from app.services.userService import UserService
-from app.utils.common import Common
+from app.utils import Common, Subscription, files_and_folders
 from app.utils.email_helper import send_mail
 from app.utils.formatter import cursor_to_dict, get_base64_encoding
 from app.utils.llm.llm_highlights import generate_highlights
@@ -29,6 +28,8 @@ from app.utils.production import Production
 from app.utils.socket import (emit_document_upload_status, socket_error,
                               socket_info, socket_success)
 from app.utils.vectorstore.document_loaders import DocumentLoader
+
+from . import userService as UserService
 
 
 class MyDocumentsService:
@@ -90,6 +91,11 @@ class MyDocumentsService:
 
         # Save file on disk or cloud bucket
         MyDocumentsService().save_file(file, inserted_id, logged_in_user, path)
+        
+        # After a document has been successfully uploaded change document subscription
+        print("🧾 Updating subscription: Document used...")
+        file_size = files_and_folders.get_size([file])
+        UserService.update_document_subscription(logged_in_user["_id"], file_size)
 
         return 1, inserted_id
 
@@ -137,7 +143,7 @@ class MyDocumentsService:
         emit_document_upload_status(user_id, upload_id, f"Parsing documents and getting them ready for chat...", 70)
         for inserted_id in uploaded_documents_ids:
             file = MyDocumentsService().get_file(inserted_id)
-            print("MyDocumentsService file : ", file)
+            # print("MyDocumentsService file : ", file)
             virtual_file_name = file["virtualFileName"]
             filepath = MyDocumentsService().get_file_save_path(
                 virtual_file_name, user_id, path
@@ -2060,7 +2066,7 @@ class MyDocumentsService:
         """
 
         try:
-            print("File : ", file)
+            # print("File : ", file)
             document = Document(file)
             print("document : ", document)
             title = document.paragraphs[0].text.strip()
@@ -2076,7 +2082,7 @@ class MyDocumentsService:
                 title, data, filename, user, root
             )
 
-            print("File data  : ", file_data)
+            # print("File data  : ", file_data)
 
             m_db = MongoClient.connect()
             response = m_db[Config.MONGO_DOCUMENT_MASTER_COLLECTION].insert_one(
@@ -2198,7 +2204,7 @@ class MyDocumentsService:
         try:
             files = self.get_files(document_ids)
             virtual_file_names = [file["virtualFileName"] for file in files]
-            user = UserService().get_user_by_id(user_id)
+            user = UserService.get_user_by_id(user_id)
             file_details = [MyDocumentsService().get_file_contents(virtual_file_name) for virtual_file_name in virtual_file_names]
             file_contents, file_names = zip(*file_details) 
             attachments = [{"content": get_base64_encoding(file_content), "name": file_name} for (file_content, file_name) in zip(file_contents, file_names)]

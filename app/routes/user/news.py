@@ -9,7 +9,7 @@ from app.auth.userauthorization import authorized
 from app.services.newsService import NewsService
 from app.utils.common import Common
 from app.utils.messages import Messages
-from app.utils.response import Response
+from app.utils import Response
 
 news = Blueprint("news", __name__)
 

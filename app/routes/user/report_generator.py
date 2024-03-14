@@ -8,26 +8,15 @@ import threading
 
 from flask import Blueprint, request, send_file
 
-from app.auth.userauthorization import authorized
 from app.config import Config
-from app.services.reportGeneratorService import (
-    delete_failed_reports_from_db,
-    get_all_reports_from_db,
-    get_failed_reports_from_db,
-    get_file_contents,
-    get_pending_reports_from_db,
-    get_report_audio_download_filename,
-    get_report_from_db,
-    report_generate,
-    share_reports_via_email
-)
-from app.utils.common import Common
-from app.utils.files_and_folders import get_report_audio_path
-from app.utils.messages import Messages
-from app.utils.production import Production
-from app.utils.response import Response
 
-report_generator = Blueprint("report_generator", __name__, url_prefix="/report")
+from ...auth import authorized
+from ...services import reportGeneratorService as ReportGeneratorService
+from ...utils import Common, Messages, Production, Response, Subscription, Enumerator
+from ...utils.files_and_folders import get_report_audio_path
+
+report_generator = Blueprint(
+    "report_generator", __name__, url_prefix="/report")
 
 
 @report_generator.route("/generate", methods=["POST"])
@@ -48,16 +37,26 @@ def generate_report(logged_in_user):
             return Response.missing_parameters()
 
         task = request_params.get("task")
-        report_type = request_params.get("report_type", "research_report")
+        report_type = request_params.get("report_type", Enumerator.ReportType.ResearchReport.value)
         source = request_params.get("source", "external")
         format = request_params.get("format", "pdf")
         report_generation_id = request_params.get("report_generation_id", None)
         websearch = request_params.get("websearch", False)
         subtopics = request_params.get("subtopics", [])
+                
+        # Check if the report_type is valid
+        if report_type not in [item.value for item in Enumerator.ReportType]:
+            return Response.custom_response([], Messages.INVALID_REPORT_TYPE, False, 400) 
+
+        # Check subscription validity before generating report
+        subscription = Subscription(user_id)
+        subscription_validity = subscription.check_subscription_duration() and subscription.check_subscription_report(report_type)
+        if not subscription_validity:
+            return Response.subscription_invalid(Messages.INVALID_SUBSCRIPTION_REPORT)
 
         # Getting response and emitting it in a separate non-blocking thread
         t1 = threading.Thread(
-            target=report_generate,
+            target=ReportGeneratorService.report_generate,
             args=(
                 user_id,
                 task,
@@ -90,7 +89,7 @@ def retrieve_reports(logged_in_user):
         format = request_params.get("format", "")
         report_type = request_params.get("report_type", "")
 
-        reports = get_all_reports_from_db(
+        reports = ReportGeneratorService.get_all_reports_from_db(
             user_id, limit, offset, source, format, report_type
         )
 
@@ -113,14 +112,15 @@ def retrieve_pending_reports(logged_in_user):
         format = request_params.get("format", "")
         report_type = request_params.get("report_type", "")
 
-        reports = get_pending_reports_from_db(
+        reports = ReportGeneratorService.get_pending_reports_from_db(
             user_id, limit, offset, source, format, report_type
         )
 
         return Response.custom_response(reports, Messages.OK_REPORTS_FOUND, True, 200)
 
     except Exception as e:
-        Common.exception_details("report-generator.py : retrieve_pending_reports", e)
+        Common.exception_details(
+            "report-generator.py : retrieve_pending_reports", e)
         return Response.server_error()
 
 
@@ -130,12 +130,13 @@ def download_report(logged_in_user, reportid):
     try:
         user_id = str(logged_in_user["_id"])
 
-        report_document = get_report_from_db(reportid)
+        report_document = ReportGeneratorService.get_report_from_db(reportid)
         if report_document:
             if user_id != str(report_document["createdBy"]["_id"]):
                 return Response.custom_response([], Messages.UNAUTHORIZED, False, 401)
 
-            file_bytes, file_name = get_file_contents(report_document)
+            file_bytes, file_name = ReportGeneratorService.get_file_contents(
+                report_document)
 
             return send_file(file_bytes, as_attachment=True, download_name=file_name)
 
@@ -152,7 +153,7 @@ def download_report_audio(logged_in_user, reportid):
     try:
         user_id = str(logged_in_user["_id"])
 
-        report_document = get_report_from_db(reportid)
+        report_document = ReportGeneratorService.get_report_from_db(reportid)
         if not report_document:
             return Response.custom_response([], Messages.MISSING_REPORT, False, 400)
 
@@ -170,7 +171,7 @@ def download_report_audio(logged_in_user, reportid):
             return send_file(
                 download_file,
                 as_attachment=True,
-                download_name=get_report_audio_download_filename(
+                download_name=ReportGeneratorService.get_report_audio_download_filename(
                     report_document["report_type"],
                     report_document["task"],
                     report_document["createdOn"],
@@ -182,7 +183,7 @@ def download_report_audio(logged_in_user, reportid):
                 return send_file(
                     file_path,
                     as_attachment=True,
-                    download_name=get_report_audio_download_filename(
+                    download_name=ReportGeneratorService.get_report_audio_download_filename(
                         report_document["report_type"],
                         report_document["task"],
                         report_document["createdOn"],
@@ -203,7 +204,8 @@ def get_failed_reports(logged_in_user):
     try:
         user_id = str(logged_in_user["_id"])
 
-        report_document = get_failed_reports_from_db(user_id)
+        report_document = ReportGeneratorService.get_failed_reports_from_db(
+            user_id)
         return Response.custom_response(report_document, "", True, 200)
 
     except Exception as e:
@@ -217,9 +219,11 @@ def clear_failed_reports(logged_in_user):
     try:
         user_id = str(logged_in_user["_id"])
 
-        report_document = delete_failed_reports_from_db(user_id).get("delete_count", 0)
+        report_document = ReportGeneratorService.delete_failed_reports_from_db(
+            user_id).get("delete_count", 0)
         return Response.custom_response(
-            [{"delete_count": report_document}], Messages.OK_REPORTS_DELETED, True, 200
+            [{"delete_count": report_document}
+             ], Messages.OK_REPORTS_DELETED, True, 200
         )
 
     except Exception as e:
@@ -250,7 +254,7 @@ def share_report(logged_in_user):
 
         user_id = logged_in_user["_id"]
 
-        response = share_reports_via_email(
+        response = ReportGeneratorService.share_reports_via_email(
             user_id, report_ids, email_ids, subject, message
         )
 

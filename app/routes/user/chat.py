@@ -3,18 +3,16 @@
 """
 
 import threading
+from datetime import datetime
 
 from flask import Blueprint, request
 
-from app.auth.userauthorization import authorized
-from app.services.chatService import ChatService
-from app.utils.common import Common
-from app.utils.enumerator import Enumerator
-from app.utils.messages import Messages
-from app.utils.response import Response
-from datetime import datetime
+from ...auth import authorized
+from ...services import ChatService
+from ...utils import Subscription, Response, Common, Enumerator, Messages
 
 chat = Blueprint("chat", __name__, url_prefix="/chat")
+
 
 @chat.route("", methods=["POST"])
 @authorized
@@ -40,6 +38,12 @@ def get_chat(logged_in_user):
     prompt = request_body.get("prompt")
     chat_type = request_body.get("chatType", int(Enumerator.ChatType.External.value))
     chatId = request_body.get("chatId", f"{user_id}_{datetime.utcnow()}")
+
+    # Check subscription validity before using chat
+    subscription = Subscription(user_id)
+    subscription_validity = subscription.check_subscription_duration() and subscription.check_subscription_chat()
+    if not subscription_validity:
+        return Response.subscription_invalid(Messages.INVALID_SUBSCRIPTION_CHAT)
 
     # Getting chat response and emitting it in a separate non-blocking thread
     chatService = ChatService(user_id)

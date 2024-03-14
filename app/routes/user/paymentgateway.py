@@ -8,9 +8,9 @@ from app.auth.userauthorization import authorized
 from app.config import Config
 from app.utils.common import Common
 from app.utils.messages import Messages
-from app.utils.response import Response
+from app.utils import Response
 from app.services import paymentGatewayService
-from app.services.userService import UserService
+from app.services import UserService
 
 payment_gateway = Blueprint("payment_gateway", __name__, url_prefix="/payment")
 

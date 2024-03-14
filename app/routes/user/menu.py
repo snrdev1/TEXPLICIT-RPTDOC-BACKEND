@@ -8,7 +8,7 @@ from flask import Blueprint, request
 from app.services.menuService import MenuService
 from app.utils.common import Common
 from app.utils.messages import Messages
-from app.utils.response import Response
+from app.utils import Response
 
 menu = Blueprint("menu", __name__, url_prefix="/menu")
 

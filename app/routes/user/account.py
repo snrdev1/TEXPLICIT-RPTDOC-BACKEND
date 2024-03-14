@@ -8,13 +8,13 @@ from flask import Blueprint, request, send_file
 
 from app.auth.userauthorization import authorized
 from app.config import Config
-from app.services.userService import UserService
+from app.services import UserService
 from app.utils.common import Common
 from app.utils.enumerator import Enumerator
 from app.utils.messages import Messages
 from app.utils.parser import Parser
 from app.utils.production import Production
-from app.utils.response import Response
+from app.utils import Response, Subscription, socket
 
 account = Blueprint("account", __name__, url_prefix="/account")
 
@@ -64,12 +64,12 @@ def account_signup():
             menu=request_params.get("menu", []),
         )
 
-        existing_user = UserService().get_user_by_email(user_data["email"])
+        existing_user = UserService.get_user_by_email(user_data["email"])
 
         if existing_user:
             return Response.custom_response([], Messages.DUPLICATE_EMAIL, False, 400)
 
-        response = UserService().create_user(user_data)
+        response = UserService.create_user(user_data)
 
         if response:
             return Response.custom_response(
@@ -109,7 +109,7 @@ def account_login():
         password = request_params["password"]
 
         # Check email in DB
-        existing_user = UserService().get_user_by_email(email)
+        existing_user = UserService.get_user_by_email(email)
 
         # If user not found
         if not existing_user:
@@ -137,46 +137,14 @@ def account_login():
             "token":token,
             "message": "Login Successful"
         }
+        
+        # If login is successful check if subscription is valid
+        subscription = Subscription(id)
+        subscription_valid = subscription.check_subscription_duration()
+        if not subscription_valid:
+            socket.emit_subscription_invalid_status(id, "Subscription duration exceeded! Please check plan details.")
+        
         return Response.custom_response(response_data,Messages.OK_LOGIN, True, 200)
-        # =================================================================
-        # Folder Creation
-        if Config.GCP_PROD_ENV:
-            bucket = Production.get_users_bucket()
-
-            # Name of the folder you want to create
-            folder_name = str(id) + "/"
-
-            # Check if the folder already exists
-            folder_flag = False
-            prefix = folder_name if folder_name.endswith("/") else folder_name + "/"
-            blobs = bucket.list_blobs(prefix=prefix)
-
-            for blob in blobs:
-                if blob.name.startswith(prefix):
-                    folder_flag = True
-                else:
-                    folder_flag = False
-            if folder_flag == True:
-                print("Folder already exists!")
-            else:
-                # Create an empty blob to represent the folder (blobs are like objects in GCS)
-                folder_blob = bucket.blob(folder_name)
-                # Upload an empty string to create an empty folder
-                folder_blob.upload_from_string("")
-
-                # print(f"Created folder {folder_name} in bucket {bucket_name}!")
-
-        else:
-            # Creating folder if folder doesn't exist for this user
-            folder_path = os.getcwd() + "\\assets\\users"
-            folder_path = os.path.join(folder_path, str(id))
-            isExist = os.path.exists(folder_path)
-            # print(isExist)
-            if isExist == False:
-                os.makedirs(folder_path, exist_ok=True)
-                print("Folder created for user : ", id)
-
-        return Response.custom_response({"token": token}, Messages.OK_LOGIN, True, 200)
 
     except Exception as e:
         Common.exception_details("account.py: account_login", e)
@@ -225,7 +193,7 @@ def account_update(logged_in_user):
             )
         }
 
-        response = UserService().update_user_info(user_id, update_dict)
+        response = UserService.update_user_info(user_id, update_dict)
         if response:
             return Response.custom_response([], Messages.OK_USER_UPDATE, True, 200)
         else:
@@ -252,7 +220,7 @@ def account_get_user_by_id(user_id):
             A json object containing the user details
     """
     try:
-        user_data = UserService().get_user_by_id(user_id)
+        user_data = UserService.get_user_by_id(user_id)
         if user_data:
             return Response.custom_response(
                 user_data, Messages.OK_USER_RETRIEVAL, True, 200
@@ -283,7 +251,7 @@ def account_get_current_user(logged_in_user):
     """
     try:
         user_id = str(logged_in_user["_id"])
-        user_data = UserService().get_user_by_id(user_id)
+        user_data = UserService.get_user_by_id(user_id)
         if user_data:
             return Response.custom_response(
                 user_data, Messages.OK_USER_RETRIEVAL, True, 200
@@ -360,7 +328,7 @@ def account_update_user_image(logged_in_user):
             return Response.missing_parameters()
 
         image = request_files["image"]
-        response = UserService().save_or_update_image(user_id, image)
+        response = UserService.save_or_update_image(user_id, image)
         if response:
             return Response.custom_response(
                 response, Messages.OK_USER_IMAGE_UPDATE, True, 200
@@ -392,7 +360,7 @@ def account_reset_password_generate_token():
         email = request_params["email"]
 
         # Check email in DB
-        existing_user = UserService().get_user_by_email(email)
+        existing_user = UserService.get_user_by_email(email)
 
         # If user not found, return a response
         if not existing_user:
@@ -441,7 +409,7 @@ def account_reset_password_check_token_validity(token):
                 [{"validity": False}], Messages.INVALID_TOKEN, False, 400
             )
 
-        existing_user = UserService().get_user_by_id(decoded_token["id"])
+        existing_user = UserService.get_user_by_id(decoded_token["id"])
         current_time = datetime.utcnow()
         expiry_time = datetime.utcfromtimestamp(decoded_token["exp"])
 
@@ -500,7 +468,7 @@ def account_reset_password_update_password():
                 [{"token_validity": False}], Messages.INVALID_TOKEN, False, 400
             )
 
-        existing_user = UserService().get_user_by_id(decoded_token["id"])
+        existing_user = UserService.get_user_by_id(decoded_token["id"])
 
         if not existing_user:
             return Response.custom_response([], Messages.NOT_FOUND_USER, False, 404)
@@ -510,14 +478,14 @@ def account_reset_password_update_password():
         new_password_hash = Common.encrypt_password(new_password)
 
         # Old password and new password cannot be same
-        current_password_hash = UserService().get_password(user_id)
+        current_password_hash = UserService.get_password(user_id)
 
         if Common.check_password(current_password_hash, new_password):
             return Response.custom_response(
                 [], Messages.INVALID_NEW_PASSWORD, False, 400
             )
 
-        response = UserService().update_password(user_id, new_password_hash)
+        response = UserService.update_password(user_id, new_password_hash)
 
         if response:
             return Response.custom_response([], Messages.OK_PASSWORD_UPDATE, True, 200)

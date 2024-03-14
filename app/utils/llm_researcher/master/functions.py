@@ -6,7 +6,7 @@ import markdown
 from ..master.prompts import *
 from ..scraper import Scraper
 from ..utils.llm import *
-
+from ....utils import Enumerator
 
 def get_retriever(retriever):
     """
@@ -184,7 +184,10 @@ def add_source_urls(
     :type source: str
     """
     try:
-        if report_type not in ["detailed_report", "complete_report"]:
+        if report_type not in [
+            Enumerator.ReportType.DetailedReport.value,
+            Enumerator.ReportType.CompleteReport.value,
+        ]:
             return report_markdown
 
         print("ℹ️ Adding source urls/documents to report!")

@@ -4,6 +4,7 @@ from typing import Union
 
 from bson import ObjectId
 
+from app.utils import Enumerator
 from app.utils.socket import emit_report_status
 
 from ...master.research_agent import ResearchAgent
@@ -61,21 +62,21 @@ class CompleteReport:
             outline_report_path,
             outline_report_tables,
             outline_report_urls,
-        ) = await self.create_report("outline_report")
+        ) = await self.create_report(Enumerator.ReportType.OutlineReport.value)
 
         (
             resource_report_markdown,
             resource_report_path,
             resource_report_tables,
             resource_report_urls,
-        ) = await self.create_report("resource_report")
+        ) = await self.create_report(Enumerator.ReportType.ResourceReport.value)
 
         (
             detailed_report_markdown,
             detailed_report_path,
             detailed_reports_tables,
             detailed_report_urls,
-        ) = await self.create_report("detailed_report")
+        ) = await self.create_report(Enumerator.ReportType.DetailedReport.value)
 
         report_markdown = (
             "#OUTLINE REPORT\n\n"
