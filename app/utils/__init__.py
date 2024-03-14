@@ -1,6 +1,6 @@
 from . import constants, document, files_and_folders, formatter, llm, llm_utils
 from . import response as Response
-from . import socket, vectorstore
+from . import socket, validator, vectorstore
 from .audio import AudioGenerator
 from .common import Common
 from .email_helper import send_mail
@@ -15,6 +15,7 @@ from .timer import timeout_handler
 from .web_scraper import WebScraper
 
 __all__ = [
+    "validator",
     "llm_researcher",
     "AudioGenerator",
     "llm",

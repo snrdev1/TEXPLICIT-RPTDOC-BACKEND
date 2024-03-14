@@ -49,7 +49,7 @@ def generate_report(logged_in_user):
                 
         # Check if the report_type is valid
         if report_type not in [item.value for item in Enumerator.ReportType]:
-            return Response.custom_response([], Messages.INVALID_REPORT_TYPE, False, 400) 
+            return Response.custom_response([], Messages.INVALID_REPORT_TYPE, False, 400)
 
         # Check subscription validity before generating report
         subscription = Subscription(user_id)
