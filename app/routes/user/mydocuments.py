@@ -122,13 +122,13 @@ def upload_documents(logged_in_user):
           
         # Check User Subscription
         subscription = Subscription(user_id)
-        subscription_validity = subscription.check_subscription_duration() and subscription.check_subscription_document()
+        subscription_validity = subscription.check_subscription_duration()
         if not subscription_validity:
             return Response.subscription_invalid()
         
         # Check if under current subscription the new files can be uploaded
         upload_files_size = files_and_folders.get_size(files)
-        subscription_validity = subscription.check_subscription_new_document(upload_files_size)
+        subscription_validity = subscription.check_subscription_document(upload_files_size)
         if not subscription_validity:
             return Response.subscription_invalid(Messages.INVALID_SUBSCRIPTION_DOCUMENT)
 
