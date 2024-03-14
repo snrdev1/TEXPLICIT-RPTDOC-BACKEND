@@ -82,8 +82,6 @@ class UserManagementService:
             "subscription",
             "role",
             "image",
-            "favourites",
-            "recommends",
             "invoices"
         ]
         if user_id == "":

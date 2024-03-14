@@ -34,15 +34,12 @@ class Subscription:
     def check_subscription_report(self, report_type: str) -> bool:
         subscription_report = self.user_permissions.get("report", {})
         allowed_report_total_count = subscription_report.get("allowed", {}).get("total", 0)
-        allowed_report_type_count = subscription_report.get("allowed", {}).get(report_type, 0)
         used_report_total_count = subscription_report.get("used", {}).get("total", 0)
-        used_report_type_count = subscription_report.get("used", {}).get(report_type, 0)
         
         # print("check_subscription_report : ", allowed_report_total_count - used_report_total_count > 0 and \
             #    allowed_report_type_count - used_report_type_count > 0)
         
-        return allowed_report_total_count - used_report_total_count > 0 and \
-               allowed_report_type_count - used_report_type_count > 0
+        return allowed_report_total_count - used_report_total_count > 0
 
     def check_subscription_document(self) -> bool:
         subscription_document = self.user_permissions.get("document", {})

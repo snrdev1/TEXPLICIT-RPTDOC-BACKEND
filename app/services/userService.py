@@ -552,9 +552,7 @@ def construct_user_data(
     subscription=1,
     image="",
     invoices="",
-    favourites=[],
-    recommends=[],
-    menu: list = [], 
+    menu: list = [],
     start_date: datetime = datetime.utcnow(),
     end_date: datetime = datetime.utcnow(),
     report_count: int = 0,
@@ -574,8 +572,6 @@ def construct_user_data(
             "subscription": subscription,
             "image": image,
             "invoices": invoices,
-            "favourites": favourites,
-            "recommends": recommends,
             "isActive": True,
             "createdOn": datetime.utcnow(),
             "permissions": create_user_permission(
@@ -620,14 +616,7 @@ def _common_user_pipeline() -> list:
                         "then": {"$concat": [user_image_route, "$image"]},
                         "else": "$image",
                     }
-                },
-                "favourites": {
-                    "$map": {
-                        "input": "$favourites",
-                        "as": "favourite",
-                        "in": {"$toString": "$$favourite._id"},
-                    }
-                },
+                }
             }
         ),
         PipelineStages.stage_unset(["passwordHash"]),
@@ -637,7 +626,7 @@ def _common_user_pipeline() -> list:
 
 
 def create_user_permission(
-    menu: list = [], 
+    menu: list = [],
     start_date: datetime = datetime.utcnow(),
     end_date: datetime = datetime.utcnow(),
     report_count: int = 0,
@@ -654,16 +643,10 @@ def create_user_permission(
             },
             "report": {
                 "allowed": {
-                    "total": report_count,
-                    Enumerator.ReportType.ResearchReport.value: report_count,
-                    Enumerator.ReportType.DetailedReport.value: report_count,
-                    Enumerator.ReportType.CompleteReport.value: report_count
+                    "total": report_count
                 },
                 "used": {
-                    "total": 0,
-                    Enumerator.ReportType.ResearchReport.value: 0,
-                    Enumerator.ReportType.DetailedReport.value: 0,
-                    Enumerator.ReportType.CompleteReport.value: 0
+                    "total": 0
                 },
             },
             "document": {
@@ -676,9 +659,24 @@ def create_user_permission(
                     "document_size": 0,
                 },
             },
-            "chat": {"allowed": {"chat_count": chat_count}, "used": {"chat_count": 0}},
-            "amount": {"spent": 0, "balance": 0, "total": 0},
-            "activePlan": {"planId": None},
+            "chat": {
+                "allowed":
+                    {
+                        "chat_count": chat_count
+                    },
+                "used":
+                    {
+                        "chat_count": 0
+                    }
+            },
+            "amount": {
+                "spent": 0,
+                "balance": 0,
+                "total": 0
+            },
+            "activePlan": {
+                "planId": None
+            }
         }
 
         return permissions
@@ -689,44 +687,67 @@ def create_user_permission(
 
 
 def update_report_subscription(user_id: Union[ObjectId, str], report_type: str) -> int:
+    """
+    Updates the report subscription for a user based on the report type.
+
+    Args:
+        user_id (Union[ObjectId, str]): The unique identifier of the user.
+        report_type (str): The type of report being generated.
+
+    Returns:
+        int: The number of documents modified.
+
+    Raises:
+        Exception: If an error occurs during the database operation.
+    """
     try:
-        
+        # Connect to the MongoDB database
         m_db = MongoClient.connect()
+
+        # Prepare the query to find the user document
         query = {"_id": ObjectId(user_id)}
-        
+
+        # Determine the value to add to the used total based on the report type
+        if report_type == Enumerator.ReportType.ResearchReport.value or report_type == Enumerator.ReportType.DetailedReport.value:
+            total = 0.5
+        else:
+            total = 1
+
+        # Prepare the pipeline to update the user document
         pipeline = [
             {
                 "$set": {
                     "permissions.report.used.total": {"$sum": ["$permissions.report.used.total", 1]},
-                    "permissions.report.used.research_report": {"$sum": [f"$permissions.report.used.{report_type}", 1]},
+                    "permissions.report.used.research_report": {"$sum": [f"$permissions.report.used.{report_type}", total]},
                 }
             }
         ]
-        
+
+        # Update the user document in the database
         response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(
-            query, pipeline
-        )
-        
+            query, pipeline)
+
+        # Check if the update was successful and return the modified count
         if response:
             return response.modified_count
-
         return 0
-    
+
     except Exception as e:
         Common.exception_details("userService.update_report_subscription", e)
+        # Handle any exceptions that may occur during the database operation
         return 0
-    
+
 
 def update_chat_subscription(user_id: Union[ObjectId, str]) -> int:
     """
     The function `update_chat_subscription` updates the chat count for a user in a MongoDB collection
     and returns the number of modified documents.
-    
+
     Args:
       user_id (Union[ObjectId, str]): The `user_id` parameter in the `update_chat_subscription` function
     is used to identify the user whose chat subscription needs to be updated. It can be either an
     `ObjectId` or a `str` type, representing the unique identifier of the user in the database.
-    
+
     Returns:
       The function `update_chat_subscription` is returning an integer value, which is the modified count
     from the update operation on the MongoDB collection. If the update operation is successful, it will
@@ -734,10 +755,10 @@ def update_chat_subscription(user_id: Union[ObjectId, str]) -> int:
     operation, it will return 0.
     """
     try:
-        
+
         m_db = MongoClient.connect()
         query = {"_id": ObjectId(user_id)}
-        
+
         pipeline = [
             {
                 "$set": {
@@ -745,27 +766,27 @@ def update_chat_subscription(user_id: Union[ObjectId, str]) -> int:
                 }
             }
         ]
-        
+
         response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(
             query, pipeline
         )
-        
+
         if response:
             return response.modified_count
 
         return 0
-    
+
     except Exception as e:
         Common.exception_details("userService.update_report_subscription", e)
         return 0
-    
-    
+
+
 def update_document_subscription(user_id: Union[ObjectId, str], document_size: int = 0) -> int:
     try:
-        
+
         m_db = MongoClient.connect()
         query = {"_id": ObjectId(user_id)}
-        
+
         pipeline = [
             {
                 "$set": {
@@ -773,16 +794,16 @@ def update_document_subscription(user_id: Union[ObjectId, str], document_size: i
                 }
             }
         ]
-        
+
         response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(
             query, pipeline
         )
-        
+
         if response:
             return response.modified_count
 
         return 0
-    
+
     except Exception as e:
         Common.exception_details("userService.update_report_subscription", e)
         return 0
