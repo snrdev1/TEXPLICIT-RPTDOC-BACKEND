@@ -3,7 +3,7 @@ from typing import Union
 
 from bson import ObjectId
 
-from ...services import userService as UserService
+from ...services import user_service as UserService
 from ..enumerator import Enumerator
 
 
@@ -71,7 +71,19 @@ class Subscription:
             self.user_permissions.get("subscription_duration")
         )
         if not all(existing_permissions):
-            new_permissions = UserService.create_user_permission(self.user_permissions.get("menu", {}))
+            new_permissions = UserService.create_user_permission(
+                menu=self.user_permissions.get("menu", []),
+                start_date=self.user_permissions.get("subscription_duration", {}).get("start_date", datetime.utcnow()),
+                end_date=self.user_permissions.get("subscription_duration", {}).get("end_date", datetime.utcnow()),
+                allowed_report_count=self.user_permissions.get("report", {}).get("allowed", {}).get("total", 0),
+                used_report_count=self.user_permissions.get("report", {}).get("used", {}).get("total", 0),
+                allowed_document_size=self.user_permissions.get("document", {}).get("allowed", {}).get("document_size", 0),
+                allowed_document_count=self.user_permissions.get("document", {}).get("allowed", {}).get("document_count", 0),
+                used_document_size=self.user_permissions.get("document", {}).get("used", {}).get("document_size", 0),
+                used_document_count=self.user_permissions.get("document", {}).get("used", {}).get("document_count", 0),
+                allowed_chat_count=self.user_permissions.get("chat", {}).get("allowed", {}).get("chat_count", 0),
+                used_chat_count=self.user_permissions.get("chat", {}).get("used", {}).get("chat_count", 0)
+            )
             new_permissions.pop('_id', None)
             self.user_permissions["permissions"] = new_permissions
             UserService.update_user_info(self.user_id, self.user_permissions)

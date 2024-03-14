@@ -112,7 +112,7 @@ def get_report_by_type(report_type):
     report_type_mapping = {
         Enumerator.ReportType.ResearchReport.value: generate_report_prompt,
         Enumerator.ReportType.ResourceReport.value: generate_resource_report_prompt,
-        Enumerator.ReportType.ResourceReport.value: generate_outline_report_prompt,
+        Enumerator.ReportType.OutlineReport.value: generate_outline_report_prompt,
         Enumerator.ReportType.CustomReport.value: generate_custom_report_prompt,
         Enumerator.ReportType.SubtopicReport.value: generate_subtopic_report_prompt,
     }

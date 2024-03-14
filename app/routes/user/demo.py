@@ -4,7 +4,7 @@
 
 from flask import Blueprint, request
 
-from app.services.demoService import save_demo_request
+from app.services.demo_service import save_demo_request
 from app.utils.common import Common
 from app.utils.messages import Messages
 from app.utils import Response

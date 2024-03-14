@@ -2,7 +2,6 @@ import io
 import os
 
 import soundfile as sf
-from google.cloud import storage
 from nltk.tokenize import sent_tokenize
 from openai import OpenAI
 

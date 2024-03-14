@@ -1,4 +1,4 @@
-from app.services.myDocumentsService import MyDocumentsService
+from app.services.my_documents_service import MyDocumentsService
 from app.utils.vectorstore.base import VectorStore
 from app.utils.llm_utils import get_embeddings
 

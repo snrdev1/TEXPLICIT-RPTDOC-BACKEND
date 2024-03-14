@@ -11,7 +11,7 @@ from flask import Blueprint, request, send_file
 from app.config import Config
 
 from ...auth import authorized
-from ...services import reportGeneratorService as ReportGeneratorService
+from ...services import report_generator_service as ReportGeneratorService
 from ...utils import Common, Messages, Production, Response, Subscription, Enumerator
 from ...utils.files_and_folders import get_report_audio_path
 
@@ -43,6 +43,9 @@ def generate_report(logged_in_user):
         report_generation_id = request_params.get("report_generation_id", None)
         websearch = request_params.get("websearch", False)
         subtopics = request_params.get("subtopics", [])
+        
+        print("report_type : ", report_type)
+        print("source : ", source)
                 
         # Check if the report_type is valid
         if report_type not in [item.value for item in Enumerator.ReportType]:

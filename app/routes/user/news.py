@@ -6,7 +6,7 @@ from flask import Blueprint, request
 
 from app import socketio
 from app.auth.userauthorization import authorized
-from app.services.newsService import NewsService
+from app.services.news_service import NewsService
 from app.utils.common import Common
 from app.utils.messages import Messages
 from app.utils import Response

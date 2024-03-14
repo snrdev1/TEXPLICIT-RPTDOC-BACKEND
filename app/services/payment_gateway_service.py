@@ -26,5 +26,5 @@ def add_payment_history(user_id: Union[ObjectId, str], payment_details: dict):
         })
             
     except Exception as e:
-        Common.exception_details("paymentGatewayService.add_payment_history", e)
+        Common.exception_details("payment_gateway_service.add_payment_history", e)
     
