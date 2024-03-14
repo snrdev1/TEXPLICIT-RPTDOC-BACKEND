@@ -541,181 +541,6 @@ def update_user_balance(user_id: Union[ObjectId, str], amount: float):
         return None
 
 
-def construct_user_data(
-    name="",
-    mobileNumber="",
-    email="",
-    passwordHash="",
-    companyName="",
-    website="",
-    role=int(Enumerator.Role.Personal.value),
-    subscription=1,
-    image="",
-    invoices="",
-    
-    # Permissions
-    # menu access
-    menu: list = [],
-
-    # subscription duration
-    start_date: datetime = datetime.utcnow(),
-    end_date: datetime = datetime.utcnow(),
-
-    # report permissions
-    allowed_report_count: int = 0,
-    used_report_count: int = 0,
-
-    # document permissions
-    allowed_document_size: int = 0,
-    allowed_document_count: int = 0,
-    used_document_size: int = 0,
-    used_document_count: int = 0,
-
-    # chat permissions
-    allowed_chat_count: int = 0,
-    used_chat_count: int = 0
-):
-    try:
-        user_data = {
-            "name": name,
-            "mobileNumber": mobileNumber,
-            "email": email,
-            "passwordHash": passwordHash,
-            "companyName": companyName,
-            "website": website,
-            "role": role,
-            "subscription": subscription,
-            "image": image,
-            "invoices": invoices,
-            "isActive": True,
-            "createdOn": datetime.utcnow(),
-            "permissions": create_user_permission(
-                menu=menu,
-                start_date=start_date,
-                end_date=end_date,
-                allowed_report_count=allowed_report_count,
-                used_report_count=used_report_count,
-                allowed_document_size=allowed_document_size,
-                allowed_document_count=allowed_document_count,
-                used_document_size=used_document_size,
-                used_document_count=used_document_count,
-                allowed_chat_count=allowed_chat_count,
-                used_chat_count=used_chat_count
-            ),
-        }
-
-        return user_data
-
-    except Exception as e:
-        Common.exception_details("UserService.construct_user_data : ", e)
-        return {}
-
-
-def _common_user_pipeline() -> list:
-    """
-    The _common_user_pipeline function is used to create a pipeline for the user collection.
-    It will be used in many different places, so it's best to have it as a function.
-    The pipeline removes the passwordHash field from all documents and adds an _id field that is converted into a string.
-
-    Args:
-
-    Returns:
-        A list of stages
-    """
-    user_image_route = request.host_url + "account/image/"
-
-    pipeline = [
-        PipelineStages.stage_add_fields(
-            {
-                "_id": {"$toString": "$_id"},
-                "createdOn": {"$toString": "$createdOn"},
-                "image": {
-                    "$cond": {
-                        "if": {"$ne": ["$image", ""]},
-                        "then": {"$concat": [user_image_route, "$image"]},
-                        "else": "$image",
-                    }
-                }
-            }
-        ),
-        PipelineStages.stage_unset(["passwordHash"]),
-    ]
-
-    return pipeline
-
-
-def create_user_permission(
-    # menu access
-    menu: list = [],
-
-    # subscription duration
-    start_date: datetime = datetime.utcnow(),
-    end_date: datetime = datetime.utcnow(),
-
-    # report permissions
-    allowed_report_count: int = 0,
-    used_report_count: int = 0,
-
-    # document permissions
-    allowed_document_size: int = 0,
-    allowed_document_count: int = 0,
-    used_document_size: int = 0,
-    used_document_count: int = 0,
-
-    # chat permissions
-    allowed_chat_count: int = 0,
-    used_chat_count: int = 0
-) -> dict:
-    try:
-        permissions = {
-            "menu": menu,
-            "subscription_duration": {
-                "start_date": start_date,
-                "end_date": end_date,
-            },
-            "report": {
-                "allowed": {
-                    "total": allowed_report_count,
-                    Enumerator.ReportType.ResearchReport: 0,
-                    Enumerator.ReportType.DetailedReport: 0,
-                    Enumerator.ReportType.CompleteReport: 0
-                },
-                "used": {
-                    "total": used_report_count,
-                    Enumerator.ReportType.ResearchReport: 0,
-                    Enumerator.ReportType.DetailedReport: 0,
-                    Enumerator.ReportType.CompleteReport: 0
-                },
-            },
-            "document": {
-                "allowed": {
-                    "document_count": allowed_document_count,
-                    "document_size": allowed_document_size,
-                },
-                "used": {
-                    "document_count": used_document_count,
-                    "document_size": used_document_size,
-                },
-            },
-            "chat": {
-                "allowed":
-                    {
-                        "chat_count": allowed_chat_count
-                    },
-                "used":
-                    {
-                        "chat_count": used_chat_count
-                    }
-            }
-        }
-
-        return permissions
-
-    except Exception as e:
-        Common.exception_details("user_service._create_new_user_permission", e)
-        return {}
-
-
 def update_report_subscription(user_id: Union[ObjectId, str], report_type: str) -> int:
     """
     The function `update_report_subscription` updates a user's report subscription in a MongoDB database
@@ -843,3 +668,38 @@ def update_document_subscription(user_id: Union[ObjectId, str], document_size: i
     except Exception as e:
         Common.exception_details("user_service.update_report_subscription", e)
         return 0
+
+
+def _common_user_pipeline() -> list:
+    """
+    The _common_user_pipeline function is used to create a pipeline for the user collection.
+    It will be used in many different places, so it's best to have it as a function.
+    The pipeline removes the passwordHash field from all documents and adds an _id field that is converted into a string.
+
+    Args:
+
+    Returns:
+        A list of stages
+    """
+    user_image_route = request.host_url + "account/image/"
+
+    pipeline = [
+        PipelineStages.stage_add_fields(
+            {
+                "_id": {"$toString": "$_id"},
+                "createdOn": {"$toString": "$createdOn"},
+                "permissions.subscription_duration.start_date": { "$toString": "$permissions.subscription_duration.start_date"},
+                "permissions.subscription_duration.end_date": { "$toString": "$permissions.subscription_duration.end_date"},
+                "image": {
+                    "$cond": {
+                        "if": {"$ne": ["$image", ""]},
+                        "then": {"$concat": [user_image_route, "$image"]},
+                        "else": "$image",
+                    }
+                }
+            }
+        ),
+        PipelineStages.stage_unset(["passwordHash"]),
+    ]
+
+    return pipeline

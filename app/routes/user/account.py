@@ -1,7 +1,6 @@
 """
     All User account related routes
 """
-import os
 from datetime import datetime
 
 from flask import Blueprint, request, send_file
@@ -13,6 +12,7 @@ from app.utils.common import Common
 from app.utils.enumerator import Enumerator
 from app.utils.messages import Messages
 from app.utils.parser import Parser
+from app.utils.validator import User
 
 account = Blueprint("account", __name__, url_prefix="/account")
 
@@ -50,7 +50,7 @@ def account_signup():
             return Response.missing_parameters()
 
         # Extract user data from request body
-        user_data = UserService.construct_user_data(
+        user_data = User(
             name=request_params.get("name", ""),
             email=request_params.get("email", ""),
             passwordHash=Common.encrypt_password(request_params.get("password", "")),
@@ -59,10 +59,12 @@ def account_signup():
             companyName=request_params.get("companyName", ""),
             website=request_params.get("website", ""),
             subscription=int(request_params.get("subscription", 1)),
-            menu=request_params.get("menu", []),
+            permissions={
+                "menu": request_params.get("menu", [])
+            }
         )
 
-        existing_user = UserService.get_user_by_email(user_data["email"])
+        existing_user = UserService.get_user_by_email(user_data.dict().get("email"))
 
         if existing_user:
             return Response.custom_response([], Messages.DUPLICATE_EMAIL, False, 400)
@@ -122,7 +124,8 @@ def account_login():
             )
 
         # Check password
-        match_password = Common.check_password(existing_user["passwordHash"], password)
+        match_password = Common.check_password(
+            existing_user["passwordHash"], password)
 
         # If password doesn't match
         if not match_password:
@@ -132,17 +135,18 @@ def account_login():
         token = Parser.get_encoded_token(id)
 
         response_data = {
-            "token":token,
+            "token": token,
             "message": "Login Successful"
         }
-        
+
         # If login is successful check if subscription is valid
         subscription = Subscription(id)
         subscription_valid = subscription.check_subscription_duration()
         if not subscription_valid:
-            socket.emit_subscription_invalid_status(id, "Subscription duration exceeded! Please check plan details.")
-        
-        return Response.custom_response(response_data,Messages.OK_LOGIN, True, 200)
+            socket.emit_subscription_invalid_status(
+                id, "Subscription duration exceeded! Please check plan details.")
+
+        return Response.custom_response(response_data, Messages.OK_LOGIN, True, 200)
 
     except Exception as e:
         Common.exception_details("account.py: account_login", e)
@@ -351,7 +355,8 @@ def account_reset_password_generate_token():
 
         # required parameters check
         required_params = ["email"]
-        check_response = Common.check_required_params(request_params, required_params)
+        check_response = Common.check_required_params(
+            request_params, required_params)
         if check_response:
             return Response.missing_required_parameter(check_response)
 
@@ -378,7 +383,8 @@ def account_reset_password_generate_token():
         )
 
     except Exception as e:
-        Common.exception_details("account.py: account_reset_password_generate_token", e)
+        Common.exception_details(
+            "account.py: account_reset_password_generate_token", e)
         return Response.server_error()
 
 
@@ -453,7 +459,8 @@ def account_reset_password_update_password():
 
         # Required parameters
         required_params = ["token", "newPassword"]
-        check_response = Common.check_required_params(request_params, required_params)
+        check_response = Common.check_required_params(
+            request_params, required_params)
         if check_response:
             return Response.missing_required_parameter(check_response)
 
