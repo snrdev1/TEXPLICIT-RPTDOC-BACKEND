@@ -122,7 +122,7 @@ def admin_add_update_user(logged_in_user):
                 },
                 "report": {
                     "allowed": {
-                        "report_count": int(request_params.get("report_count", 0))
+                        "total": int(request_params.get("report_count", 0))
                     }
                 }
             }
