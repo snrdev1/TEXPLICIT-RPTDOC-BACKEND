@@ -33,8 +33,8 @@ class DocumentPermission(BaseModel):
 
 
 class ChatPermission(BaseModel):
-    allowed: int = 0
-    used: int = 0
+    allowed: Dict[str, int] = {"chat_count": 0}
+    used: Dict[str, int] = {"chat_count": 0}
 
 
 class UserPermissions(BaseModel):

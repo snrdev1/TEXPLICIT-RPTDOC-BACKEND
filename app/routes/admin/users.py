@@ -101,8 +101,8 @@ def admin_add_update_user(logged_in_user):
             "mobileNumber": request_params.get("mobileNumber", ""),
             "companyName": request_params.get("companyName", ""),
             "website": request_params.get("website", ""),
-            "role": request_params.get("role", int(Enumerator.Role.Personal.value)),
-            "subscription": request_params.get("subscription", 1),
+            "role": int(request_params.get("role", int(Enumerator.Role.Personal.value))),
+            "subscription": int(request_params.get("subscription", 1)),
             "permissions": {
                 "menu": request_params.get("menu", []),
                 "subscription_duration": {
