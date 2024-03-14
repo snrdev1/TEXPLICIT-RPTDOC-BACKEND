@@ -643,10 +643,16 @@ def create_user_permission(
             },
             "report": {
                 "allowed": {
-                    "total": report_count
+                    "total": report_count,
+                    Enumerator.ReportType.ResearchReport: 0,
+                    Enumerator.ReportType.DetailedReport: 0,
+                    Enumerator.ReportType.CompleteReport: 0
                 },
                 "used": {
-                    "total": 0
+                    "total": 0,
+                    Enumerator.ReportType.ResearchReport: 0,
+                    Enumerator.ReportType.DetailedReport: 0,
+                    Enumerator.ReportType.CompleteReport: 0
                 },
             },
             "document": {
@@ -688,17 +694,23 @@ def create_user_permission(
 
 def update_report_subscription(user_id: Union[ObjectId, str], report_type: str) -> int:
     """
-    Updates the report subscription for a user based on the report type.
-
+    The function `update_report_subscription` updates a user's report subscription in a MongoDB database
+    based on the report type and returns the modified count.
+    
     Args:
-        user_id (Union[ObjectId, str]): The unique identifier of the user.
-        report_type (str): The type of report being generated.
-
+      user_id (Union[ObjectId, str]): The `user_id` parameter is the unique identifier of the user for
+    whom you want to update the report subscription. It can be either an `ObjectId` or a string that
+    represents the user's ID in the MongoDB database.
+      report_type (str): The `report_type` parameter in the `update_report_subscription` function is a
+    string that specifies the type of report for which the user's subscription is being updated. It can
+    have values like "ResearchReport" or "DetailedReport" based on the report types defined in the
+    Enumerator class.
+    
     Returns:
-        int: The number of documents modified.
-
-    Raises:
-        Exception: If an error occurs during the database operation.
+      The function `update_report_subscription` is returning an integer value, which represents the
+    modified count after updating the user document in the MongoDB database. If the update operation is
+    successful, it returns the modified count. If any exceptions occur during the database operation, it
+    returns 0.
     """
     try:
         # Connect to the MongoDB database
@@ -717,15 +729,14 @@ def update_report_subscription(user_id: Union[ObjectId, str], report_type: str) 
         pipeline = [
             {
                 "$set": {
-                    "permissions.report.used.total": {"$sum": ["$permissions.report.used.total", 1]},
-                    "permissions.report.used.research_report": {"$sum": [f"$permissions.report.used.{report_type}", total]},
+                    "permissions.report.used.total": {"$sum": ["$permissions.report.used.total", total]},
+                    f"$permissions.report.used.{report_type}": {"$sum": [f"$permissions.report.used.{report_type}", 1]},
                 }
             }
         ]
 
         # Update the user document in the database
-        response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(
-            query, pipeline)
+        response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(query, pipeline)
 
         # Check if the update was successful and return the modified count
         if response:

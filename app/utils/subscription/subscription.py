@@ -4,6 +4,7 @@ from typing import Union
 from bson import ObjectId
 
 from ...services import userService as UserService
+from ..enumerator import Enumerator
 
 
 class Subscription:
@@ -35,11 +36,13 @@ class Subscription:
         subscription_report = self.user_permissions.get("report", {})
         allowed_report_total_count = subscription_report.get("allowed", {}).get("total", 0)
         used_report_total_count = subscription_report.get("used", {}).get("total", 0)
+            
+        if report_type == Enumerator.ReportType.ResearchReport.value or report_type == Enumerator.ReportType.DetailedReport.value:
+            report_value = 0.5
+        else:
+            report_value = 1
         
-        # print("check_subscription_report : ", allowed_report_total_count - used_report_total_count > 0 and \
-            #    allowed_report_type_count - used_report_type_count > 0)
-        
-        return allowed_report_total_count - used_report_total_count > 0
+        return allowed_report_total_count - (used_report_total_count + report_value) >= 0
 
     def check_subscription_document(self) -> bool:
         subscription_document = self.user_permissions.get("document", {})
