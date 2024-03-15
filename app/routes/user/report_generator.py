@@ -37,6 +37,7 @@ def generate_report(logged_in_user):
             return Response.missing_parameters()
 
         report_generation_info = ReportGenerationParameters(
+            user_id = user_id,
             task = request_params.get("task"),
             report_type = request_params.get("report_type", Enumerator.ReportType.ResearchReport.value),
             source = request_params.get("source", "external"),
@@ -49,22 +50,32 @@ def generate_report(logged_in_user):
 
         # Check subscription validity before generating report
         subscription = Subscription(user_id)
-        subscription_validity = subscription.check_subscription_duration() and subscription.check_subscription_report(report_type)
+        subscription_validity = subscription.check_subscription_duration() and subscription.check_subscription_report(report_generation_info.report_type)
         if not subscription_validity:
             return Response.subscription_invalid(Messages.INVALID_SUBSCRIPTION_REPORT)
 
         # Getting response and emitting it in a separate non-blocking thread
         t1 = threading.Thread(
             target=ReportGeneratorService.report_generate,
-            args=(user_id),
-            kwargs=report_generation_info.dict()
+            args=(
+                report_generation_info.user_id,
+                report_generation_info.task,
+                report_generation_info.websearch,
+                report_generation_info.report_type,
+                report_generation_info.source,
+                report_generation_info.format,
+                report_generation_info.report_generation_id,
+                report_generation_info.subtopics,
+                report_generation_info.urls,
+            ),
         )
         t1.start()
 
         return Response.custom_response([], Messages.OK_REPORT_GENERATING, True, 200)
 
     except ValueError as e:
-        return Response.custom_response([], e, True, 400)
+        Common.exception_details("report-generator.py : generate_report", e)
+        return Response.custom_response([], str(e), True, 400)
     
     except Exception as e:
         Common.exception_details("report-generator.py : generate_report", e)

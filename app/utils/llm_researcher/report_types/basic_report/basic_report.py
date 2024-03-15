@@ -1,6 +1,6 @@
 # basic_report.py
 
-from typing import Union
+from typing import Union, List
 
 from bson import ObjectId
 
@@ -22,6 +22,7 @@ class BasicReport:
         websocket=None,
         subtopics: list = [],
         check_existing_report: bool = False,
+        urls: List[str] = []
     ):
         self.user_id = user_id
         self.task = task
@@ -33,6 +34,7 @@ class BasicReport:
         self.websocket = websocket
         self.subtopics = subtopics
         self.check_existing_report = check_existing_report
+        self.urls = urls
         self.assistant = self._create_research_assistant()
 
     async def generate_report(self) -> tuple:
@@ -51,6 +53,7 @@ class BasicReport:
             report_type=self.report_type,
             websocket=self.websocket,
             report_generation_id=self.report_generation_id,
+            urls=self.urls
         )
 
     async def _check_existing_report(self) -> str:
