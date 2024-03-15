@@ -206,7 +206,7 @@ def send_mail_with_reset_token(user_id, user_name, user_email):
         resetPasswordLink = request.environ["HTTP_ORIGIN"] + \
             "/reset-password/" + token
 
-        mailBody = Constants.PASSWORD_RESET_REQUEST_MAILBODY.format(
+        mailBody = Constants.NEW_ACCOUNT_MAILBODY.format(
             name=user_name,
             link=resetPasswordLink,
             sender=Config.MAIL_SENDER_NAME,
@@ -216,7 +216,7 @@ def send_mail_with_reset_token(user_id, user_name, user_email):
         receivers.append({"name": user_name, "email": user_email})
 
         success = send_mail(
-            Constants.PASSWORD_RESET_REQUEST_MAILSUBJECT, mailBody, receivers, None
+            Constants.NEW_ACCOUNT_MAILSUBJECT, mailBody, receivers
         )
 
         return success, token
