@@ -421,7 +421,7 @@ def update_user_info(user_id, update_dict) -> int:
     """
     The function `update_user_info` updates user information in a MongoDB database and returns the count
     of modified documents.
-    
+
     Args:
       user_id: The `user_id` parameter in the `update_user_info` function is the unique identifier of
     the user whose information you want to update in the database. It is used to locate the specific
@@ -430,7 +430,7 @@ def update_user_info(user_id, update_dict) -> int:
     want to update for a specific user in the database. The keys in the dictionary represent the fields
     you want to update, and the corresponding values are the new values you want to set for those
     fields.
-    
+
     Returns:
       The function `update_user_info` is returning the number of documents that were modified in the
     MongoDB collection as a result of the update operation.
@@ -581,17 +581,17 @@ def update_report_subscription(user_id: Union[ObjectId, str], report_type: str) 
 
         # Update the user document in the database
         response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(
-            query, pipeline)
+            query,
+            pipeline,
+            upsert=True  # Add this option to enable upsert
+        )
 
-        # Check if the update was successful and return the modified count
-        if response:
-            return response.modified_count
-        return 0
+        return response.modified_count
 
     except Exception as e:
         Common.exception_details("user_service.update_report_subscription", e)
         # Handle any exceptions that may occur during the database operation
-        return 0
+        return -1
 
 
 def update_chat_subscription(user_id: Union[ObjectId, str]) -> int:
@@ -624,17 +624,16 @@ def update_chat_subscription(user_id: Union[ObjectId, str]) -> int:
         ]
 
         response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(
-            query, pipeline
+            query,
+            pipeline,
+            upsert=True  # Add this option to enable upsert
         )
 
-        if response:
-            return response.modified_count
-
-        return 0
+        return response.modified_count
 
     except Exception as e:
         Common.exception_details("user_service.update_report_subscription", e)
-        return 0
+        return -1
 
 
 def update_document_subscription(user_id: Union[ObjectId, str], document_size: int = 0) -> int:
@@ -652,17 +651,16 @@ def update_document_subscription(user_id: Union[ObjectId, str], document_size: i
         ]
 
         response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(
-            query, pipeline
+            query,
+            pipeline,
+            upsert=True  # Add this option to enable upsert
         )
 
-        if response:
-            return response.modified_count
-
-        return 0
+        return response.modified_count
 
     except Exception as e:
         Common.exception_details("user_service.update_report_subscription", e)
-        return 0
+        return -1
 
 
 def _common_user_pipeline() -> list:
@@ -683,8 +681,8 @@ def _common_user_pipeline() -> list:
             {
                 "_id": {"$toString": "$_id"},
                 "createdOn": {"$toString": "$createdOn"},
-                "permissions.subscription_duration.start_date": { "$toString": "$permissions.subscription_duration.start_date"},
-                "permissions.subscription_duration.end_date": { "$toString": "$permissions.subscription_duration.end_date"},
+                "permissions.subscription_duration.start_date": {"$toString": "$permissions.subscription_duration.start_date"},
+                "permissions.subscription_duration.end_date": {"$toString": "$permissions.subscription_duration.end_date"},
                 "image": {
                     "$cond": {
                         "if": {"$ne": ["$image", ""]},

@@ -5,7 +5,7 @@ from bson import ObjectId
 
 from ...services import user_service as UserService
 from ..enumerator import Enumerator
-
+from ...utils.common import Common
 
 class Subscription:
     def __init__(self, user_id: Union[str, ObjectId]):
@@ -26,18 +26,16 @@ class Subscription:
         """
         try:
             current_date = datetime.utcnow()
-            subscription_duration = self.user_permissions.get(
-                "subscription_duration", {})
-            start_date = datetime.strptime(subscription_duration.get(
-                "start_date")['$date'], '%Y-%m-%dT%H:%M:%S.%fZ')
-            end_date = datetime.strptime(subscription_duration.get("end_date")[
-                                         '$date'], '%Y-%m-%dT%H:%M:%S.%fZ')
+            subscription_duration = self.user_permissions.get("subscription_duration", {})
+            start_date = datetime.strptime(subscription_duration.get("start_date", str(current_date)), '%Y-%m-%dT%H:%M:%S.%fZ')
+            end_date = datetime.strptime(subscription_duration.get("end_date", str(current_date)), '%Y-%m-%dT%H:%M:%S.%fZ')
 
-            # print("check_subscription_duration : ", start_date <= current_date <= end_date)
+            print("check_subscription_duration : ", start_date <= current_date < end_date)
 
-            return start_date <= current_date <= end_date
+            return start_date <= current_date < end_date
 
         except Exception as e:
+            Common.exception_details("Subscription.check_subscription_duration", e)
             return False
 
     def check_subscription_chat(self) -> bool:
@@ -63,6 +61,7 @@ class Subscription:
             return used_chat_count < allowed_chat_count
 
         except Exception as e:
+            Common.exception_details("Subscription.check_subscription_chat", e)
             return False
 
     def check_subscription_report(self, report_type: str) -> bool:
@@ -94,6 +93,7 @@ class Subscription:
             return allowed_report_total_count - (used_report_total_count + report_value) >= 0
 
         except Exception as e:
+            Common.exception_details("Subscription.check_subscription_report", e)
             return False
 
 
@@ -125,4 +125,5 @@ class Subscription:
             return allowed_document_size > used_document_size + upload_documents_size
 
         except Exception as e:
+            Common.exception_details("Subscription.check_subscription_document", e)
             return False
