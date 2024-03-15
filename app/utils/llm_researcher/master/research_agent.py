@@ -176,11 +176,19 @@ class ResearchAgent:
 
         await stream_output("logs", f"🧠 I will conduct my research based on the following queries: {', '.join(sub_queries)}...", self.websocket)
 
+        # If custom urls are provided then scraping should be done only once 
+        # and the results should be shared amongst all queries
+        if self.urls:
+            scraped_sites = await self.scrape_sites_by_query()
+        
+        # Get scraped data from sites based on sub-queries
         for sub_query in sub_queries:
             emit_report_status(self.user_id, self.report_generation_id, f"🔎 Running research for '{sub_query}'...")
             await stream_output("logs", f"\n🔎 Running research for '{sub_query}'...", self.websocket)
-
-            scraped_sites = await self.scrape_sites_by_query(sub_query)
+            
+            if not self.urls:
+                scraped_sites = await self.scrape_sites_by_query(sub_query)
+                
             if scraped_sites:
                 content = await self.get_similar_content_by_query(sub_query, scraped_sites)
                 if content:
@@ -217,14 +225,21 @@ class ResearchAgent:
         # Run Tasks
         return context_compressor.get_context(query, max_results=8)
 
-    async def scrape_sites_by_query(self, sub_query):
+    async def scrape_sites_by_query(self, sub_query:str = ""):
         """
-        Runs a sub-query
+        This Python async function scrapes websites based on a query, retrieves URLs if not provided,
+        extracts tables, and then scrapes the content from the URLs.
+        
         Args:
-            sub_query:
-
+          sub_query (str): The `sub_query` parameter in the `scrape_sites_by_query` function is a string
+        that represents the query term or keyword used for searching and scraping websites. It is used
+        to retrieve relevant information from the websites based on this query.
+        
         Returns:
-            Summary
+          The function `scrape_sites_by_query` returns the `scraped_content_results` variable, which
+        contains the results of scraping the URLs obtained either from the user-defined URLs or from the
+        retriever if the user-defined URLs are not provided. If an exception occurs during the process,
+        it returns an empty string.
         """
         try:
             
