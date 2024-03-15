@@ -129,11 +129,12 @@ def admin_add_update_user(logged_in_user):
         ).dict()
 
         if "userId" in request_params:
+            print("Updating existing user!")
             # Update existing user
             target_user_id = request_params.get("userId")
             response = UserService.update_user_info(target_user_id, user_info)
 
-            if response:
+            if response > -1:
                 return Response.custom_response([], Messages.OK_USER_UPDATE, True, 200)
 
         else:
@@ -141,10 +142,12 @@ def admin_add_update_user(logged_in_user):
             existing_user = UserService.get_user_by_email(user_info["email"])
 
             if existing_user:
+                print("New user has duplicate email id!")
                 return Response.custom_response(
                     [], Messages.DUPLICATE_EMAIL, False, 400
                 )
 
+            print("Creating new user!")
             user_data = User(**user_info).dict()
             response = UserService.create_user(user_data)
 

@@ -419,23 +419,21 @@ def create_user(user_data):
 
 def update_user_info(user_id, update_dict) -> int:
     """
-    The function `update_user_info` updates user information in a MongoDB collection and returns the
-    count of modified documents.
-
+    The function `update_user_info` updates user information in a MongoDB database and returns the count
+    of modified documents.
+    
     Args:
-      user_id: The `user_id` parameter in the `update_user_info` function is expected to be a unique
-    identifier for the user whose information is being updated. It is used to locate the specific user
-    document in the MongoDB collection based on its `_id` field.
-      update_dict: The `update_dict` parameter in the `update_user_info` function is a dictionary
-    containing the fields and values that need to be updated for a specific user in the database. The
-    keys in the dictionary represent the fields to be updated, and the corresponding values are the new
-    values that will replace the existing
-
+      user_id: The `user_id` parameter in the `update_user_info` function is the unique identifier of
+    the user whose information you want to update in the database. It is used to locate the specific
+    user document in the database based on its ObjectId.
+      update_dict: The `update_dict` parameter is a dictionary containing the fields and values that you
+    want to update for a specific user in the database. The keys in the dictionary represent the fields
+    you want to update, and the corresponding values are the new values you want to set for those
+    fields.
+    
     Returns:
-      The function `update_user_info` is returning an integer value, specifically the number of
-    documents that were modified as a result of the update operation in the MongoDB database. If the
-    update operation is successful, it will return the count of modified documents. If there is an
-    exception during the update process, it will return 0.
+      The function `update_user_info` is returning the number of documents that were modified in the
+    MongoDB collection as a result of the update operation.
     """
     try:
         m_db = MongoClient.connect()
@@ -445,14 +443,11 @@ def update_user_info(user_id, update_dict) -> int:
             query, new_values
         )
 
-        if response:
-            return response.modified_count
-
-        return 0
+        return response.modified_count
 
     except Exception as e:
         Common.exception_details("user_service.update_user_info : ", e)
-        return 0
+        return -1
 
 
 def update_password(user_id, new_password_hash):
