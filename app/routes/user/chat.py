@@ -43,6 +43,7 @@ def get_chat(logged_in_user):
     subscription = Subscription(user_id)
     subscription_validity = subscription.check_subscription_duration() and subscription.check_subscription_chat()
     if not subscription_validity:
+        print("Subscription is invalid!")
         return Response.subscription_invalid(Messages.INVALID_SUBSCRIPTION_CHAT)
 
     # Getting chat response and emitting it in a separate non-blocking thread

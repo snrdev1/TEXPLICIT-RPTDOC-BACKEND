@@ -1,10 +1,10 @@
 # Password reset request
-PASSWORD_RESET_REQUEST_MAILSUBJECT="Reset Your Texplicit2 Password"
+PASSWORD_RESET_REQUEST_MAILSUBJECT="Reset Your TexplicitRW Password"
 PASSWORD_RESET_REQUEST_MAILBODY='''\
 <p>
     Dear {name},
     <br/><br/>
-    We have received a request to reset your password for your Texplicit2 account. If you did initiate this request, please follow the instructions below to reset your password. If you did not make this request, you can safely ignore this email and rest assured that your account is secure.
+    We have received a request to reset your password for your TexplicitRW account. If you did initiate this request, please follow the instructions below to reset your password. If you did not make this request, you can safely ignore this email and rest assured that your account is secure.
     <br/>
     <br/>
     To reset your password, please click on the following link: <a href="{link}" target="_blank">{link}</a>. This link will be valid for the next 24 hours.
@@ -136,4 +136,27 @@ DEMO_REQUEST_CONFIRMATION_MAILBODY='''\
     <br/>
     Warm regards,
     The TexplicitRW Team
+'''
+
+# Password reset request
+NEW_ACCOUNT_MAILSUBJECT="Your TexplicitRW account has been created! Generate your password and login to TepxlicitRW today!"
+NEW_ACCOUNT_MAILBODY='''\
+<p>
+    Dear {name},
+    <br/><br/>
+    We are excited to inform you that a new account has been created for you on TexplicitRW. To set your password and access your account, please follow the instructions below.
+    <br/>
+    <br/>
+    To set your password and log in, please click on the following link: <a href="{link}" target="_blank">{link}</a>. This link will be valid for the next 24 hours.
+    <br/>
+    <br/>
+    If you have any questions or need assistance, please contact us at support@texplicit2.com.
+    <br/>
+    <br/>
+    Thank you for choosing Texplicit2. We look forward to serving you!
+    <br/><br/>
+    Warm regards,
+    <br/>
+    {sender}
+</p>
 '''

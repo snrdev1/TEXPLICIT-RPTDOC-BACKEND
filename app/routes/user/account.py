@@ -196,7 +196,7 @@ def account_update(logged_in_user):
         }
 
         response = UserService.update_user_info(user_id, update_dict)
-        if response:
+        if response > -1:
             return Response.custom_response([], Messages.OK_USER_UPDATE, True, 200)
         else:
             return Response.custom_response([], Messages.ERROR_USER_UPDATE, True, 400)

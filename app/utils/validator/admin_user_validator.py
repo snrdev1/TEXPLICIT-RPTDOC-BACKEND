@@ -1,19 +1,17 @@
 from datetime import datetime
-from typing import Dict
 
 from pydantic import BaseModel, Field
 
 from ..enumerator import Enumerator
 
 
+class TotalReportCount(BaseModel):
+    total: int = 0
+
+
 class ReportPermission(BaseModel):
-    allowed: Dict[str, int] = {"total": 0}
-    used: Dict[str, int] = {"total": 0}
-    
-    def __init__(self, **data):
-        super().__init__(**data)
-        for report_type in Enumerator.ReportType:
-            self.used[report_type.value] = 0
+    allowed: TotalReportCount = TotalReportCount()
+
 
 class SubscriptionDuration(BaseModel):
     start_date: datetime = Field(default_factory=datetime.utcnow)
@@ -21,20 +19,19 @@ class SubscriptionDuration(BaseModel):
 
 
 class AllowedDocument(BaseModel):
-    document_count: int = 0
     document_size: int = 0
 
 
 class DocumentPermission(BaseModel):
     allowed: AllowedDocument = AllowedDocument()
-    used: AllowedDocument = AllowedDocument()
+
 
 class ChatCount(BaseModel):
     chat_count: int = 0
 
+
 class ChatPermission(BaseModel):
     allowed: ChatCount = ChatCount()
-    used: ChatCount = ChatCount()
 
 
 class UserPermissions(BaseModel):
@@ -45,17 +42,12 @@ class UserPermissions(BaseModel):
     chat: ChatPermission = ChatPermission()
 
 
-class User(BaseModel):
+class AdminUserPermissions(BaseModel):
     name: str = ""
     mobileNumber: str = ""
     email: str = ""
-    passwordHash: str = ""
     companyName: str = ""
     website: str = ""
     role: int = int(Enumerator.Role.Personal.value)
     subscription: int = 1
-    image: str = ""
-    invoices: str = ""
-    isActive: bool = True
-    createdOn: datetime = Field(default_factory=datetime.utcnow)
     permissions: UserPermissions = UserPermissions()

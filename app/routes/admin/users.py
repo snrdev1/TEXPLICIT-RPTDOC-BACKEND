@@ -8,7 +8,7 @@ from flask import Blueprint, request
 from app.auth.userauthorization import admin, authorized
 from app.services import UserService
 from app.utils import Common, Enumerator, Messages, Response, files_and_folders
-from app.utils.validator import User
+from app.utils.validator import AdminUserPermissions, User
 
 admin_users = Blueprint("admin_users", __name__, url_prefix="/admin/user")
 
@@ -95,15 +95,15 @@ def admin_add_update_user(logged_in_user):
         ):
             return Response.missing_parameters()
 
-        user_info = {
-            "name": request_params.get("name", ""),
-            "email": request_params.get("email", ""),
-            "mobileNumber": request_params.get("mobileNumber", ""),
-            "companyName": request_params.get("companyName", ""),
-            "website": request_params.get("website", ""),
-            "role": int(request_params.get("role", int(Enumerator.Role.Personal.value))),
-            "subscription": int(request_params.get("subscription", 1)),
-            "permissions": {
+        user_info = AdminUserPermissions(
+            name=request_params.get("name", ""),
+            email=request_params.get("email", ""),
+            mobileNumber=request_params.get("mobileNumber", ""),
+            companyName=request_params.get("companyName", ""),
+            website=request_params.get("website", ""),
+            role=int(request_params.get("role", int(Enumerator.Role.Personal.value))),
+            subscription=int(request_params.get("subscription", 1)),
+            permissions={
                 "menu": request_params.get("menu", []),
                 "subscription_duration": {
                     "start_date": request_params.get("start_date", datetime.utcnow()),
@@ -126,14 +126,15 @@ def admin_add_update_user(logged_in_user):
                     }
                 }
             }
-        }
-        
+        ).dict()
+
         if "userId" in request_params:
+            print("Updating existing user!")
             # Update existing user
             target_user_id = request_params.get("userId")
             response = UserService.update_user_info(target_user_id, user_info)
 
-            if response:
+            if response > -1:
                 return Response.custom_response([], Messages.OK_USER_UPDATE, True, 200)
 
         else:
@@ -141,12 +142,14 @@ def admin_add_update_user(logged_in_user):
             existing_user = UserService.get_user_by_email(user_info["email"])
 
             if existing_user:
+                print("New user has duplicate email id!")
                 return Response.custom_response(
                     [], Messages.DUPLICATE_EMAIL, False, 400
                 )
 
-            user_data = User(**user_info)
-            response = UserService.create_user(user_data.dict())
+            print("Creating new user!")
+            user_data = User(**user_info).dict()
+            response = UserService.create_user(user_data)
 
             if response:
                 user_id = response
@@ -168,7 +171,7 @@ def admin_add_update_user(logged_in_user):
         return Response.custom_response(
             response, Messages.ERROR_USER_UPDATE, False, 400
         )
-        
+
     except Exception as e:
         Common.exception_details("admin users.py : admin_add_update_user", e)
         return Response.server_error()
