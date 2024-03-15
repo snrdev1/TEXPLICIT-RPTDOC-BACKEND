@@ -27,8 +27,8 @@ class Subscription:
         try:
             current_date = datetime.utcnow()
             subscription_duration = self.user_permissions.get("subscription_duration", {})
-            start_date = datetime.strptime(subscription_duration.get("start_date", str(current_date)), '%Y-%m-%dT%H:%M:%S.%fZ')
-            end_date = datetime.strptime(subscription_duration.get("end_date", str(current_date)), '%Y-%m-%dT%H:%M:%S.%fZ')
+            start_date = datetime.strptime(subscription_duration.get("start_date", current_date)["$date"], '%Y-%m-%dT%H:%M:%S.%fZ')
+            end_date = datetime.strptime(subscription_duration.get("end_date", current_date)["$date"], '%Y-%m-%dT%H:%M:%S.%fZ')
 
             print("check_subscription_duration : ", start_date <= current_date < end_date)
 

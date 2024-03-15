@@ -313,15 +313,21 @@ def get_user_by_id(user_id):
     Returns:
         A dictionary with the user's information
     """
-    m_db = MongoClient.connect()
+    try:
+        m_db = MongoClient.connect()
 
-    pipeline = [
-        PipelineStages.stage_match({"_id": ObjectId(user_id)})
-    ] + _common_user_pipeline()
+        pipeline = [
+            PipelineStages.stage_match({"_id": ObjectId(user_id)})
+        ] + _common_user_pipeline()
 
-    response = m_db[Config.MONGO_USER_MASTER_COLLECTION].aggregate(pipeline)
+        response = m_db[Config.MONGO_USER_MASTER_COLLECTION].aggregate(
+            pipeline)
 
-    return cursor_to_dict(response)[0]
+        return cursor_to_dict(response)[0]
+
+    except Exception as e:
+        Common.exception_details("user_service.get_user_by_id", e)
+        return None
 
 
 def get_user_by_ids(ids):
@@ -369,12 +375,17 @@ def get_user_by_email(email):
     Returns:
         A dictionary object
     """
-    m_db = MongoClient.connect()
+    try:
+        m_db = MongoClient.connect()
 
-    response = m_db[Config.MONGO_USER_MASTER_COLLECTION].find_one({
-                                                                  "email": email})
+        response = m_db[Config.MONGO_USER_MASTER_COLLECTION].find_one({
+                                                                      "email": email})
 
-    return response
+        return response
+
+    except Exception as e:
+        Common.exception_details("user_service.get_user_by_email", e)
+        return None
 
 
 def create_user(user_data):
@@ -681,8 +692,6 @@ def _common_user_pipeline() -> list:
             {
                 "_id": {"$toString": "$_id"},
                 "createdOn": {"$toString": "$createdOn"},
-                "permissions.subscription_duration.start_date": {"$toString": "$permissions.subscription_duration.start_date"},
-                "permissions.subscription_duration.end_date": {"$toString": "$permissions.subscription_duration.end_date"},
                 "image": {
                     "$cond": {
                         "if": {"$ne": ["$image", ""]},
