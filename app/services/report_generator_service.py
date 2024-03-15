@@ -18,7 +18,7 @@ from app.utils.files_and_folders import get_report_directory, get_report_path
 from app.utils.formatter import cursor_to_dict, get_base64_encoding
 from app.utils.llm_researcher.llm_researcher import research
 from app.utils.socket import emit_report_status
-
+from typing import List
 
 def report_generate(
     user_id: Union[str, ObjectId],
@@ -29,6 +29,7 @@ def report_generate(
     format: str,
     report_generation_id: Union[int, None],
     subtopics: list,
+    urls: List[str]
 ) -> None:
 
     def transform_data(report_document, report_id: Union[ObjectId, str] = ""):
@@ -65,6 +66,7 @@ def report_generate(
             "createdOn": datetime.utcnow(),
             "source": source,
             "format": format,
+            "urls": urls,
             "report_generation_id": report_generation_id,
         }
         insert_response = _insert_document_into_db(document_data)
@@ -91,6 +93,7 @@ def report_generate(
                 format=format,
                 report_generation_id=report_generation_id,
                 subtopics=subtopics,
+                urls=urls
             )
         )
 
@@ -146,6 +149,7 @@ def report_generate(
                 "createdOn": datetime.utcnow(),
                 "source": source,
                 "format": format,
+                "urls": urls,
                 "report_generation_id": report_generation_id,
                 "report_generation_time": report_generation_time,
                 "report_audio": report_audio,

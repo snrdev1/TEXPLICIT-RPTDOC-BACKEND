@@ -1,7 +1,7 @@
 # detailed_report.py
 
 import asyncio
-from typing import Union
+from typing import Union, List
 
 from bson import ObjectId
 
@@ -26,6 +26,7 @@ class DetailedReport:
         websocket=None,
         subtopics: list = [],
         check_existing_report: bool = False,
+        urls: List[str] = []
     ):
         self.user_id = user_id
         self.task = task
@@ -36,6 +37,7 @@ class DetailedReport:
         self.report_generation_id = report_generation_id
         self.websocket = websocket
         self.subtopics = subtopics
+        self.urls = urls
         self.check_existing_report = check_existing_report
         self.main_task_assistant = self._create_main_task_assistant()
         self.existing_headers = []
@@ -76,6 +78,7 @@ class DetailedReport:
             report_type=self.report_type,
             websocket=self.websocket,
             report_generation_id=self.report_generation_id,
+            urls=self.urls
         )
 
     async def _check_existing_report(self) -> str:
@@ -136,6 +139,7 @@ class DetailedReport:
             format=self.format,
             report_generation_id=self.report_generation_id,
             websocket=self.websocket,
+            urls=self.urls
         )
 
     async def _generate_subtopic_reports(self, subtopics: list) -> tuple:
@@ -186,13 +190,14 @@ class DetailedReport:
             parent_query=self.task,
             subtopics=self.subtopics,
             report_generation_id=self.report_generation_id,
+            urls=self.urls
         )
 
         report_markdown = await subtopic_assistant.conduct_research(
             max_docs=10, score_threshold=1, existing_headers=self.existing_headers
         )
         report_markdown = report_markdown.strip()
-        
+
         # After a subtopic report has been generated then append the headers of the report to existing headers
         self.existing_headers.append({
             "subtopic task": current_subtopic_task,
@@ -200,10 +205,12 @@ class DetailedReport:
         })
 
         if len(report_markdown) == 0:
-            print(f"⚠️ Failed to gather data from research on subtopic : {self.task}")
+            print(
+                f"⚠️ Failed to gather data from research on subtopic : {self.task}")
             return "", "", []
 
-        self.main_task_assistant.visited_urls.update(subtopic_assistant.visited_urls)
+        self.main_task_assistant.visited_urls.update(
+            subtopic_assistant.visited_urls)
 
         return report_markdown, "", subtopic_assistant.tables_extractor.tables
 
@@ -212,7 +219,8 @@ class DetailedReport:
             await self.main_task_assistant.write_introduction_conclusion()
         )
         detailed_report = report_body + "\n\n" + conclusion
-        detailed_report = introduction + "\n\n" + table_of_contents(detailed_report) + detailed_report
+        detailed_report = introduction + "\n\n" + \
+            table_of_contents(detailed_report) + detailed_report
         detailed_report_path = await self.main_task_assistant.save_report(
             detailed_report
         )

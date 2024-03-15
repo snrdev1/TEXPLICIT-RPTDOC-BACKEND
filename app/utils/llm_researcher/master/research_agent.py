@@ -3,7 +3,7 @@
 import os
 import re
 import time
-from typing import Union
+from typing import Union, List
 
 import mistune
 from bson import ObjectId
@@ -36,7 +36,8 @@ class ResearchAgent:
         websocket=None,
         parent_query="",
         subtopics=[],
-        report_generation_id=""
+        report_generation_id="",
+        urls: List[str] = []
     ):
         # Stores the user question (task)
         self.query = query
@@ -50,6 +51,9 @@ class ResearchAgent:
 
         # Type of report
         self.report_type = report_type
+
+        # Specified set of urls to be used 
+        self.urls = urls
 
         # Set to store unique urls
         self.visited_urls = set()
@@ -223,19 +227,25 @@ class ResearchAgent:
             Summary
         """
         try:
-            # Get Urls
-            retriever = self.retriever(sub_query)
-            search_results = retriever.search(
-                max_results=self.cfg.max_search_results_per_query
-            )
             
-            if not search_results:
-                emit_report_status(self.user_id, self.report_generation_id, f"🚩 Failed to get search results for : {sub_query}")
-                return ""
+            # Use the user-defined urls for report generation
+            new_search_urls = self.urls
+            
+            # If input set of urls are not defined then use a retriever to get the urls
+            if not self.urls:
+                # Get Urls
+                retriever = self.retriever(sub_query)
+                search_results = retriever.search(
+                    max_results=self.cfg.max_search_results_per_query
+                )
+                
+                if not search_results:
+                    emit_report_status(self.user_id, self.report_generation_id, f"🚩 Failed to get search results for : {sub_query}")
+                    return ""
 
-            new_search_urls = await self.get_new_urls(
-                [url.get("href") or url.get("link") or "" for url in search_results]
-            )
+                new_search_urls = await self.get_new_urls(
+                    [url.get("href") or url.get("link") or "" for url in search_results]
+                )
 
             # Extract tables
             emit_report_status(self.user_id, self.report_generation_id, "📊 Trying to extracting tables...")

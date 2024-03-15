@@ -1,6 +1,6 @@
 import asyncio
 import datetime
-from typing import Union
+from typing import Union, List
 
 from bson import ObjectId
 
@@ -20,6 +20,7 @@ class AgentExecutor:
         websocket=None,
         subtopics: list = [],
         check_existing_report: bool = False,
+        urls: List[str] = []
     ):
         self.user_id = user_id
         self.task = task
@@ -31,6 +32,7 @@ class AgentExecutor:
         self.websocket = websocket
         self.subtopics = subtopics
         self.check_existing_report = check_existing_report
+        self.urls = urls
 
     def get_report_executor(self):
         match self.report_type:
@@ -65,6 +67,7 @@ class AgentExecutor:
             report_generation_id=self.report_generation_id,
             websocket=self.websocket,
             check_existing_report=self.check_existing_report,
+            urls=self.urls
         )
         report_markdown, path, tables, urls = await executor.generate_report()
 

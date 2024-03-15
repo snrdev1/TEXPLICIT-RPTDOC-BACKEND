@@ -1,6 +1,6 @@
 # complete_report.py
 
-from typing import Union
+from typing import Union, List
 
 from bson import ObjectId
 
@@ -24,6 +24,7 @@ class CompleteReport:
         websocket=None,
         subtopics: list = [],
         check_existing_report: bool = False,
+        urls: List[str] = []
     ):
         self.user_id = user_id
         self.task = task
@@ -35,6 +36,7 @@ class CompleteReport:
         self.websocket = websocket
         self.subtopics = subtopics
         self.check_existing_report = check_existing_report
+        self.urls = urls
         self.assistant = self._create_assistant()
 
     async def create_report(self, report_type: str) -> tuple:
@@ -47,6 +49,7 @@ class CompleteReport:
             format=self.format,
             websocket=self.websocket,
             report_generation_id=self.report_generation_id,
+            urls=self.urls
         )
         markdown, path, tables, urls = await report_executor.run_agent()
         return markdown, path, tables, urls
@@ -117,6 +120,7 @@ class CompleteReport:
             report_type=self.report_type,
             websocket=self.websocket,
             report_generation_id=self.report_generation_id,
+            urls=self.urls
         )
 
     async def _check_existing_report(self) -> str:

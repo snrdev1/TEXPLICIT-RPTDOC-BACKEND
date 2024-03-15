@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, List
 
 from bson import ObjectId
 
@@ -14,6 +14,7 @@ async def research(
     format: str,
     report_generation_id: Union[str, None],
     subtopics: list = [],
+    urls: List[str] = []
 ):
     if task:
         agent_executor = AgentExecutor(
@@ -26,7 +27,8 @@ async def research(
             format=format,
             report_generation_id=report_generation_id,
             subtopics=subtopics,
-            # check_existing_report=True
+            # check_existing_report=True.
+            urls=urls
         )
         report, path, *_ = await agent_executor.run_agent()
         return report, path
