@@ -115,8 +115,6 @@ def account_login():
         if not existing_user:
             return Response.custom_response([], Messages.INVALID_LOGIN_INFO, False, 400)
 
-        id = existing_user["_id"]
-
         # Check user is active
         if not UserService.active_user(existing_user):
             return Response.custom_response(
@@ -124,15 +122,15 @@ def account_login():
             )
 
         # Check password
-        match_password = Common.check_password(
-            existing_user["passwordHash"], password)
+        match_password = Common.check_password(existing_user["passwordHash"], password)
 
         # If password doesn't match
         if not match_password:
             return Response.custom_response([], Messages.INVALID_LOGIN_INFO, False, 400)
 
         # If user found, generate token
-        token = Parser.get_encoded_token(id)
+        user_id = existing_user["_id"]
+        token = Parser.get_encoded_token(user_id)
 
         response_data = {
             "token": token,
@@ -140,11 +138,11 @@ def account_login():
         }
 
         # If login is successful check if subscription is valid
-        subscription = Subscription(id)
+        subscription = Subscription(user_id)
         subscription_valid = subscription.check_subscription_duration()
         if not subscription_valid:
             socket.emit_subscription_invalid_status(
-                id, "Subscription duration exceeded! Please check plan details.")
+                user_id, "Subscription duration exceeded! Please check plan details.")
 
         return Response.custom_response(response_data, Messages.OK_LOGIN, True, 200)
 
