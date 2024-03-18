@@ -8,7 +8,6 @@ from .master.run import AgentExecutor
 async def research(
     user_id: Union[str, ObjectId],
     task: str,
-    websearch: bool,
     report_type: str,
     source: str,
     format: str,
@@ -20,7 +19,6 @@ async def research(
         agent_executor = AgentExecutor(
             user_id=user_id,
             task=task,
-            websearch=websearch,
             report_type=report_type,
             websocket=None,
             source=source,

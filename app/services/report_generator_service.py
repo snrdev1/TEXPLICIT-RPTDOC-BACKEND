@@ -25,7 +25,6 @@ from . import user_service as UserService
 def report_generate(
     user_id: Union[str, ObjectId],
     task: str,
-    websearch: bool,
     report_type: str,
     source: str,
     format: str,
@@ -61,7 +60,6 @@ def report_generate(
                 "ref": "pending",
             },
             "task": task,
-            "websearch": websearch,
             "subtopics": subtopics,
             "report_type": report_type,
             "createdBy": {"_id": ObjectId(user_id), "ref": "user"},
@@ -93,7 +91,6 @@ def report_generate(
             research(
                 user_id,
                 task=task,
-                websearch=websearch,
                 report_type=report_type,
                 source=source,
                 format=format,
@@ -149,7 +146,6 @@ def report_generate(
 
             document = {
                 "task": task,
-                "websearch": websearch,
                 "subtopics": subtopics,
                 "report_path": report_path,
                 "report": report,

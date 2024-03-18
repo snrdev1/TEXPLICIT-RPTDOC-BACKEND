@@ -23,6 +23,7 @@ from ..memory import Memory
 from ..scraper import *
 from ..utils.text import (remove_roman_numerals, save_markdown,
                           write_md_to_pdf, write_md_to_word)
+from ..utils.llm import construct_subtopics
 from . import prompts
 
 
@@ -99,30 +100,38 @@ class ResearchAgent:
         # Stores the report generation id
         self.report_generation_id = report_generation_id
 
-    async def conduct_research(self, max_docs: int = 15, score_threshold: float = 1.2, existing_headers: list = []):
+    async def conduct_research(
+        self, 
+        max_docs: int = 15, 
+        score_threshold: float = 1.2, 
+        existing_headers: list = [], 
+        write_report: bool = True
+    ):
         """
-        This Python async function conducts research based on a query, generates a report, and handles
-        exceptions.
+        This async function conducts research based on a query, retrieves context from external sources
+        or documents, and writes a report if specified.
         
         Args:
-          max_docs (int): The `max_docs` parameter specifies the maximum number of documents to retrieve
-        or consider during the research process. In the provided code snippet, it is set to a default
-        value of 15, meaning that the research will involve retrieving or analyzing up to 15 documents.
-        Defaults to 15
+          max_docs (int): The `max_docs` parameter in the `conduct_research` method specifies the
+        maximum number of documents to retrieve or process during the research operation. In this case,
+        the default value is set to 15, meaning that by default, the method will retrieve or process up
+        to 15 documents unless a. Defaults to 15
           score_threshold (float): The `score_threshold` parameter in the `conduct_research` method is
-        used to filter the retrieved documents based on a threshold score. Only documents with a score
-        higher than the specified threshold will be considered in the research process. This helps in
-        ensuring that only relevant and high-quality documents are included in the
+        used to set a threshold value for the score of documents retrieved during the research process.
+        Only documents with a score higher than this threshold will be considered relevant for the
+        research. The default value for `score_threshold` is set to
           existing_headers (list): The `existing_headers` parameter in the `conduct_research` method is
-        a list that contains any headers that are already present in the report. This parameter is used
-        when generating a custom or subtopic report to ensure consistency in the report structure or to
-        avoid duplicating headers that have already been included.
+        a list that contains headers that are already present in a report. This parameter allows you to
+        pass a list of existing headers that you want to include in the report being generated.
+          write_report (bool): The `write_report` parameter in the `conduct_research` method is a
+        boolean flag that determines whether a report should be written or not. If `write_report` is set
+        to `True`, the method will generate and write a report based on the research conducted. If it is
+        set to `. Defaults to True
         
         Returns:
-          The `conduct_research` method returns the generated report based on the research task
-        conducted. If the research task is successful and a report is generated, it will return the
-        report. If an exception occurs during the research process, it will catch the exception, log the
-        details, and return an empty string as the report.
+          The `conduct_research` method returns the `report` generated during the research process. If
+        an exception occurs during the research process, the method catches the exception, logs the
+        details, and then returns an empty string as the report.
         """
         try:
             report = ""
@@ -149,7 +158,17 @@ class ResearchAgent:
                 self.context, self.visited_urls = retrieve_context_from_documents(
                     self.user_id, self.query, max_docs, score_threshold
                 )
+                
+            if write_report:
+                report = await self.write_report(existing_headers)
 
+        except Exception as e:
+            Common.exception_details("ResearchAgent.conduct_research", e)
+            return report
+        
+    async def write_report(self, existing_headers: list = []):
+        try:
+            report = ""
             # Write Research Report
             if len("".join(self.context)) > 50:
                 emit_report_status(self.user_id, self.report_generation_id,
@@ -188,7 +207,7 @@ class ResearchAgent:
             time.sleep(2)
 
             return report
-
+        
         except Exception as e:
             Common.exception_details("ResearchAgent.conduct_research", e)
             return report
@@ -456,21 +475,13 @@ class ResearchAgent:
 
     # DETAILED REPORT
 
-    def extract_subtopics(self, report, search, source):
-        # Convert the Markdown to HTML
-        html_content = mistune.html(report)
-
-        # Use regular expressions to extract only the heading names and remove index and HTML tags
-        h2_headings = re.findall(r"<h2[^>]*>(.*?)<\/h2>", html_content)
-
-        subtopics = []
-        # Print the extracted h2 headings without the index and HTML tags
-        for heading in h2_headings:
-            clean_heading = remove_roman_numerals(
-                heading).split(".")[-1].strip()
-            subtopics.append(
-                {"task": clean_heading, "websearch": search, "source": source}
-            )
+    async def get_subtopics(self):
+        subtopics = await construct_subtopics(
+            task = self.query, 
+            data=self.context,
+            source = self.source,
+            subtopics = self.subtopics
+        )
 
         return subtopics
 
@@ -537,7 +548,7 @@ class ResearchAgent:
                 )
 
                 new_table = timeout_handler(
-                    [], 10, self.tables_extractor.extract_tables, url)
+                    [], 15, self.tables_extractor.extract_tables, url)
                 if len(new_table):
                     new_tables = {"tables": new_table, "url": url}
                     print(f"💎 Found table/s from {url}")

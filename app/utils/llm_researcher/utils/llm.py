@@ -5,15 +5,22 @@ import json
 import logging
 from typing import List, Optional
 
-import openai
-from langchain_community.adapters import openai as lc_openai
 from colorama import Fore, Style
-from ..master.prompts import auto_agent_instructions
-from ..config.config import Config
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.output_parsers import PydanticOutputParser
+from langchain.prompts import PromptTemplate
+from langchain_community.adapters import openai as lc_openai
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.pydantic_v1 import BaseModel, Field, validator
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
+
+from app.utils.validator import Subtopics
+
+from ..config.config import Config
+from ..master.prompts import auto_agent_instructions
 
 CFG = Config()
+
 
 async def create_chat_completion(
     messages: list,  # type: ignore
@@ -41,11 +48,12 @@ async def create_chat_completion(
     if model is None:
         raise ValueError("Model cannot be None")
     if max_tokens is not None and max_tokens > 8001:
-        raise ValueError(f"Max tokens cannot be more than 8001, but got {max_tokens}")
+        raise ValueError(
+            f"Max tokens cannot be more than 8001, but got {max_tokens}")
 
     # create response
     for _ in range(10):  # maximum of 10 attempts
-        if llm_provider=="Google":
+        if llm_provider == "Google":
             response = await send_google_chat_completion_request(
                 messages, model, temperature, max_tokens, stream, llm_provider, websocket
             )
@@ -53,17 +61,18 @@ async def create_chat_completion(
             response = await send_oepnai_chat_completion_request(
                 messages, model, temperature, max_tokens, stream, llm_provider, websocket
             )
-        
+
         return response
 
     logging.error("Failed to get response from OpenAI API")
     raise RuntimeError("Failed to get response from OpenAI API")
 
+
 def convert_messages(messages):
     """
     The function `convert_messages` converts messages based on their role into either SystemMessage or
     HumanMessage objects.
-    
+
     :param messages: It seems like the code snippet you provided is a function called `convert_messages`
     that takes a list of messages as input and converts each message based on its role into either a
     `SystemMessage` or a `HumanMessage`. However, the definition of `SystemMessage` and `HumanMessage`
@@ -75,28 +84,32 @@ def convert_messages(messages):
     converted_messages = []
     for message in messages:
         if message["role"] == "system":
-            converted_messages.append(SystemMessage(content=message["content"]))
+            converted_messages.append(
+                SystemMessage(content=message["content"]))
         elif message["role"] == "user":
             converted_messages.append(HumanMessage(content=message["content"]))
-            
+
     return converted_messages
+
 
 async def send_google_chat_completion_request(
     messages, model, temperature, max_tokens, stream, llm_provider, websocket=None
 ):
     print(f"🤖 Calling {model}...")
-    
-    llm = ChatGoogleGenerativeAI(model=model, convert_system_message_to_human=True, temperature=temperature, max_output_tokens=max_tokens)
+
+    llm = ChatGoogleGenerativeAI(model=model, convert_system_message_to_human=True,
+                                 temperature=temperature, max_output_tokens=max_tokens)
     converted_messages = convert_messages(messages)
     result = llm.invoke(converted_messages)
-    
+
     return result.content
+
 
 async def send_oepnai_chat_completion_request(
     messages, model, temperature, max_tokens, stream, llm_provider, websocket=None
 ):
     print(f"🤖 Calling {model}...")
-    
+
     if not stream:
         result = lc_openai.chat.completions.create(
             model=model,  # Change model here to use different models
@@ -116,7 +129,7 @@ async def stream_response(
     model, messages, temperature, max_tokens, llm_provider, websocket=None
 ):
     print(f"\n🤖 Calling {model}...\n")
-    
+
     paragraph = ""
     response = ""
 
@@ -162,58 +175,56 @@ async def choose_agent(query, cfg):
             llm_provider=cfg.llm_provider
         )
         agent_dict = json.loads(response)
-            
+
         return agent_dict["agent"], agent_dict["agent_role_prompt"]
     except Exception as e:
         print("Exception : ", e)
         return "Default Agent", "You are an AI critical thinker research assistant. Your sole purpose is to write well written, critically acclaimed, objective and structured reports on given text."
 
 
-async def llm_process_subtopics(task: str, subtopics: list) -> list:
+async def construct_subtopics(task: str, data: str, source: str, subtopics: list = []) -> list:
     try:
-        print(f"💎 Number of subtopics to be processed : {len(subtopics)}")
+        parser = PydanticOutputParser(pydantic_object=Subtopics)
 
-        prompt = f"""
-            Provided the main topic -> {task}, subtopics -> {subtopics}
-            - remove all generic subtopics containing tasks like: 
-            '''
-                - introduction
-                - appendices
-                - conclusion
-                - overview
-                - background
-                - abstract
-                - summary 
-                - references
-                etc.
-            '''
-            - merge subtopics closely related or similar in meaning while retaining the latest 'websearch' and 'source' values
-            - Do NOT add any new subtopics
-            - Retain the main task as the first subtopic
-            - Limit the number of subtopics to a maximum of 10 (can be lower)
-            - Finally order the subtopics by their tasks, in a relevant and meaningful order which is presentable in a detailed report
-        """
-
-        print(f"\n🤖 Calling {CFG.fast_llm_model}...\n")
-        
-        response = lc_openai.chat.completions.create(
-            model=CFG.fast_llm_model,
-            response_format={"type": "json_object"},
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a helpful assistant designed to output JSON.",
-                },
-                {"role": "user", "content": prompt},
-            ],
+        prompt = PromptTemplate(
+            template="""
+                Provided the main topic:
+                
+                {task}
+                
+                and research data:
+                
+                {data}
+                
+                - Construct a list of subtopics which indicate the headers of a report document to be generated on the task. 
+                - Default value of source: {source}
+                - You MUST retain these subtopics along with their sources : {subtopics}.
+                - There should NOT be any duplicate subtopics.
+                - Limit the number of subtopics to a maximum of 10 (can be lower)
+                - Finally order the subtopics by their tasks, in a relevant and meaningful order which is presentable in a detailed report
+                
+                {format_instructions}
+            """,
+            input_variables=["task", "data", "source", "subtopics"],
+            partial_variables={
+                "format_instructions": parser.get_format_instructions()},
         )
-        output = json.loads(response.choices[0].message.content)["subtopics"]
 
-        print(f"💎 Final number of subtopics : {len(output)}")
+        print(f"\n🤖 Calling {CFG.smart_llm_model}...\n")
+
+        model = ChatOpenAI(model=CFG.smart_llm_model)
+
+        chain = prompt | model | parser
+
+        output = chain.invoke({
+            "task": task,
+            "data": data,
+            "source": source,
+            "subtopics": subtopics
+        })
 
         return output
 
     except Exception as e:
         print("Exception in parsing subtopics : ", e)
         return subtopics
-

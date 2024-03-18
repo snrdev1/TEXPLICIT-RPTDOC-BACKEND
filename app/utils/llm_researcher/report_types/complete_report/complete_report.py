@@ -17,7 +17,6 @@ class CompleteReport:
         user_id: Union[ObjectId, str],
         task: str,
         report_type: str,
-        websearch: bool = True,
         source: str = "external",
         format: str = "pdf",
         report_generation_id: str = "",
@@ -29,7 +28,6 @@ class CompleteReport:
         self.user_id = user_id
         self.task = task
         self.report_type = report_type
-        self.websearch = websearch
         self.source = source
         self.format = format
         self.report_generation_id = report_generation_id
@@ -43,7 +41,6 @@ class CompleteReport:
         report_executor = AgentExecutor(
             user_id=self.user_id,
             task=self.task,
-            websearch=self.websearch,
             report_type=report_type,
             source=self.source,
             format=self.format,

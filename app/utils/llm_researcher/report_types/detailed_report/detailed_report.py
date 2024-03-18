@@ -1,16 +1,17 @@
 # detailed_report.py
 
 import asyncio
-from typing import Union, List
+from typing import List, Union
 
 from bson import ObjectId
 
 from app.utils.socket import emit_report_status
 
-from ...master.functions import table_of_contents, extract_headers
+from ...master.functions import extract_headers, table_of_contents
 from ...master.research_agent import ResearchAgent
-from ...master.run import AgentExecutor
-from ...utils.llm import llm_process_subtopics
+
+# from ...master.run import AgentExecutor
+# from ...utils.llm import llm_process_subtopics
 
 
 class DetailedReport:
@@ -19,7 +20,6 @@ class DetailedReport:
         user_id: Union[ObjectId, str],
         task: str,
         report_type: str,
-        websearch: bool = True,
         source: str = "external",
         format: str = "pdf",
         report_generation_id: str = "",
@@ -31,7 +31,6 @@ class DetailedReport:
         self.user_id = user_id
         self.task = task
         self.report_type = report_type
-        self.websearch = websearch
         self.source = source
         self.format = format
         self.report_generation_id = report_generation_id
@@ -39,7 +38,7 @@ class DetailedReport:
         self.subtopics = subtopics
         self.urls = urls
         self.check_existing_report = check_existing_report
-        self.main_task_assistant = self._create_main_task_assistant()
+        self.main_task_assistant = self._create_task_assistant()
         self.existing_headers = []
 
     async def generate_report(self) -> tuple:
@@ -47,13 +46,13 @@ class DetailedReport:
         if detailed_report_path:
             return await self._handle_existing_report(detailed_report_path)
 
-        processed_subtopics = await self._get_all_subtopics()
+        subtopics = await self._get_all_subtopics()
 
         (
-            subtopics_reports,
+            _,
             subtopics_reports_body,
-            subtopics_tables,
-        ) = await self._generate_subtopic_reports(processed_subtopics)
+            _,
+        ) = await self._generate_subtopic_reports(subtopics)
 
         if not subtopics_reports_body.strip():
             return "", "", [], set()
@@ -70,7 +69,7 @@ class DetailedReport:
             self.main_task_assistant.visited_urls,
         )
 
-    def _create_main_task_assistant(self) -> ResearchAgent:
+    def _create_task_assistant(self) -> ResearchAgent:
         return ResearchAgent(
             user_id=self.user_id,
             query=self.task,
@@ -79,7 +78,8 @@ class DetailedReport:
             report_type=self.report_type,
             websocket=self.websocket,
             report_generation_id=self.report_generation_id,
-            urls=self.urls
+            urls=self.urls,
+            subtopics=self.subtopics
         )
 
     async def _check_existing_report(self) -> str:
@@ -106,42 +106,10 @@ class DetailedReport:
         )
 
     async def _get_all_subtopics(self) -> list:
-        outline_executor = self._create_outline_executor()
+        await self.main_task_assistant.conduct_research(write_report=False)
+        subtopics = await self.main_task_assistant.get_subtopics()
 
-        (outline_report_markdown, *_) = (  # Unused variables
-            await outline_executor.run_agent()
-        )
-
-        base_subtopics = self.main_task_assistant.extract_subtopics(
-            outline_report_markdown, self.websearch, self.source
-        )
-
-        all_subtopics = (
-            [
-                {
-                    "task": self.task,
-                    "websearch": self.websearch,
-                    "source": self.source,
-                }
-            ]
-            + base_subtopics
-            + self.subtopics
-        )
-
-        return await llm_process_subtopics(task=self.task, subtopics=all_subtopics)
-
-    def _create_outline_executor(self):
-        return AgentExecutor(
-            user_id=self.user_id,
-            task=self.task,
-            websearch=self.websearch,
-            report_type="outline_report",
-            source=self.source,
-            format=self.format,
-            report_generation_id=self.report_generation_id,
-            websocket=self.websocket,
-            urls=self.urls
-        )
+        return subtopics.dict()["subtopics"]
 
     async def _generate_subtopic_reports(self, subtopics: list) -> tuple:
         reports = []

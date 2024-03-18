@@ -12,7 +12,6 @@ class AgentExecutor:
         self,
         user_id: Union[ObjectId, str],
         task: str,
-        websearch: bool = True,
         report_type: str = Enumerator.ReportType.ResearchReport.value,
         source: str = "external",
         format: str = "pdf",
@@ -24,7 +23,6 @@ class AgentExecutor:
     ):
         self.user_id = user_id
         self.task = task
-        self.websearch = websearch
         self.report_type = report_type
         self.source = source
         self.format = format
@@ -60,12 +58,12 @@ class AgentExecutor:
         executor = Executor(
             user_id=self.user_id,
             task=self.task,
-            websearch=self.websearch,
             report_type=self.report_type,
             source=self.source,
             format=self.format,
             report_generation_id=self.report_generation_id,
             websocket=self.websocket,
+            subtopics=self.subtopics,
             check_existing_report=self.check_existing_report,
             urls=self.urls
         )
