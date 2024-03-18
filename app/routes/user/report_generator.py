@@ -9,11 +9,13 @@ import threading
 from flask import Blueprint, request, send_file
 
 from app.config import Config
+from app.utils.validator import ReportGenerationParameters
+
 from ...auth import authorized
 from ...services import report_generator_service as ReportGeneratorService
-from ...utils import Common, Messages, Production, Response, Subscription, Enumerator
+from ...utils import (Common, Enumerator, Messages, Production, Response,
+                      Subscription)
 from ...utils.files_and_folders import get_report_audio_path
-from app.utils.validator import ReportGenerationParameters
 
 report_generator = Blueprint(
     "report_generator", __name__, url_prefix="/report")
@@ -26,31 +28,23 @@ def generate_report(logged_in_user):
         user_id = logged_in_user["_id"]
         request_params = request.get_json()
 
-        # Required parameters
-        required_params = ["task"]
-
-        # Check if all required parameters are present in the request params
-        if not any(
-            (key in request_params) and (request_params[key] not in [None, ""])
-            for key in required_params
-        ):
-            return Response.missing_parameters()
-
         report_generation_info = ReportGenerationParameters(
-            user_id = user_id,
-            task = request_params.get("task"),
-            report_type = request_params.get("report_type", Enumerator.ReportType.ResearchReport.value),
-            source = request_params.get("source", "external"),
-            format = request_params.get("format", "pdf"),
-            report_generation_id = request_params.get("report_generation_id", None),
-            websearch = request_params.get("websearch", False),
-            subtopics = request_params.get("subtopics", []),
-            urls = request_params.get("urls", [])
-        )
+            user_id=user_id,
+            task=request_params.get("task"),
+            report_type=request_params.get(
+                "report_type", Enumerator.ReportType.ResearchReport.value),
+            source=request_params.get("source", "external"),
+            format=request_params.get("format", "pdf"),
+            report_generation_id=request_params.get(
+                "report_generation_id", None),
+            subtopics=request_params.get("subtopics", []),
+            urls=request_params.get("urls", [])
+        ).dict()
 
         # Check subscription validity before generating report
         subscription = Subscription(user_id)
-        subscription_validity = subscription.check_subscription_duration() and subscription.check_subscription_report(report_generation_info.report_type)
+        subscription_validity = subscription.check_subscription_duration(
+        ) and subscription.check_subscription_report(report_generation_info.get("report_type"))
         if not subscription_validity:
             return Response.subscription_invalid(Messages.INVALID_SUBSCRIPTION_REPORT)
 
@@ -58,15 +52,14 @@ def generate_report(logged_in_user):
         t1 = threading.Thread(
             target=ReportGeneratorService.report_generate,
             args=(
-                report_generation_info.user_id,
-                report_generation_info.task,
-                report_generation_info.websearch,
-                report_generation_info.report_type,
-                report_generation_info.source,
-                report_generation_info.format,
-                report_generation_info.report_generation_id,
-                report_generation_info.subtopics,
-                report_generation_info.urls,
+                report_generation_info.get("user_id"),
+                report_generation_info.get("task"),
+                report_generation_info.get("report_type"),
+                report_generation_info.get("source"),
+                report_generation_info.get("format"),
+                report_generation_info.get("report_generation_id"),
+                report_generation_info.get("subtopics"),
+                report_generation_info.get("urls")
             ),
         )
         t1.start()
@@ -76,7 +69,7 @@ def generate_report(logged_in_user):
     except ValueError as e:
         Common.exception_details("report-generator.py : generate_report", e)
         return Response.custom_response([], str(e), True, 400)
-    
+
     except Exception as e:
         Common.exception_details("report-generator.py : generate_report", e)
         return Response.server_error()

@@ -15,7 +15,6 @@ class BasicReport:
         user_id: Union[ObjectId, str],
         task: str,
         report_type: str,
-        websearch: bool = True,
         source: str = "external",
         format: str = "pdf",
         report_generation_id: str = "",
@@ -27,7 +26,6 @@ class BasicReport:
         self.user_id = user_id
         self.task = task
         self.report_type = report_type
-        self.websearch = websearch
         self.source = source
         self.format = format
         self.report_generation_id = report_generation_id
@@ -87,11 +85,12 @@ class BasicReport:
         if len(report_markdown) == 0:
             return "", "", [], set()
 
-        path = await self.assistant.save_report(report_markdown)
+        report_path, table_path = await self.assistant.save_report(report_markdown)
 
         return (
             report_markdown,
-            path,
+            report_path,
             self.assistant.tables_extractor.tables,
+            table_path,
             self.assistant.visited_urls,
         )

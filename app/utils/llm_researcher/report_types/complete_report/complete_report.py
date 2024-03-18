@@ -5,7 +5,6 @@ from typing import Union, List
 from bson import ObjectId
 
 from app.utils import Enumerator
-from app.utils.socket import emit_report_status
 
 from ...master.research_agent import ResearchAgent
 from ...master.run import AgentExecutor
@@ -17,7 +16,6 @@ class CompleteReport:
         user_id: Union[ObjectId, str],
         task: str,
         report_type: str,
-        websearch: bool = True,
         source: str = "external",
         format: str = "pdf",
         report_generation_id: str = "",
@@ -29,7 +27,6 @@ class CompleteReport:
         self.user_id = user_id
         self.task = task
         self.report_type = report_type
-        self.websearch = websearch
         self.source = source
         self.format = format
         self.report_generation_id = report_generation_id
@@ -43,7 +40,6 @@ class CompleteReport:
         report_executor = AgentExecutor(
             user_id=self.user_id,
             task=self.task,
-            websearch=self.websearch,
             report_type=report_type,
             source=self.source,
             format=self.format,
@@ -51,8 +47,8 @@ class CompleteReport:
             report_generation_id=self.report_generation_id,
             urls=self.urls
         )
-        markdown, path, tables, urls = await report_executor.run_agent()
-        return markdown, path, tables, urls
+        markdown, path, tables, table_path, urls = await report_executor.run_agent()
+        return markdown, path, tables, table_path, urls
 
     async def generate_report(self) -> tuple:
 
@@ -62,52 +58,58 @@ class CompleteReport:
 
         (
             outline_report_markdown,
-            outline_report_path,
+            _,
             outline_report_tables,
+            _,
             outline_report_urls,
         ) = await self.create_report(Enumerator.ReportType.OutlineReport.value)
 
         (
             resource_report_markdown,
-            resource_report_path,
+            _,
             resource_report_tables,
+            _,
             resource_report_urls,
         ) = await self.create_report(Enumerator.ReportType.ResourceReport.value)
 
         (
             detailed_report_markdown,
-            detailed_report_path,
+            _,
             detailed_reports_tables,
+            _,
             detailed_report_urls,
         ) = await self.create_report(Enumerator.ReportType.DetailedReport.value)
 
         report_markdown = (
             "#OUTLINE REPORT\n\n"
             + outline_report_markdown
-            + "\n\n\n\n#SUMMARY REPORT\n\n"
+            + "\n\n\n\n#RESOURCE REPORT\n\n"
             + resource_report_markdown
             + "\n\n\n\n#DETAILED REPORT\n\n"
             + detailed_report_markdown
         )
         report_markdown = report_markdown.strip()
 
+        if not report_markdown:
+            return "", "", [], set()
+        
+        # Accumulate all tables
         self.assistant.tables_extractor.tables = (
             outline_report_tables + resource_report_tables + detailed_reports_tables
         )
 
-        if not report_markdown:
-            return "", "", [], set()
-
+        # Accumulate all urls
         self.assistant.visited_urls.update(
             outline_report_urls, resource_report_urls, detailed_report_urls
         )
 
-        path = await self.assistant.save_report(report_markdown)
+        report_path, table_path = await self.assistant.save_report(report_markdown)
 
         return (
             report_markdown,
-            path,
+            report_path, 
             self.assistant.tables_extractor.tables,
+            table_path,
             self.assistant.visited_urls,
         )
 
