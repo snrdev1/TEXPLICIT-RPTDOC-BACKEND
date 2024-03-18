@@ -5,7 +5,6 @@ from typing import Union, List
 from bson import ObjectId
 
 from app.utils import Enumerator
-from app.utils.socket import emit_report_status
 
 from ...master.research_agent import ResearchAgent
 from ...master.run import AgentExecutor
@@ -84,7 +83,7 @@ class CompleteReport:
         report_markdown = (
             "#OUTLINE REPORT\n\n"
             + outline_report_markdown
-            + "\n\n\n\n#SUMMARY REPORT\n\n"
+            + "\n\n\n\n#RESOURCE REPORT\n\n"
             + resource_report_markdown
             + "\n\n\n\n#DETAILED REPORT\n\n"
             + detailed_report_markdown

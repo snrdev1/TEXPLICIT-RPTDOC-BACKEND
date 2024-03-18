@@ -10,9 +10,6 @@ from app.utils.socket import emit_report_status
 from ...master.functions import extract_headers, table_of_contents
 from ...master.research_agent import ResearchAgent
 
-# from ...master.run import AgentExecutor
-# from ...utils.llm import llm_process_subtopics
-
 
 class DetailedReport:
     def __init__(

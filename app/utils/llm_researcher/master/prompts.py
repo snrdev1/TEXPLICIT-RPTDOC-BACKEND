@@ -1,5 +1,7 @@
 from datetime import datetime
+
 from ....utils import Enumerator
+
 
 def generate_search_queries_prompt(question: str, max_iterations: int = 3) -> str:
     return (
@@ -192,12 +194,14 @@ def generate_subtopic_report_prompt(
         f"""construct a detailed report on the subtopic: {current_subtopic} under the main topic: {main_topic}.
         - The report should focus on the answer to the question, should be well structured, informative,
         in-depth, with facts and numbers if available, a minimum of {total_words} words and with markdown syntax.
-        - As this report will be part of a bigger report, you must ONLY include the main body divided into suitable subtopics,
+        - As this sub-report will be part of a bigger report, you must ONLY include the main body divided into suitable subtopics,
         without any introduction, conclusion, or reference section.
         {source_hyperlinks}
         - All related numerical values (if any) should be bold.
-        - This is a list of exisitng subtopic reports and its headers : 
-        {existing_headers}.\n 
+        
+        - This is a list of existing subtopic reports and their sections headers : 
+        {existing_headers}.
+        
         - You MUST AVOID using any of the above headers or any related details, to avoid duplicates!
         - Ensure that you use smaller Markdown headers (e.g., H2 or H3) to structure your content and avoid using the largest Markdown header (H1).
         The H1 header will be used for the heading of the larger report later on.
