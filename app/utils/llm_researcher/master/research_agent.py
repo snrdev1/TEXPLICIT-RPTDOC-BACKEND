@@ -1,11 +1,9 @@
 # Description: Research assistant class that handles the research process for a given question.
 
 import os
-import re
 import time
 from typing import List, Union
 
-import mistune
 from bson import ObjectId
 
 from app.config import Config as GlobalConfig
@@ -21,9 +19,8 @@ from ..context.compression import ContextCompressor
 from ..master.functions import *
 from ..memory import Memory
 from ..scraper import *
-from ..utils.text import (remove_roman_numerals, save_markdown,
-                          write_md_to_pdf, write_md_to_word)
 from ..utils.llm import construct_subtopics
+from ..utils.text import save_markdown, write_md_to_pdf, write_md_to_word
 from . import prompts
 
 

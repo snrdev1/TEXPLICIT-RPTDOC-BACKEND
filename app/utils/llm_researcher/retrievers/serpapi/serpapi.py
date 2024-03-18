@@ -1,7 +1,6 @@
 # SerpApi Retriever
 
 # libraries
-import os
 import json
 from serpapi import GoogleSearch
 from app.config import Config

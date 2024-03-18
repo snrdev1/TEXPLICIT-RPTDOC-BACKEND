@@ -1,7 +1,6 @@
 """Text processing functions"""
 import io
 import os
-import re
 import urllib
 
 import mistune
@@ -252,23 +251,3 @@ def md_to_pdf(input_file, output_file):
         css_file_path=None,
         base_url=None,
     )
-
-
-def remove_roman_numerals(input_string):
-    """
-    The function `remove_roman_numerals` takes an input string and removes any occurrences of Roman
-    numerals from it.
-
-    Args:
-      input_string: The input string is the string from which you want to remove Roman numerals.
-
-    Returns:
-      a string with all Roman numerals removed.
-    """
-    # Define a regular expression pattern for Roman numerals
-    roman_numerals_pattern = r"\b[IVXLCDM]+\b"
-
-    # Use re.sub() to replace Roman numerals with an empty string
-    result_string = re.sub(roman_numerals_pattern, "", input_string)
-
-    return result_string
