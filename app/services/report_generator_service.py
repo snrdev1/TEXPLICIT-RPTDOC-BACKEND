@@ -4,21 +4,23 @@ import os
 import re
 import urllib
 from datetime import datetime, timedelta
-from typing import Tuple, Union
+from typing import List, Tuple, Union
 from urllib.parse import unquote, urlparse, urlunparse
 
-from . import user_service as UserService
 from bson import ObjectId
 
 from app.config import Config
 from app.models.mongoClient import MongoClient
-from ..utils import Response, AudioGenerator, Common, send_mail, Enumerator, Production
 from app.utils.email_helper import send_mail
 from app.utils.files_and_folders import get_report_directory, get_report_path
 from app.utils.formatter import cursor_to_dict, get_base64_encoding
 from app.utils.llm_researcher.llm_researcher import research
 from app.utils.socket import emit_report_status
-from typing import List
+
+from ..utils import (AudioGenerator, Common, Enumerator, Production, Response,
+                     send_mail)
+from . import user_service as UserService
+
 
 def report_generate(
     user_id: Union[str, ObjectId],
@@ -68,6 +70,10 @@ def report_generate(
             "format": format,
             "urls": urls,
             "report_generation_id": report_generation_id,
+            "tables": {
+                "data": [],
+                "path": ""
+            },
         }
         insert_response = _insert_document_into_db(document_data)
 
@@ -133,6 +139,9 @@ def report_generate(
         report: str,
         report_audio: dict[str, Union[bool, str]],
         report_path: str,
+        tables: list,
+        table_path: str,
+        report_urls: set,
         report_generation_time: float,
         status: int,
     ) -> None:
@@ -149,10 +158,14 @@ def report_generate(
                 "createdOn": datetime.utcnow(),
                 "source": source,
                 "format": format,
-                "urls": urls,
+                "urls": list(report_urls),
                 "report_generation_id": report_generation_id,
                 "report_generation_time": report_generation_time,
                 "report_audio": report_audio,
+                "tables": {
+                    "data": tables,
+                    "path": table_path
+                },
             }
 
             if status == int(Enumerator.ReportStep.Success.value):
@@ -208,11 +221,11 @@ def report_generate(
         start_time = datetime.utcnow()
 
         emit_report_status(
-            user_id, report_generation_id, "✈️ Initiaing report generation..."
+            user_id, report_generation_id, "✈️ Initiating report generation..."
         )
 
         report_id = emit_and_save_pending_report()
-        report, report_path = run_research()
+        report, report_path, tables, table_path, report_urls = run_research()
 
         # Log end time of report generation
         end_time = datetime.utcnow()
@@ -228,6 +241,9 @@ def report_generate(
                 report,
                 report_audio,
                 report_path,
+                tables,
+                table_path,
+                report_urls,
                 report_generation_time,
                 int(Enumerator.ReportStep.Success.value),
             )
@@ -240,6 +256,9 @@ def report_generate(
                 report,
                 report_audio,
                 report_path,
+                tables,
+                table_path,
+                report_urls,
                 report_generation_time,
                 int(Enumerator.ReportStep.Failure.value),
             )
@@ -351,7 +370,7 @@ def get_all_reports_from_db(
     return cursor_to_dict(response)
 
 
-def get_report_from_db(reportid):
+def get_report_from_db(reportid: Union[str, ObjectId]):
     """
     The function `get_report_from_db` retrieves a report from a MongoDB database based on the
     provided report ID.
@@ -384,7 +403,7 @@ def get_report_from_db(reportid):
         return None
 
 
-def get_multiple_reports_from_db(reportids):
+def get_multiple_reports_from_db(reportids: List[Union[str, ObjectId]]):
     """
     The function `get_reports_from_db` retrieves reports from a MongoDB database based on the
     provided list of report IDs.
@@ -417,7 +436,7 @@ def get_multiple_reports_from_db(reportids):
     return response
 
 
-def extract_text_before_h2(markdown_string):
+def extract_text_before_h2(markdown_string: str):
     # Split the string into lines
     lines = markdown_string.split("\n")
 
@@ -697,7 +716,8 @@ def get_file_contents(report_document):
                     return io.BytesIO(file_bytes), file_name
 
     except Exception as e:
-        Common.exception_details("report_generator_service.get_file_contents", e)
+        Common.exception_details(
+            "report_generator_service.get_file_contents", e)
         return None, None
 
 

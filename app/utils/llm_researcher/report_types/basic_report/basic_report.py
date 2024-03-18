@@ -87,11 +87,12 @@ class BasicReport:
         if len(report_markdown) == 0:
             return "", "", [], set()
 
-        path = await self.assistant.save_report(report_markdown)
+        report_path, table_path = await self.assistant.save_report(report_markdown)
 
         return (
             report_markdown,
-            path,
+            report_path,
             self.assistant.tables_extractor.tables,
+            table_path,
             self.assistant.visited_urls,
         )

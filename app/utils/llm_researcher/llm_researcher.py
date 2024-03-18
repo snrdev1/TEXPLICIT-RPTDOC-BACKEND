@@ -1,4 +1,4 @@
-from typing import Union, List
+from typing import List, Union
 
 from bson import ObjectId
 
@@ -27,11 +27,11 @@ async def research(
             format=format,
             report_generation_id=report_generation_id,
             subtopics=subtopics,
-            # check_existing_report=True.
+            check_existing_report=False,
             urls=urls
         )
-        report, path, *_ = await agent_executor.run_agent()
-        return report, path
+        report_markdown, report_path, tables, table_path, report_urls = await agent_executor.run_agent()
+        return report_markdown, report_path, tables, table_path, report_urls
     else:
         print("⚠️ Error! Not enough parameters provided.")
-        return "", ""
+        return "", "", [], "", set()

@@ -51,8 +51,8 @@ class CompleteReport:
             report_generation_id=self.report_generation_id,
             urls=self.urls
         )
-        markdown, path, tables, urls = await report_executor.run_agent()
-        return markdown, path, tables, urls
+        markdown, path, tables, table_path, urls = await report_executor.run_agent()
+        return markdown, path, tables, table_path, urls
 
     async def generate_report(self) -> tuple:
 
@@ -62,22 +62,25 @@ class CompleteReport:
 
         (
             outline_report_markdown,
-            outline_report_path,
+            _,
             outline_report_tables,
+            _,
             outline_report_urls,
         ) = await self.create_report(Enumerator.ReportType.OutlineReport.value)
 
         (
             resource_report_markdown,
-            resource_report_path,
+            _,
             resource_report_tables,
+            _,
             resource_report_urls,
         ) = await self.create_report(Enumerator.ReportType.ResourceReport.value)
 
         (
             detailed_report_markdown,
-            detailed_report_path,
+            _,
             detailed_reports_tables,
+            _,
             detailed_report_urls,
         ) = await self.create_report(Enumerator.ReportType.DetailedReport.value)
 
@@ -91,23 +94,26 @@ class CompleteReport:
         )
         report_markdown = report_markdown.strip()
 
+        if not report_markdown:
+            return "", "", [], set()
+        
+        # Accumulate all tables
         self.assistant.tables_extractor.tables = (
             outline_report_tables + resource_report_tables + detailed_reports_tables
         )
 
-        if not report_markdown:
-            return "", "", [], set()
-
+        # Accumulate all urls
         self.assistant.visited_urls.update(
             outline_report_urls, resource_report_urls, detailed_report_urls
         )
 
-        path = await self.assistant.save_report(report_markdown)
+        report_path, table_path = await self.assistant.save_report(report_markdown)
 
         return (
             report_markdown,
-            path,
+            report_path, 
             self.assistant.tables_extractor.tables,
+            table_path,
             self.assistant.visited_urls,
         )
 

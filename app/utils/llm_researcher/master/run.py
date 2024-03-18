@@ -69,13 +69,11 @@ class AgentExecutor:
             check_existing_report=self.check_existing_report,
             urls=self.urls
         )
-        report_markdown, path, tables, urls = await executor.generate_report()
+        report_markdown, report_path, tables, table_path, urls = await executor.generate_report()
 
         end_time = datetime.datetime.utcnow()
-        print({"type": "path", "output": path})
+        print({"type": "path", "output": report_path})
         print({"type": "logs", "output": f"\nEnd time: {end_time}\n"})
-        print(
-            {"type": "logs", "output": f"\nTotal run time: {end_time - start_time}\n"}
-        )
+        print({"type": "logs", "output": f"\nTotal run time: {end_time - start_time}\n"})
 
-        return report_markdown, path, tables, urls
+        return report_markdown, report_path, tables, table_path, urls

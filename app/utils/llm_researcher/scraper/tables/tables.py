@@ -2,11 +2,14 @@ import os
 import re
 
 import mistune
+import openpyxl
 import requests
 from bs4 import BeautifulSoup
 from docx import Document
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.shared import Pt
+from openpyxl.styles import Font
+from openpyxl.utils import get_column_letter
 
 from app.config import Config as GlobalConfig
 from app.utils.common import Common
@@ -20,7 +23,8 @@ class TableExtractor:
     def __init__(self, dir_path: str):
         self.dir_path = dir_path
         self.tables = []
-        self.tables_path = os.path.join(self.dir_path, "tables.txt")
+        self.tables_temp_path = os.path.join(self.dir_path, "tables.txt")
+        self.tables_save_path = os.path.join(self.dir_path, "tables.xlsx")
 
     def read_tables(self):
         if GlobalConfig.GCP_PROD_ENV:
@@ -35,11 +39,11 @@ class TableExtractor:
         # save tables
         if GlobalConfig.GCP_PROD_ENV:
             user_bucket = Production.get_users_bucket()
-            blob = user_bucket.blob(self.tables_path)
+            blob = user_bucket.blob(self.tables_temp_path)
             blob.upload_from_string(str(self.tables))
         else:
-            os.makedirs(os.path.dirname(self.tables_path), exist_ok=True)
-            write_to_file(self.tables_path, str(self.tables))
+            os.makedirs(os.path.dirname(self.tables_temp_path), exist_ok=True)
+            write_to_file(self.tables_temp_path, str(self.tables))
 
     def extract_tables(self, url: str) -> list:
         """
@@ -296,63 +300,26 @@ class TableExtractor:
             return ""
 
     def add_tables_to_doc(self, document: Document):
-        if not len(self.tables):
-            return
 
-        # Add "Data Tables" as a title before the tables section
-        document.add_heading("Data Tables", level=1)
+        def add_table_to_doc(self, document: Document, table_title: str, table_values: list, url: str):
+            try:
+                def clean_text(text):
+                    """Remove spaces, new lines, and tabs from the text."""
+                    return text.replace("\n", " ").replace("\t", " ")
 
-        # Adding tables to the Word document
-        for tables_set in self.tables:
-            tables_in_url = tables_set["tables"]
-            url = tables_set["url"]
-            for table_data in tables_in_url:
-                self.add_table_to_doc(
-                    document, table_data["title"], table_data["values"], url
-                )
+                document.add_heading(table_title, level=2)
 
-    def add_table_to_doc(
-        self, document: Document, table_title: str, table_values: list, url: str
-    ):
-        try:
+                table = document.add_table(rows=1, cols=len(table_values[0]))
 
-            def clean_text(text):
-                """Remove spaces, new lines, and tabs from the text."""
-                return text.replace("\n", " ").replace("\t", " ")
+                table.style = "Table Grid"  # Applying table grid style to have borders
 
-            document.add_heading(table_title, level=2)
-
-            table = document.add_table(rows=1, cols=len(table_values[0]))
-
-            table.style = "Table Grid"  # Applying table grid style to have borders
-
-            # Set header rows as bold and add borders
-            hdr_cells = table.rows[0].cells
-            for i, key in enumerate(table_values[0].keys()):
-                cell = hdr_cells[i]
-                cell.text = clean_text(table_values[0][key])
-                cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                cell.paragraphs[0].runs[0].font.bold = True
-                for paragraph in cell.paragraphs:
-                    for run in paragraph.runs:
-                        run.font.size = Pt(10)
-                for border in cell._element.xpath(".//*"):
-                    border_val = border.attrib.get("val")
-                    if border_val is not None:
-                        border.attrib.clear()
-                        border.attrib["val"] = border_val
-                    else:
-                        border.attrib["val"] = "single"
-
-            for row_data in table_values[1:]:
-                row = table.add_row().cells
-                for i, key in enumerate(row_data.keys()):
-                    cell = row[i]
-                    cell.text = clean_text(row_data[key])
-                    if self.is_numerical(row_data[key]):
-                        cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
-                    else:
-                        cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+                # Set header rows as bold and add borders
+                hdr_cells = table.rows[0].cells
+                for i, key in enumerate(table_values[0].keys()):
+                    cell = hdr_cells[i]
+                    cell.text = clean_text(table_values[0][key])
+                    cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                    cell.paragraphs[0].runs[0].font.bold = True
                     for paragraph in cell.paragraphs:
                         for run in paragraph.runs:
                             run.font.size = Pt(10)
@@ -364,20 +331,51 @@ class TableExtractor:
                         else:
                             border.attrib["val"] = "single"
 
-            # Adding the table URL after the table with right alignment and as a hyperlink
-            p = document.add_paragraph()
-            p.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
-            add_hyperlink(p, "source", url, True)
+                for row_data in table_values[1:]:
+                    row = table.add_row().cells
+                    for i, key in enumerate(row_data.keys()):
+                        cell = row[i]
+                        cell.text = clean_text(row_data[key])
+                        if self.is_numerical(row_data[key]):
+                            cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+                        else:
+                            cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+                        for paragraph in cell.paragraphs:
+                            for run in paragraph.runs:
+                                run.font.size = Pt(10)
+                        for border in cell._element.xpath(".//*"):
+                            border_val = border.attrib.get("val")
+                            if border_val is not None:
+                                border.attrib.clear()
+                                border.attrib["val"] = border_val
+                            else:
+                                border.attrib["val"] = "single"
 
-        except Exception as e:
-            print(f"🚩 Exception in adding tables to word document : {e}")
-            # Revert changes on any exception
-            pass
+                # Adding the table URL after the table with right alignment and as a hyperlink
+                p = document.add_paragraph()
+                p.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+                add_hyperlink(p, "source", url, True)
 
-    def get_combined_html(self, report: str):
-        # Convert Markdown to HTML
-        report_html = mistune.html(report)
+            except Exception as e:
+                print(f"🚩 Exception in adding tables to word document : {e}")
+                # Revert changes on any exception
+                pass
 
+        if not len(self.tables):
+            return
+
+        # Add "Data Tables" as a title before the tables section
+        document.add_heading("Data Tables", level=1)
+
+        # Adding tables to the Word document
+        for tables_set in self.tables:
+            tables_in_url = tables_set["tables"]
+            url = tables_set["url"]
+            for table_data in tables_in_url:
+                add_table_to_doc(
+                    document, table_data["title"], table_data["values"], url)
+
+    def get_combined_html(self, report_html: str):
         # Get the html of the tables
         tables_html = ""
         for tables_in_url in self.tables:
@@ -392,6 +390,51 @@ class TableExtractor:
 
         return combined_html
 
+    def save_table_to_excel(self):
+        try:
+            if not self.tables:
+                return ""
+            
+            # Create a new workbook
+            workbook = openpyxl.Workbook()
+
+            # Remove the default blank sheet
+            workbook.remove(workbook.active)
+
+            # Iterate through the 'tables' list
+            for table_dict in self.tables[0]['tables']:
+                # Get the table title and values
+                table_title = table_dict['title']
+                table_values = table_dict['values']
+
+                # Create a new sheet with the table title
+                sheet = workbook.create_sheet(title=table_title)
+
+                # Write the table values to the sheet
+                for row_idx, row in enumerate(table_values, start=1):
+                    for col_idx, value in enumerate(row.values(), start=1):
+                        cell = sheet.cell(
+                            row=row_idx, column=col_idx, value=str(value))
+
+                        # Make the first row values bold and increase font size
+                        if row_idx == 1:
+                            cell.font = Font(bold=True, size=14)
+
+                        # Adjust column width based on the length of the cell value
+                        col_letter = get_column_letter(col_idx)
+                        column_width = len(str(value)) + 2  # Add some padding
+                        sheet.column_dimensions[col_letter].width = column_width
+
+            # Save the workbook to a file
+            workbook.save(self.tables_save_path)
+            print(f"Excel file '{self.tables_save_path}' has been created.")
+            
+            return urllib.parse.quote(self.tables_save_path)
+
+        except Exception as e:
+            Common.exception_details("TableExtractor.save_table_excel", e)
+            return ""
+
     @staticmethod
     def is_numerical(value: str) -> bool:
         """
@@ -404,5 +447,6 @@ class TableExtractor:
         Returns:
         The function is_numerical is returning a boolean value.
         """
-        numerical_pattern = re.compile(r"^-?(\d{1,3}(,\d{3})*|\d+)?(\.\d+)?%?$")
+        numerical_pattern = re.compile(
+            r"^-?(\d{1,3}(,\d{3})*|\d+)?(\.\d+)?%?$")
         return bool(numerical_pattern.match(str(value).replace(",", "")))

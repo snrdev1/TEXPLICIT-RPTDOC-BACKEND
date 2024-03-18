@@ -58,7 +58,7 @@ class DetailedReport:
         if not subtopics_reports_body.strip():
             return "", "", [], set()
 
-        detailed_report, detailed_report_path = await self._construct_detailed_report(
+        detailed_report, detailed_report_path, table_path = await self._construct_detailed_report(
             subtopics_reports_body
         )
 
@@ -66,6 +66,7 @@ class DetailedReport:
             detailed_report,
             detailed_report_path,
             self.main_task_assistant.tables_extractor.tables,
+            table_path,
             self.main_task_assistant.visited_urls,
         )
 
@@ -221,7 +222,7 @@ class DetailedReport:
         detailed_report = report_body + "\n\n" + conclusion
         detailed_report = introduction + "\n\n" + \
             table_of_contents(detailed_report) + detailed_report
-        detailed_report_path = await self.main_task_assistant.save_report(
+        detailed_report_path, table_path = await self.main_task_assistant.save_report(
             detailed_report
         )
-        return detailed_report, detailed_report_path
+        return detailed_report, detailed_report_path, table_path
