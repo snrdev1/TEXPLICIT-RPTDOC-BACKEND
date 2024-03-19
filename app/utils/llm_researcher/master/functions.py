@@ -1,12 +1,12 @@
-import asyncio
 import json
 
 import markdown
 
+from ....utils import Enumerator
 from ..master.prompts import *
 from ..scraper import Scraper
 from ..utils.llm import *
-from ....utils import Enumerator
+
 
 def get_retriever(retriever):
     """

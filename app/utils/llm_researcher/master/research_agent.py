@@ -1,11 +1,9 @@
 # Description: Research assistant class that handles the research process for a given question.
 
 import os
-import re
 import time
 from typing import List, Union
 
-import mistune
 from bson import ObjectId
 
 from app.config import Config as GlobalConfig
@@ -21,9 +19,8 @@ from ..context.compression import ContextCompressor
 from ..master.functions import *
 from ..memory import Memory
 from ..scraper import *
-from ..utils.text import (remove_roman_numerals, save_markdown,
-                          write_md_to_pdf, write_md_to_word)
 from ..utils.llm import construct_subtopics
+from ..utils.text import save_markdown, write_md_to_pdf, write_md_to_word
 from . import prompts
 
 
@@ -161,6 +158,8 @@ class ResearchAgent:
                 
             if write_report:
                 report = await self.write_report(existing_headers)
+                
+            return report
 
         except Exception as e:
             Common.exception_details("ResearchAgent.conduct_research", e)
@@ -403,8 +402,9 @@ class ResearchAgent:
                 updated_markdown_report
             )
 
-        await stream_output("logs", f"💾 Saving tables to excel...\n")
-        encoded_table_path = self.tables_extractor.save_table_to_excel()
+        encoded_table_path = ""
+        # await stream_output("logs", f"💾 Saving tables to excel...\n")
+        # encoded_table_path = self.tables_extractor.save_tables_to_excel()
         
         return encoded_file_path, encoded_table_path
 
@@ -538,19 +538,15 @@ class ResearchAgent:
         elif len(urls):
             # Extract all tables from search urls
             for url in urls:
-                if url.endswith(".pdf"):
-                    continue
-
                 await stream_output(
                     "logs",
                     f"🌐 Looking for tables to extract from {url}...\n",
                     self.websocket,
                 )
 
-                new_table = timeout_handler(
-                    [], 15, self.tables_extractor.extract_tables, url)
-                if len(new_table):
-                    new_tables = {"tables": new_table, "url": url}
+                tables = timeout_handler([], 10, self.tables_extractor.extract_tables, url)
+                if len(tables):
+                    new_tables = {"tables": tables, "url": url}
                     print(f"💎 Found table/s from {url}")
                     self.tables_extractor.tables.append(new_tables)
 

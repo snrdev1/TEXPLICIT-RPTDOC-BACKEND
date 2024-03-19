@@ -42,33 +42,27 @@ def retrieve_context_from_documents(user_id, query: str, max_docs: int = 15, sco
 
       # Filter all relevant docs using score
       scored_docs = [doc for doc in relevant_docs if doc[1] <= score_threshold]
-      # print("ℹ️ scored_docs : ", scored_docs)
 
       # Extract all virtual filenames
       virtual_filenames = [doc[0].metadata["source"] for doc in scored_docs]
-      # print("ℹ️ virtual_filenames : ", virtual_filenames)
 
       # Get all original files from the DB using virtual filenames
       original_files = MyDocumentsService().get_all_files_by_virtual_name(
           user_id, virtual_filenames
       )
-      # print("ℹ️ original_files : ", original_files)
 
       # Get the original filenames from the data loaded from DB
       filenames = [file["originalFileName"] for file in original_files]
-      # print("ℹ️ filenames : ", filenames)
 
       # Format the extracted docs in suitable format to construct the context
       processed_docs = [
           f"Excerpt from file {filename} : {doc[0].page_content}"
           for filename, doc in zip(filenames, scored_docs)
       ]
-      # print("ℹ️ processed_docs : ", processed_docs)
 
       # Appending the formatted docs to form the context
       context = ("\n").join(processed_docs)
 
-      # print(f"ℹ️ Context :  {context}")
       print(f"💎 Found {len(processed_docs)} relevant docs...")
 
     return context, filenames

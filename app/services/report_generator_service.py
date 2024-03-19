@@ -67,11 +67,7 @@ def report_generate(
             "source": source,
             "format": format,
             "urls": urls,
-            "report_generation_id": report_generation_id,
-            "tables": {
-                "data": [],
-                "path": ""
-            },
+            "report_generation_id": report_generation_id
         }
         insert_response = _insert_document_into_db(document_data)
 
@@ -148,7 +144,7 @@ def report_generate(
                 "task": task,
                 "subtopics": subtopics,
                 "report_path": report_path,
-                "report": report,
+                "table_path": table_path,
                 "report_type": report_type,
                 "createdBy": {"_id": ObjectId(user_id), "ref": "user"},
                 "createdOn": datetime.utcnow(),
@@ -157,11 +153,7 @@ def report_generate(
                 "urls": list(report_urls),
                 "report_generation_id": report_generation_id,
                 "report_generation_time": report_generation_time,
-                "report_audio": report_audio,
-                "tables": {
-                    "data": tables,
-                    "path": table_path
-                },
+                "report_audio": report_audio
             }
 
             if status == int(Enumerator.ReportStep.Success.value):
@@ -181,6 +173,7 @@ def report_generate(
         # Prepare report document for update
         report_document = prepare_report_document()
         # Update report document in db
+        
         update_count = update_report_document_in_db(report_document)
         # Transform the report data to suitable format before emitting
         report_document_for_emitting = transform_data(
