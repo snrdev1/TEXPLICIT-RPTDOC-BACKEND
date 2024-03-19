@@ -167,8 +167,3 @@ cython_debug/
 
 #All assets
 assets/
-
-#ppt images
-app/ppt_outputs/
-app/excel_outputs/
-TEXPLICIT-RPTDOC-BACKEND.zip

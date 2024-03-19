@@ -544,8 +544,7 @@ class ResearchAgent:
                     self.websocket,
                 )
 
-                new_table = timeout_handler(
-                    [], 15, self.tables_extractor.extract_tables, url)
+                new_table = timeout_handler([], 15, self.tables_extractor.extract_tables, url)
                 if len(new_table):
                     new_tables = {"tables": new_table, "url": url}
                     print(f"💎 Found table/s from {url}")
