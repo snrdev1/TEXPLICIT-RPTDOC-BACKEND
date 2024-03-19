@@ -1,7 +1,6 @@
 """Text processing functions"""
 import io
 import os
-import re
 import urllib
 
 import mistune
@@ -27,125 +26,51 @@ def write_to_file(filename: str, text: str) -> None:
         file.write(text)
 
 
-async def save_markdown(task: str, path: str, text: str) -> str:
-    """
-    The function `save_markdown` saves a markdown file to a specified path, either in a production or
-    development environment.
-
-    Args:
-      task (str): A string representing the task or purpose of the markdown file.
-      path (str): The `path` parameter is a string that represents the file path where the markdown file
-    will be saved.
-      text (str): The `text` parameter is a string that represents the content of the markdown file that
-    you want to save.
-
-    Returns:
-      the encoded file path.
-    """
+async def save_markdown(path: str, text: str) -> str:
     if GlobalConfig.GCP_PROD_ENV:
-        encoded_file_path = await _save_markdown_prod(task, path, text)
+        encoded_file_path = await _save_markdown_prod(path, text)
 
     else:
-        encoded_file_path = await _save_markdown_dev(task, path, text)
+        encoded_file_path = await _save_markdown_dev(path, text)
 
     return encoded_file_path
 
 
-async def _save_markdown_prod(task: str, path: str, text: str) -> str:
-    """
-    The function `_save_markdown_prod` saves a markdown file to a specified path in a user's production
-    bucket and returns the encoded file path.
-
-    Args:
-      task (str): The `task` parameter is a string that represents the name or identifier of the task.
-    It is used to create the file path for the markdown file.
-      path (str): The `path` parameter is a string that represents the directory path where the markdown
-    file will be saved.
-      text (str): The `text` parameter is a string that represents the content of the markdown file that
-    you want to save.
-
-    Returns:
-      the encoded file path of the uploaded markdown file.
-    """
-    file_path = f"{path}/{task}"
+async def _save_markdown_prod(path: str, text: str) -> str:
     user_bucket = Production.get_users_bucket()
-    blob = user_bucket.blob(f"{file_path}.md")
+    blob = user_bucket.blob(f"{path}.md")
     blob.upload_from_string(text, content_type="text/markdown")
 
-    encoded_file_path = urllib.parse.quote(f"{file_path}.md")
+    encoded_file_path = urllib.parse.quote(f"{path}.md")
 
     return encoded_file_path
 
 
-async def _save_markdown_dev(task: str, path: str, text: str) -> str:
-    """
-    The function `_save_markdown_dev` saves a markdown text to a specified file path and returns the
-    encoded file path.
-
-    Args:
-      task (str): The `task` parameter is a string that represents the name or identifier of the task or
-    report. It is used to create the file name for the markdown file.
-      path (str): The `path` parameter is a string that represents the directory path where the markdown
-    file will be saved.
-      text (str): The `text` parameter is a string that represents the content of the markdown file that
-    you want to save.
-
-    Returns:
-      the encoded file path of the saved markdown file.
-    """
-    # Ensure that this file path exists
-    os.makedirs(path, exist_ok=True)
-
-    # Get the complete file path based reports folder, type of report
-    file_path = os.path.join(path, task)
-
+async def _save_markdown_dev(path: str, text: str) -> str:
     # Write the report to markdown file
-    write_to_file(f"{file_path}.md", text)
+    write_to_file(f"{path}.md", text)
 
-    encoded_file_path = urllib.parse.quote(f"{file_path}.md")
+    encoded_file_path = urllib.parse.quote(f"{path}.md")
 
     return encoded_file_path
 
 
-async def write_md_to_word(task: str, path: str, report: str, table_extractor):
-    """
-    The function `write_md_to_word` writes markdown text to a Word document and returns the encoded file
-    path.
-
-    Args:
-      task (str): A string representing the task or purpose of the document.
-      path (str): The `path` parameter is a string that represents the file path where the Word document
-    will be saved.
-      report (str): The `report` parameter is a string that represents the content of the Markdown file that
-    you want to convert to a Word document.
-
-    Returns:
-      the encoded file path.
-    """
+async def write_md_to_word(path: str, report: str):
     if GlobalConfig.GCP_PROD_ENV:
-        encoded_file_path = await _write_md_to_word_prod(
-            task, path, report, table_extractor
-        )
+        encoded_file_path = await _write_md_to_word_prod(path, report)
     else:
-        encoded_file_path = await _write_md_to_word_dev(
-            task, path, report, table_extractor
-        )
+        encoded_file_path = await _write_md_to_word_dev(path, report)
 
     return encoded_file_path
 
 
-async def _write_md_to_word_prod(
-    task: str, path: str, report: str, table_extractor
-) -> str:
-    file_path = f"{path}/{task}"
+async def _write_md_to_word_prod(path: str, report: str) -> str:
     user_bucket = Production.get_users_bucket()
 
-    # combined_html = table_extractor.get_combined_html(report)
+    # Convert Markdown to HTML
     html = mistune.html(report)
     doc = Document()
     HtmlToDocx().add_html_to_document(html, doc)
-
-    table_extractor.add_tables_to_doc(doc)
 
     # Create a temporary file-like object to save the updated document
     temp_doc_io = io.BytesIO()
@@ -153,148 +78,71 @@ async def _write_md_to_word_prod(
     temp_doc_io.seek(0)  # Reset the pointer to the beginning of the stream
 
     # Upload the Docx file to the bucket
-    blob = user_bucket.blob(f"{file_path}.docx")
+    blob = user_bucket.blob(f"{path}.docx")
     blob.upload_from_file(
         temp_doc_io,
         content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
 
-    print(f"🎉 {task} written to {file_path}.docx")
-
-    encoded_file_path = urllib.parse.quote(f"{file_path}.docx")
+    encoded_file_path = urllib.parse.quote(f"{path}.docx")
 
     return encoded_file_path
 
 
-async def _write_md_to_word_dev(
-    task: str, path: str, report: str, table_extractor
-) -> str:
-    # Ensure that this file path exists
-    os.makedirs(path, exist_ok=True)
-
-    # Get the complete file path based reports folder, type of report
-    file_path = os.path.join(path, task)
-
-    # combined_html = table_extractor.get_combined_html(report)
+async def _write_md_to_word_dev(path: str, report: str) -> str:
+    # Convert Markdown to HTML
     html = mistune.html(report)
     doc = Document()
     HtmlToDocx().add_html_to_document(html, doc)
 
-    table_extractor.add_tables_to_doc(doc)
+    doc.save(f"{path}.docx")
 
-    doc.save(f"{file_path}.docx")
-
-    print(f"🎉 {task} written to {file_path}.docx")
-
-    encoded_file_path = urllib.parse.quote(f"{file_path}.docx")
+    encoded_file_path = urllib.parse.quote(f"{path}.docx")
 
     return encoded_file_path
 
 
-async def write_md_to_pdf(task: str, path: str, report: str, table_extractor) -> str:
-    """
-    The function `write_md_to_pdf` writes markdown text to a PDF file and returns the encoded file path.
-
-    Args:
-      task (str): A string representing the task or purpose of the PDF file.
-      path (str): The `path` parameter is a string that represents the file path where the PDF file will
-    be saved.
-      report (str): The `report` parameter is a string that represents the content of the Markdown file that
-    you want to convert to a PDF.
-
-    Returns:
-      the encoded file path as a string.
-    """
+async def write_md_to_pdf(path: str, report: str) -> str:
+  
     if GlobalConfig.GCP_PROD_ENV:
-        encoded_file_path = await _write_md_to_pdf_prod(
-            task, path, report, table_extractor
-        )
+        encoded_file_path = await _write_md_to_pdf_prod(path, report)
 
     else:
-        encoded_file_path = await _write_md_to_pdf_dev(
-            task, path, report, table_extractor
-        )
+        encoded_file_path = await _write_md_to_pdf_dev(path, report)
 
     return encoded_file_path
 
 
-async def _write_md_to_pdf_prod(
-    task: str, path: str, report: str, table_extractor
-) -> str:
-    """
-    The function `_write_md_to_pdf_prod` takes a task, path, and text as input, uploads the text as a
-    Markdown file to a user's bucket, converts the Markdown to HTML, generates a PDF file from the HTML
-    using WeasyPrint, uploads the PDF file to the user's bucket, and returns the encoded file path of
-    the PDF file.
-
-    Args:
-      task (str): The `task` parameter is a string that represents the name or identifier of the task
-    for which the Markdown file and PDF file will be created.
-      path (str): The `path` parameter is a string representing the directory path where the files will
-    be stored.
-      report (str): The `report` parameter is a string that contains the content of the Markdown file that
-    needs to be converted to PDF.
-
-    Returns:
-      the encoded file path of the PDF file that was generated.
-    """
-    file_path = f"{path}/{task}"
+async def _write_md_to_pdf_prod(path: str, report: str) -> str:
     user_bucket = Production.get_users_bucket()
 
-    # Combined html
-    html = table_extractor.get_combined_html(report)
+    # Convert Markdown to HTML
+    html = mistune.html(report)
 
     # Create a WeasyPrint HTML object
     html_obj = HTML(string=html)
 
     # Generate the PDF file
     pdf_bytes = html_obj.write_pdf()
-    blob = user_bucket.blob(f"{file_path}.pdf")
+    blob = user_bucket.blob(f"{path}.pdf")
     blob.upload_from_string(pdf_bytes, content_type="application/pdf")
 
-    print(f"🎉 {task} written to {file_path}.pdf")
-
-    encoded_file_path = urllib.parse.quote(f"{file_path}.pdf")
+    encoded_file_path = urllib.parse.quote(f"{path}.pdf")
 
     return encoded_file_path
 
 
-async def _write_md_to_pdf_dev(
-    task: str, path: str, report: str, table_extractor
-) -> str:
-    """
-    The function `_write_md_to_pdf_dev` takes a task, path, and text as input, writes the text to a
-    markdown file, converts the markdown to HTML, generates a PDF file using WeasyPrint, and returns the
-    encoded file path of the PDF.
+async def _write_md_to_pdf_dev(path: str, report: str) -> str:
+    # Convert Markdown to HTML
+    html = mistune.html(report)
 
-    Args:
-      task (str): The `task` parameter is a string that represents the name or identifier of the task or
-    report. It is used to create the file name for the markdown and PDF files.
-      path (str): The `path` parameter is the directory path where the PDF file will be saved.
-      report (str): The `report` parameter is a string that contains the content of the report in Markdown
-    format.
-
-    Returns:
-      the encoded file path of the generated PDF file.
-    """
-    # Ensure that this file path exists
-    os.makedirs(path, exist_ok=True)
-
-    # Get the complete file path based reports folder, type of report
-    file_path = os.path.join(path, task)
-
-    # Combined html
-    html = table_extractor.get_combined_html(report)
-    
     # Create a WeasyPrint HTML object
     html_obj = HTML(string=html)
 
     # Generate the PDF file
-    html_obj.write_pdf(f"{file_path}.pdf")
+    html_obj.write_pdf(f"{path}.pdf")
 
-    print(f"🎉 {task} written to {file_path}.pdf")
-
-    encoded_file_path = urllib.parse.quote(f"{file_path}.pdf")
+    encoded_file_path = urllib.parse.quote(f"{path}.pdf")
 
     return encoded_file_path
 
@@ -403,23 +251,3 @@ def md_to_pdf(input_file, output_file):
         css_file_path=None,
         base_url=None,
     )
-
-
-def remove_roman_numerals(input_string):
-    """
-    The function `remove_roman_numerals` takes an input string and removes any occurrences of Roman
-    numerals from it.
-
-    Args:
-      input_string: The input string is the string from which you want to remove Roman numerals.
-
-    Returns:
-      a string with all Roman numerals removed.
-    """
-    # Define a regular expression pattern for Roman numerals
-    roman_numerals_pattern = r"\b[IVXLCDM]+\b"
-
-    # Use re.sub() to replace Roman numerals with an empty string
-    result_string = re.sub(roman_numerals_pattern, "", input_string)
-
-    return result_string

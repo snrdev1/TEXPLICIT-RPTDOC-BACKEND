@@ -30,7 +30,7 @@ class Subscription:
             start_date = datetime.strptime(subscription_duration.get("start_date", current_date)["$date"], '%Y-%m-%dT%H:%M:%S.%fZ')
             end_date = datetime.strptime(subscription_duration.get("end_date", current_date)["$date"], '%Y-%m-%dT%H:%M:%S.%fZ')
 
-            print("check_subscription_duration : ", start_date <= current_date < end_date)
+            # print("check_subscription_duration : ", start_date <= current_date < end_date)
 
             return start_date <= current_date < end_date
 
@@ -120,9 +120,7 @@ class Subscription:
             used_document_size = subscription_document.get(
                 "used", {}).get("document_size", 0)
 
-            # print("check_subscription_new_document : ", allowed_document_size > used_document_size + upload_documents_size)
-
-            return allowed_document_size > used_document_size + upload_documents_size
+            return allowed_document_size >= (used_document_size + upload_documents_size)
 
         except Exception as e:
             Common.exception_details("Subscription.check_subscription_document", e)

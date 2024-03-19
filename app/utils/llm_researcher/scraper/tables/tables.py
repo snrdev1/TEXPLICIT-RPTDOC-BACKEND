@@ -1,12 +1,15 @@
 import os
 import re
 
-import mistune
+import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from docx import Document
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.shared import Pt
+from openpyxl import Workbook
+from openpyxl.styles import Font, NamedStyle
+from openpyxl.utils.dataframe import dataframe_to_rows
 
 from app.config import Config as GlobalConfig
 from app.utils.common import Common
@@ -20,7 +23,8 @@ class TableExtractor:
     def __init__(self, dir_path: str):
         self.dir_path = dir_path
         self.tables = []
-        self.tables_path = os.path.join(self.dir_path, "tables.txt")
+        self.tables_temp_path = os.path.join(self.dir_path, "tables.txt")
+        self.tables_save_path = os.path.join(self.dir_path, "tables.xlsx")
 
     def read_tables(self):
         if GlobalConfig.GCP_PROD_ENV:
@@ -35,197 +39,86 @@ class TableExtractor:
         # save tables
         if GlobalConfig.GCP_PROD_ENV:
             user_bucket = Production.get_users_bucket()
-            blob = user_bucket.blob(self.tables_path)
+            blob = user_bucket.blob(self.tables_temp_path)
             blob.upload_from_string(str(self.tables))
         else:
-            os.makedirs(os.path.dirname(self.tables_path), exist_ok=True)
-            write_to_file(self.tables_path, str(self.tables))
+            os.makedirs(os.path.dirname(self.tables_temp_path), exist_ok=True)
+            write_to_file(self.tables_temp_path, str(self.tables))
 
     def extract_tables(self, url: str) -> list:
         """
-        Extract tables from a given URL excluding those with hyperlinks in values.
+        Extract tables from a given URL excluding those with hyperlinks in values and skipping dataframes with zero or one rows.
 
         Args:
-        - url (str): The URL to scrape tables from.
+            url (str): The URL to scrape tables from.
 
         Returns:
-        - list: List of dictionaries, each representing a table with title and values.
+            list: List of dictionaries, each representing a table with title and values.
         """
-
         def extract_table_title(table) -> str:
             """
             Extract and process the title of a table.
 
             Args:
-            - table: BeautifulSoup object representing a table.
+                table: BeautifulSoup object representing a table.
 
             Returns:
-            - str: Processed title of the table.
+                str: Processed title of the table.
             """
-
             def process_table_title(title):
                 # Removing Table numberings like "Table 1:", "Table1-", etc.
-                cleaned_title = re.sub(
-                    r"^\s*Table\s*\d+\s*[:\-]\s*", "", title, flags=re.IGNORECASE
-                )
+                cleaned_title = re.sub(r"^\\s*Table\\s*\\d+\\s*[:\\-]\\s*", "", title, flags=re.IGNORECASE)
                 return cleaned_title.strip()
 
-            title = ""
             # Check for a caption tag within the table
             table_caption = table.find("caption")
             if table_caption:
                 title = table_caption.get_text(strip=True)
             else:
                 # If no caption, look at previous tags like h1, h2, etc.
-                previous_tag = table.find_previous(
-                    ["h1", "h2", "h3", "h4", "h5", "h6", "p"]
-                )
+                previous_tag = table.find_previous(["h1", "h2", "h3", "h4", "h5", "h6", "p"])
                 if previous_tag:
                     title = previous_tag.get_text(strip=True)
+                else:
+                    title = ""
 
             return process_table_title(title)
 
-        def extract_table_data(table) -> list:
-            """
-            Extract data from a table excluding rows with hyperlinks.
-
-            Args:
-            - table: BeautifulSoup object representing a table.
-
-            Returns:
-            - list: List of dictionaries, each representing a row in the table.
-            """
-            table_data = []
-            rows = table.find_all("tr")
-
-            header_dict = {}
-            thead = table.find("thead")
-
-            if thead:
-                header_row = thead.find("tr")
-                if header_row:
-                    # Extract header names from thead
-                    header_cells = header_row.find_all(["th", "td"])
-                    header_names = [
-                        cell.text.strip() for cell in header_cells if cell.text.strip()
-                    ]
-                    # Assuming the header row contains unique names for keys
-                    header_dict = {
-                        index: name for index, name in enumerate(header_names)
-                    }
-
-            if header_dict:
-                table_data.append(header_dict)
-
-            for row in rows[1:]:
-                row_data = {}
-                cells = row.find_all(["td", "th"])
-                valid_row = False
-
-                for idx, cell in enumerate(cells):
-                    cell_text = cell.text.strip() if idx < len(header_dict) else ""
-
-                    row_data[str(idx)] = cell_text
-
-                    # Check if cell_text is valid (not in exclusion list)
-                    if cell_text and cell_text not in [
-                        "NA",
-                        "n/a",
-                        "na",
-                        "-",
-                        "",
-                        "NaN",
-                    ]:
-                        valid_row = True
-
-                if valid_row:
-                    table_data.append(row_data)
-
-            return {"title": extract_table_title(table), "values": table_data}
-
-        def has_hyperlinks(table_data) -> bool:
-            """
-            Check if any values in the table data contain hyperlinks.
-
-            Args:
-            - table_data (list): List of dictionaries representing table data.
-
-            Returns:
-            - bool: True if hyperlinks are found, False otherwise.
-            """
-            for row in table_data:
-
-                for value in row:
-                    # Check if the value contains an <a> tag
-                    if isinstance(value, str) and re.search(
-                        r'<a\s+(?:[^>]*?\s+)?href=[\'"]([^\'"]*)[\'"]', value
-                    ):
-                        return True
-            return False
-
-        def filter_tables(table) -> bool:
-            """
-            The function `filter_tables` filters out tables based on specific criteria such as blank
-            values, hyperlinks, titles, and column names.
-
-            :param table: The `filter_tables` function takes a `table` parameter, which is expected to
-            be a dictionary representing a table. The dictionary should have the following keys:
-            :return: The function `filter_tables` returns a boolean value - `True` if the table passes
-            all the exclusion criteria specified in the function, and `False` if the table fails any of
-            the criteria.
-            """
-            try:
-                # Exlcude tables where value field is blank
-                if len(table["values"]) in [0, 1]:
-                    return False
-
-                # Exclude tables with hyperlinks
-                if has_hyperlinks(table["values"]):
-                    return False
-
-                # Exclude tables with specific titles
-                if table["title"].lower() in [
-                    "",
-                    "information related to the various screen readers",
-                ]:
-                    return False
-
-                # Exclude tables with specific column names
-                for column_name in table["values"][0].values():
-                    if column_name.lower() in ["download"]:
-                        return False
-
-                return True
-
-            except Exception as e:
-                Common.exception_details("TableExtractor.filter_tables", e)
-                return False
-
-        try:
-            if url.endswith(".pdf"):
-                return [], url
-
+        def extract_table_from_pdf() -> list:
+            return []
+        
+        def extract_table_from_url() -> list:
             response = requests.get(url)
             response.raise_for_status()
+
             soup = BeautifulSoup(response.content, "html.parser")
-            tables = soup.find_all("table")
+            dfs = pd.read_html(response.content)
+
             extracted_tables = []
+            for idx, df in enumerate(dfs):
+                # Skip dataframes with zero or one rows
+                if len(df) > 1:
+                    table_title = extract_table_title(soup.find_all("table")[idx])
+                    # Convert NaN values to "-"
+                    df_filled = df.fillna("-")
+                    extracted_tables.append({"title": table_title, "values": df_filled.to_dict(orient="records")})
+                    
+            return extracted_tables
 
-            for table in tables:
-                nested_tables = table.find_all("table")
-                if not nested_tables:
-                    table_struct = extract_table_data(table)
-
-                    if filter_tables(table_struct):
-                        extracted_tables.append(table_struct)
+        try:
+            extracted_tables = []
+            if url.endswith(".pdf"):
+                extracted_tables = extract_table_from_pdf()
+            else:
+                extracted_tables = extract_table_from_url()
 
             return extracted_tables
 
         except requests.RequestException as e:
-            print(f"🚩 Request Exception when scraping tables : {e}")
+            print(f"🚩 Request Exception when scraping tables: {e}")
             return []
         except Exception as e:
-            Common.exception_details("TableExtractor.extract_tables", e)
+            print(f"🚩 Error in extract_tables: {e}")
             return []
 
     def tables_to_html(self, list_of_tables: list, url: str) -> str:
@@ -296,63 +189,26 @@ class TableExtractor:
             return ""
 
     def add_tables_to_doc(self, document: Document):
-        if not len(self.tables):
-            return
 
-        # Add "Data Tables" as a title before the tables section
-        document.add_heading("Data Tables", level=1)
+        def add_table_to_doc(self, document: Document, table_title: str, table_values: list, url: str):
+            try:
+                def clean_text(text):
+                    """Remove spaces, new lines, and tabs from the text."""
+                    return text.replace("\n", " ").replace("\t", " ")
 
-        # Adding tables to the Word document
-        for tables_set in self.tables:
-            tables_in_url = tables_set["tables"]
-            url = tables_set["url"]
-            for table_data in tables_in_url:
-                self.add_table_to_doc(
-                    document, table_data["title"], table_data["values"], url
-                )
+                document.add_heading(table_title, level=2)
 
-    def add_table_to_doc(
-        self, document: Document, table_title: str, table_values: list, url: str
-    ):
-        try:
+                table = document.add_table(rows=1, cols=len(table_values[0]))
 
-            def clean_text(text):
-                """Remove spaces, new lines, and tabs from the text."""
-                return text.replace("\n", " ").replace("\t", " ")
+                table.style = "Table Grid"  # Applying table grid style to have borders
 
-            document.add_heading(table_title, level=2)
-
-            table = document.add_table(rows=1, cols=len(table_values[0]))
-
-            table.style = "Table Grid"  # Applying table grid style to have borders
-
-            # Set header rows as bold and add borders
-            hdr_cells = table.rows[0].cells
-            for i, key in enumerate(table_values[0].keys()):
-                cell = hdr_cells[i]
-                cell.text = clean_text(table_values[0][key])
-                cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                cell.paragraphs[0].runs[0].font.bold = True
-                for paragraph in cell.paragraphs:
-                    for run in paragraph.runs:
-                        run.font.size = Pt(10)
-                for border in cell._element.xpath(".//*"):
-                    border_val = border.attrib.get("val")
-                    if border_val is not None:
-                        border.attrib.clear()
-                        border.attrib["val"] = border_val
-                    else:
-                        border.attrib["val"] = "single"
-
-            for row_data in table_values[1:]:
-                row = table.add_row().cells
-                for i, key in enumerate(row_data.keys()):
-                    cell = row[i]
-                    cell.text = clean_text(row_data[key])
-                    if self.is_numerical(row_data[key]):
-                        cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
-                    else:
-                        cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+                # Set header rows as bold and add borders
+                hdr_cells = table.rows[0].cells
+                for i, key in enumerate(table_values[0].keys()):
+                    cell = hdr_cells[i]
+                    cell.text = clean_text(table_values[0][key])
+                    cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                    cell.paragraphs[0].runs[0].font.bold = True
                     for paragraph in cell.paragraphs:
                         for run in paragraph.runs:
                             run.font.size = Pt(10)
@@ -364,20 +220,51 @@ class TableExtractor:
                         else:
                             border.attrib["val"] = "single"
 
-            # Adding the table URL after the table with right alignment and as a hyperlink
-            p = document.add_paragraph()
-            p.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
-            add_hyperlink(p, "source", url, True)
+                for row_data in table_values[1:]:
+                    row = table.add_row().cells
+                    for i, key in enumerate(row_data.keys()):
+                        cell = row[i]
+                        cell.text = clean_text(row_data[key])
+                        if self.is_numerical(row_data[key]):
+                            cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+                        else:
+                            cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+                        for paragraph in cell.paragraphs:
+                            for run in paragraph.runs:
+                                run.font.size = Pt(10)
+                        for border in cell._element.xpath(".//*"):
+                            border_val = border.attrib.get("val")
+                            if border_val is not None:
+                                border.attrib.clear()
+                                border.attrib["val"] = border_val
+                            else:
+                                border.attrib["val"] = "single"
 
-        except Exception as e:
-            print(f"🚩 Exception in adding tables to word document : {e}")
-            # Revert changes on any exception
-            pass
+                # Adding the table URL after the table with right alignment and as a hyperlink
+                p = document.add_paragraph()
+                p.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+                add_hyperlink(p, "source", url, True)
 
-    def get_combined_html(self, report: str):
-        # Convert Markdown to HTML
-        report_html = mistune.html(report)
+            except Exception as e:
+                print(f"🚩 Exception in adding tables to word document : {e}")
+                # Revert changes on any exception
+                pass
 
+        if not len(self.tables):
+            return
+
+        # Add "Data Tables" as a title before the tables section
+        document.add_heading("Data Tables", level=1)
+
+        # Adding tables to the Word document
+        for tables_set in self.tables:
+            tables_in_url = tables_set["tables"]
+            url = tables_set["url"]
+            for table_data in tables_in_url:
+                add_table_to_doc(
+                    document, table_data["title"], table_data["values"], url)
+
+    def get_combined_html(self, report_html: str):
         # Get the html of the tables
         tables_html = ""
         for tables_in_url in self.tables:
@@ -392,6 +279,97 @@ class TableExtractor:
 
         return combined_html
 
+    def save_tables_to_excel(self):
+        """Convert each table inside the output list to an Excel sheet with the title of the table as sheet name.
+        Include a hyperlinked URL to the table at the top of each sheet. Also, insert a sheet at the beginning
+        titled 'List of tables' containing a list of all tables in the file along with their URLs."""
+        
+        def sanitize_sheet_title(title: str) -> str:
+            """Sanitize the sheet title by replacing invalid characters with '_' and limiting the length."""
+            # Replace invalid characters with '_'
+            sanitized_title = re.sub(r'[\\/*?:[\]]', '_', title)
+            # Limit the length of the title to 31 characters
+            return sanitized_title[:30]
+
+        def adjust_column_widths(ws):
+            """Adjust column widths based on content length."""
+            for column_cells in ws.columns:
+                max_length = 0
+                for cell in column_cells:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except TypeError:
+                        pass
+                adjusted_width = (max_length + 2) * 1.2
+                ws.column_dimensions[column_cells[0].column_letter].width = adjusted_width
+        
+        # To be modified later
+        if GlobalConfig.GCP_PROD_ENV:
+            print("Returning because env is GCP!")
+            return
+        
+        wb = Workbook()
+
+        # Create a custom style for the first row in the first sheet
+        first_row_style = NamedStyle(name="first_row_style")
+        first_row_style.font = Font(bold=True, size=14)
+        wb.add_named_style(first_row_style)
+
+        # Insert a sheet at the beginning titled 'List of tables'
+        list_sheet = wb.create_sheet(title="List of tables")
+        list_sheet.append(["Table Title", "URL"])
+
+        # Set column widths for 'List of tables' sheet
+        list_sheet.column_dimensions['A'].width = 30
+        list_sheet.column_dimensions['B'].width = 50
+
+        for table_data in self.tables:
+            tables = table_data["tables"]
+            url = table_data["url"]
+            
+            for index, table in enumerate(tables):
+                title = sanitize_sheet_title(table['title'])
+                values = table['values']
+
+                # Create a new sheet with the title of the table
+                ws = wb.create_sheet(title=title)
+
+                # Convert table values to DataFrame
+                df = pd.DataFrame(values)
+
+                # Write DataFrame to Excel sheet
+                for row in dataframe_to_rows(df, index=False, header=True):
+                    print("Row : ", row)
+                    ws.append(row)
+
+                # Adjust column widths to fit content
+                adjust_column_widths(ws)
+
+                # Add table title and URL as a clickable link to the 'List of tables' sheet
+                list_sheet.append([title, '=HYPERLINK("{}", "{}")'.format(url, f"{url}")])
+            
+        # Apply custom style to the first row of the 'List of tables' sheet
+        for cell in list_sheet['1:1']:
+            cell.style = first_row_style
+
+        # Apply italic and blue style to column 2 starting from row 2 in 'List of tables' sheet
+        italic_blue_style = NamedStyle(name="italic_blue_style")
+        italic_blue_style.font = Font(italic=True, color="0000FF")  # Blue color code
+        list_sheet.column_dimensions['B'].width = 50  # Adjust column width for URL
+        for row in list_sheet.iter_rows(min_row=2, min_col=2, max_col=2):
+            for cell in row:
+                cell.style = italic_blue_style
+
+        # Adjust column widths for 'List of tables' sheet
+        adjust_column_widths(list_sheet)
+
+        # Remove default sheet created by openpyxl
+        wb.remove(wb["Sheet"])
+
+        # Save the Excel file
+        wb.save(self.tables_save_path)
+
     @staticmethod
     def is_numerical(value: str) -> bool:
         """
@@ -404,5 +382,6 @@ class TableExtractor:
         Returns:
         The function is_numerical is returning a boolean value.
         """
-        numerical_pattern = re.compile(r"^-?(\d{1,3}(,\d{3})*|\d+)?(\.\d+)?%?$")
+        numerical_pattern = re.compile(
+            r"^-?(\d{1,3}(,\d{3})*|\d+)?(\.\d+)?%?$")
         return bool(numerical_pattern.match(str(value).replace(",", "")))
