@@ -340,8 +340,14 @@ class TableExtractor:
 
                 # Write DataFrame to Excel sheet
                 for row in dataframe_to_rows(df, index=False, header=True):
-                    print("Row : ", row)
-                    ws.append(row)
+                    try:
+                        ws.append(row)
+                    except ValueError as e:
+                        print(f"Error appending row {row}: {e}")
+                        # Delete the sheet if there's an error appending rows
+                        del wb[title]
+                        print(f"Deleted sheet {title}")
+                        continue
 
                 # Adjust column widths to fit content
                 adjust_column_widths(ws)
