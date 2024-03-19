@@ -1,15 +1,15 @@
 import os
 import re
 
-import openpyxl
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from docx import Document
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.shared import Pt
-from openpyxl.styles import Font
-from openpyxl.utils import get_column_letter
+from openpyxl import Workbook
+from openpyxl.styles import Font, NamedStyle
+from openpyxl.utils.dataframe import dataframe_to_rows
 
 from app.config import Config as GlobalConfig
 from app.utils.common import Common
@@ -67,8 +67,7 @@ class TableExtractor:
             """
             def process_table_title(title):
                 # Removing Table numberings like "Table 1:", "Table1-", etc.
-                cleaned_title = re.sub(
-                    r"^\\s*Table\\s*\\d+\\s*[:\\-]\\s*", "", title, flags=re.IGNORECASE)
+                cleaned_title = re.sub(r"^\\s*Table\\s*\\d+\\s*[:\\-]\\s*", "", title, flags=re.IGNORECASE)
                 return cleaned_title.strip()
 
             # Check for a caption tag within the table
@@ -77,8 +76,7 @@ class TableExtractor:
                 title = table_caption.get_text(strip=True)
             else:
                 # If no caption, look at previous tags like h1, h2, etc.
-                previous_tag = table.find_previous(
-                    ["h1", "h2", "h3", "h4", "h5", "h6", "p"])
+                previous_tag = table.find_previous(["h1", "h2", "h3", "h4", "h5", "h6", "p"])
                 if previous_tag:
                     title = previous_tag.get_text(strip=True)
                 else:
@@ -88,7 +86,7 @@ class TableExtractor:
 
         def extract_table_from_pdf() -> list:
             return []
-
+        
         def extract_table_from_url() -> list:
             response = requests.get(url)
             response.raise_for_status()
@@ -100,12 +98,12 @@ class TableExtractor:
             for idx, df in enumerate(dfs):
                 # Skip dataframes with zero or one rows
                 if len(df) > 1:
-                    table_title = extract_table_title(
-                        soup.find_all("table")[idx])
-                    extracted_tables.append(
-                        {"title": table_title, "values": df.to_dict(orient="records")})
-
-            return extracted_tables
+                    table_title = extract_table_title(soup.find_all("table")[idx])
+                    # Convert NaN values to "-"
+                    df_filled = df.fillna("-")
+                    extracted_tables.append({"title": table_title, "values": df_filled.to_dict(orient="records")})
+                    
+            return [{"tables": extracted_tables, "url": url}]
 
         try:
             extracted_tables = []
@@ -282,49 +280,86 @@ class TableExtractor:
         return combined_html
 
     def save_table_to_excel(self):
-        try:
-            if not self.tables:
-                return ""
+        """Convert each table inside the output list to an Excel sheet with the title of the table as sheet name.
+        Include a hyperlinked URL to the table at the top of each sheet. Also, insert a sheet at the beginning
+        titled 'List of tables' containing a list of all tables in the file along with their URLs."""
+        
+        def sanitize_sheet_title(title: str) -> str:
+            """Sanitize the sheet title by replacing invalid characters with '_' and limiting the length."""
+            # Replace invalid characters with '_'
+            sanitized_title = re.sub(r'[\\/*?:[\]]', '_', title)
+            # Limit the length of the title to 31 characters
+            return sanitized_title[:30]
 
-            # Create a new workbook
-            workbook = openpyxl.Workbook()
+        def adjust_column_widths(ws):
+            """Adjust column widths based on content length."""
+            for column_cells in ws.columns:
+                max_length = 0
+                for cell in column_cells:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except TypeError:
+                        pass
+                adjusted_width = (max_length + 2) * 1.2
+                ws.column_dimensions[column_cells[0].column_letter].width = adjusted_width
+        
+        wb = Workbook()
 
-            # Remove the default blank sheet
-            workbook.remove(workbook.active)
+        # Create a custom style for the first row in the first sheet
+        first_row_style = NamedStyle(name="first_row_style")
+        first_row_style.font = Font(bold=True, size=14)
+        wb.add_named_style(first_row_style)
 
-            # Iterate through the 'tables' list
-            for table_dict in self.tables[0]['tables']:
-                # Get the table title and values
-                table_title = table_dict['title']
-                table_values = table_dict['values']
+        # Insert a sheet at the beginning titled 'List of tables'
+        list_sheet = wb.create_sheet(title="List of tables")
+        list_sheet.append(["Table Title", "URL"])
 
-                # Create a new sheet with the table title
-                sheet = workbook.create_sheet(title=table_title)
+        # Set column widths for 'List of tables' sheet
+        list_sheet.column_dimensions['A'].width = 30
+        list_sheet.column_dimensions['B'].width = 50
 
-                # Write the table values to the sheet
-                for row_idx, row in enumerate(table_values, start=1):
-                    for col_idx, value in enumerate(row.values(), start=1):
-                        cell = sheet.cell(
-                            row=row_idx, column=col_idx, value=str(value))
+        for index, table in enumerate(self.tables[0]['tables']):
+            title = sanitize_sheet_title(table['title'])
+            values = table['values']
+            url = self.tables[0]["url"]
 
-                        # Make the first row values bold and increase font size
-                        if row_idx == 1:
-                            cell.font = Font(bold=True, size=14)
+            # Create a new sheet with the title of the table
+            ws = wb.create_sheet(title=title)
 
-                        # Adjust column width based on the length of the cell value
-                        col_letter = get_column_letter(col_idx)
-                        column_width = len(str(value)) + 2  # Add some padding
-                        sheet.column_dimensions[col_letter].width = column_width
+            # Convert table values to DataFrame
+            df = pd.DataFrame(values)
 
-            # Save the workbook to a file
-            workbook.save(self.tables_save_path)
-            print(f"Excel file '{self.tables_save_path}' has been created.")
+            # Write DataFrame to Excel sheet
+            for row in dataframe_to_rows(df, index=False, header=True):
+                ws.append(row)
 
-            return urllib.parse.quote(self.tables_save_path)
+            # Adjust column widths to fit content
+            adjust_column_widths(ws)
 
-        except Exception as e:
-            Common.exception_details("TableExtractor.save_table_excel", e)
-            return ""
+            # Add table title and URL as a clickable link to the 'List of tables' sheet
+            list_sheet.append([title, '=HYPERLINK("{}", "{}")'.format(url, f"{url}")])
+            
+        # Apply custom style to the first row of the 'List of tables' sheet
+        for cell in list_sheet['1:1']:
+            cell.style = first_row_style
+
+        # Apply italic and blue style to column 2 starting from row 2 in 'List of tables' sheet
+        italic_blue_style = NamedStyle(name="italic_blue_style")
+        italic_blue_style.font = Font(italic=True, color="0000FF")  # Blue color code
+        list_sheet.column_dimensions['B'].width = 50  # Adjust column width for URL
+        for row in list_sheet.iter_rows(min_row=2, min_col=2, max_col=2):
+            for cell in row:
+                cell.style = italic_blue_style
+
+        # Adjust column widths for 'List of tables' sheet
+        adjust_column_widths(list_sheet)
+
+        # Remove default sheet created by openpyxl
+        wb.remove(wb["Sheet"])
+
+        # Save the Excel file
+        wb.save(self.tables_save_path)
 
     @staticmethod
     def is_numerical(value: str) -> bool:
