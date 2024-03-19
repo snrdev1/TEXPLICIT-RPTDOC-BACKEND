@@ -103,7 +103,7 @@ class TableExtractor:
                     df_filled = df.fillna("-")
                     extracted_tables.append({"title": table_title, "values": df_filled.to_dict(orient="records")})
                     
-            return [{"tables": extracted_tables, "url": url}]
+            return extracted_tables
 
         try:
             extracted_tables = []
@@ -279,7 +279,7 @@ class TableExtractor:
 
         return combined_html
 
-    def save_table_to_excel(self):
+    def save_tables_to_excel(self):
         """Convert each table inside the output list to an Excel sheet with the title of the table as sheet name.
         Include a hyperlinked URL to the table at the top of each sheet. Also, insert a sheet at the beginning
         titled 'List of tables' containing a list of all tables in the file along with their URLs."""
@@ -304,6 +304,11 @@ class TableExtractor:
                 adjusted_width = (max_length + 2) * 1.2
                 ws.column_dimensions[column_cells[0].column_letter].width = adjusted_width
         
+        # To be modified later
+        if GlobalConfig.GCP_PROD_ENV:
+            print("Returning because env is GCP!")
+            return
+        
         wb = Workbook()
 
         # Create a custom style for the first row in the first sheet
@@ -319,26 +324,30 @@ class TableExtractor:
         list_sheet.column_dimensions['A'].width = 30
         list_sheet.column_dimensions['B'].width = 50
 
-        for index, table in enumerate(self.tables[0]['tables']):
-            title = sanitize_sheet_title(table['title'])
-            values = table['values']
-            url = self.tables[0]["url"]
+        for table_data in self.tables:
+            tables = table_data["tables"]
+            url = table_data["url"]
+            
+            for index, table in enumerate(tables):
+                title = sanitize_sheet_title(table['title'])
+                values = table['values']
 
-            # Create a new sheet with the title of the table
-            ws = wb.create_sheet(title=title)
+                # Create a new sheet with the title of the table
+                ws = wb.create_sheet(title=title)
 
-            # Convert table values to DataFrame
-            df = pd.DataFrame(values)
+                # Convert table values to DataFrame
+                df = pd.DataFrame(values)
 
-            # Write DataFrame to Excel sheet
-            for row in dataframe_to_rows(df, index=False, header=True):
-                ws.append(row)
+                # Write DataFrame to Excel sheet
+                for row in dataframe_to_rows(df, index=False, header=True):
+                    print("Row : ", row)
+                    ws.append(row)
 
-            # Adjust column widths to fit content
-            adjust_column_widths(ws)
+                # Adjust column widths to fit content
+                adjust_column_widths(ws)
 
-            # Add table title and URL as a clickable link to the 'List of tables' sheet
-            list_sheet.append([title, '=HYPERLINK("{}", "{}")'.format(url, f"{url}")])
+                # Add table title and URL as a clickable link to the 'List of tables' sheet
+                list_sheet.append([title, '=HYPERLINK("{}", "{}")'.format(url, f"{url}")])
             
         # Apply custom style to the first row of the 'List of tables' sheet
         for cell in list_sheet['1:1']:
