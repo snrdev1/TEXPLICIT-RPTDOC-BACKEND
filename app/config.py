@@ -28,8 +28,8 @@ class Config(object):
 
     # Email Configuration
     MAIL_API_KEY = os.getenv("MAIL_API_KEY", "")
-    MAIL_SENDER_EMAIL = os.getenv("MAIL_SENDER_EMAIL", "noreply@texplicit2.com")
-    MAIL_SENDER_NAME = os.getenv("MAIL_SENDER_NAME", "Texplicit2 Admin")
+    MAIL_SENDER_EMAIL = os.getenv("MAIL_SENDER_EMAIL", "noreply@texplicitrw.com")
+    MAIL_SENDER_NAME = os.getenv("MAIL_SENDER_NAME", "TexplicitRW Admin")
 
     # Constant variable for environment
     GCP_PROD_ENV = eval(os.getenv("GCP_PROD_ENV", "False"))
