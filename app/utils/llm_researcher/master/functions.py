@@ -184,8 +184,7 @@ def add_source_urls(
     """
     try:
         if report_type not in [
-            Enumerator.ReportType.DetailedReport.value,
-            Enumerator.ReportType.CompleteReport.value,
+            Enumerator.ReportType.DetailedReport.value
         ]:
             return report_markdown
 

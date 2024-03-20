@@ -38,7 +38,9 @@ def generate_report(logged_in_user):
             report_generation_id=request_params.get(
                 "report_generation_id", None),
             subtopics=request_params.get("subtopics", []),
-            urls=request_params.get("urls", [])
+            urls=request_params.get("urls", []),
+            restrict_search=request_params.get(
+                "restrict_search", False)
         ).dict()
 
         # Check subscription validity before generating report
@@ -59,7 +61,8 @@ def generate_report(logged_in_user):
                 report_generation_info.get("format"),
                 report_generation_info.get("report_generation_id"),
                 report_generation_info.get("subtopics"),
-                report_generation_info.get("urls")
+                report_generation_info.get("urls"),
+                report_generation_info.get("restrict_search")
             ),
         )
         t1.start()
