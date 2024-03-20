@@ -97,6 +97,12 @@ def get_report_path(report_document):
 
     return file_path
 
+def get_report_data_table_path(report_document):
+    data_table_file_path = urllib.parse.unquote(report_document["table_path"])
+    print("📡 data_table_file_path : ", data_table_file_path)
+
+    return data_table_file_path
+
 
 def get_report_audio_path(report_document):
     try:

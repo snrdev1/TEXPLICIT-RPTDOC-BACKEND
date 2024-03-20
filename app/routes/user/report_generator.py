@@ -148,6 +148,28 @@ def download_report(logged_in_user, reportid):
         return Response.server_error()
 
 
+@report_generator.route("/download/data-table/<reportid>", methods=["GET"])
+@authorized
+def download_report_data_table(logged_in_user, reportid):
+    try:
+        user_id = str(logged_in_user["_id"])
+
+        report_document = ReportGeneratorService.get_report_from_db(reportid)
+        if report_document:
+            if user_id != str(report_document["createdBy"]["_id"]):
+                return Response.custom_response([], Messages.UNAUTHORIZED, False, 401)
+
+            file_bytes, file_name = ReportGeneratorService.get_data_table_contents(report_document)
+
+            return send_file(file_bytes, as_attachment=True, download_name=file_name)
+
+        return Response.custom_response([], Messages.MISSING_REPORT, False, 400)
+
+    except Exception as e:
+        Common.exception_details("mydocuments.py : download_report_data_table", e)
+        return Response.server_error()
+
+
 @report_generator.route("/audio/download/<reportid>", methods=["GET"])
 @authorized
 def download_report_audio(logged_in_user, reportid):
