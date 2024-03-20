@@ -84,7 +84,6 @@ class Enumerator:
     class ReportType(Enum):
       ResearchReport = "research_report"
       DetailedReport = "detailed_report"
-      CompleteReport = "complete_report"
       OutlineReport = "outline_report"
       ResourceReport = "resource_report"
       SubtopicReport = "subtopic_report"
@@ -94,5 +93,4 @@ class Enumerator:
         Chat = 0.0
         SummaryReport = 0.0
         DetailedReport = 0.0
-        CompleteReport = 0.0
         

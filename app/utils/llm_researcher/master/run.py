@@ -1,6 +1,5 @@
-import asyncio
 import datetime
-from typing import Union, List
+from typing import List, Union
 
 from bson import ObjectId
 
@@ -40,11 +39,6 @@ class AgentExecutor:
                 from ..report_types import DetailedReport
 
                 executor = DetailedReport
-            case Enumerator.ReportType.CompleteReport.value:
-                from ..report_types import CompleteReport
-
-                executor = CompleteReport
-
             case _:
                 from ..report_types import BasicReport
 
