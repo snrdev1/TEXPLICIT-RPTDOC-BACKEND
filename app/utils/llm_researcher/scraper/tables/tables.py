@@ -1,3 +1,4 @@
+import io
 import os
 import re
 
@@ -67,7 +68,8 @@ class TableExtractor:
             """
             def process_table_title(title):
                 # Removing Table numberings like "Table 1:", "Table1-", etc.
-                cleaned_title = re.sub(r"^\\s*Table\\s*\\d+\\s*[:\\-]\\s*", "", title, flags=re.IGNORECASE)
+                cleaned_title = re.sub(
+                    r"^\\s*Table\\s*\\d+\\s*[:\\-]\\s*", "", title, flags=re.IGNORECASE)
                 return cleaned_title.strip()
 
             # Check for a caption tag within the table
@@ -76,7 +78,8 @@ class TableExtractor:
                 title = table_caption.get_text(strip=True)
             else:
                 # If no caption, look at previous tags like h1, h2, etc.
-                previous_tag = table.find_previous(["h1", "h2", "h3", "h4", "h5", "h6", "p"])
+                previous_tag = table.find_previous(
+                    ["h1", "h2", "h3", "h4", "h5", "h6", "p"])
                 if previous_tag:
                     title = previous_tag.get_text(strip=True)
                 else:
@@ -86,7 +89,7 @@ class TableExtractor:
 
         def extract_table_from_pdf() -> list:
             return []
-        
+
         def extract_table_from_url() -> list:
             response = requests.get(url)
             response.raise_for_status()
@@ -98,11 +101,13 @@ class TableExtractor:
             for idx, df in enumerate(dfs):
                 # Skip dataframes with zero or one rows
                 if len(df) > 1:
-                    table_title = extract_table_title(soup.find_all("table")[idx])
+                    table_title = extract_table_title(
+                        soup.find_all("table")[idx])
                     # Convert NaN values to "-"
                     df_filled = df.fillna("-")
-                    extracted_tables.append({"title": table_title, "values": df_filled.to_dict(orient="records")})
-                    
+                    extracted_tables.append(
+                        {"title": table_title, "values": df_filled.to_dict(orient="records")})
+
             return extracted_tables
 
         try:
@@ -280,36 +285,18 @@ class TableExtractor:
         return combined_html
 
     async def save_tables_to_excel(self):
-        """Convert each table inside the output list to an Excel sheet with the title of the table as sheet name.
-        Include a hyperlinked URL to the table at the top of each sheet. Also, insert a sheet at the beginning
-        titled 'List of tables' containing a list of all tables in the file along with their URLs."""
+        """
+        The `save_tables_to_excel` function in Python creates an Excel workbook with multiple sheets
+        containing table data and saves it either to a production bucket or locally based on the
+        environment.
         
-        def sanitize_sheet_title(title: str) -> str:
-            """Sanitize the sheet title by replacing invalid characters with '_' and limiting the length."""
-            # Replace invalid characters with '_'
-            sanitized_title = re.sub(r'[\\/*?:[\]]', '_', title)
-            # Limit the length of the title to 31 characters
-            return sanitized_title[:30]
+        Returns:
+          The `save_tables_to_excel` method returns the encoded file path where the tables have been
+        saved. This path is returned as a result of the method execution. If an exception occurs during
+        the process, the method catches the exception, logs the details, and returns an empty string.
+        """
 
-        def adjust_column_widths(ws):
-            """Adjust column widths based on content length."""
-            for column_cells in ws.columns:
-                max_length = 0
-                for cell in column_cells:
-                    try:
-                        if len(str(cell.value)) > max_length:
-                            max_length = len(str(cell.value))
-                    except TypeError:
-                        pass
-                adjusted_width = (max_length + 2) * 1.2
-                ws.column_dimensions[column_cells[0].column_letter].width = adjusted_width
-        
-        try:
-            # To be modified later
-            if GlobalConfig.GCP_PROD_ENV:
-                print("Returning because env is GCP!")
-                return
-            
+        def _get_excel_workbook():
             wb = Workbook()
 
             # Create a custom style for the first row in the first sheet
@@ -328,9 +315,9 @@ class TableExtractor:
             for table_data in self.tables:
                 tables = table_data["tables"]
                 url = table_data["url"]
-                
-                for index, table in enumerate(tables):
-                    title = sanitize_sheet_title(table['title'])
+
+                for table in tables:
+                    title = _sanitize_sheet_title(table['title'])
                     values = table['values']
 
                     # Create a new sheet with the title of the table
@@ -351,35 +338,88 @@ class TableExtractor:
                             continue
 
                     # Adjust column widths to fit content
-                    adjust_column_widths(ws)
+                    _adjust_column_widths(ws)
 
                     # Add table title and URL as a clickable link to the 'List of tables' sheet
-                    list_sheet.append([title, '=HYPERLINK("{}", "{}")'.format(url, f"{url}")])
-                
+                    list_sheet.append(
+                        [table['title'], '=HYPERLINK("{}", "{}")'.format(url, f"{url}")])
+
             # Apply custom style to the first row of the 'List of tables' sheet
             for cell in list_sheet['1:1']:
                 cell.style = first_row_style
 
             # Apply italic and blue style to column 2 starting from row 2 in 'List of tables' sheet
             italic_blue_style = NamedStyle(name="italic_blue_style")
-            italic_blue_style.font = Font(italic=True, color="0000FF")  # Blue color code
-            list_sheet.column_dimensions['B'].width = 50  # Adjust column width for URL
+            italic_blue_style.font = Font(
+                italic=True, color="0000FF")  # Blue color code
+            # Adjust column width for URL
+            list_sheet.column_dimensions['B'].width = 50
             for row in list_sheet.iter_rows(min_row=2, min_col=2, max_col=2):
                 for cell in row:
                     cell.style = italic_blue_style
 
             # Adjust column widths for 'List of tables' sheet
-            adjust_column_widths(list_sheet)
+            _adjust_column_widths(list_sheet)
 
             # Remove default sheet created by openpyxl
             wb.remove(wb["Sheet"])
 
+            return wb
+
+        def _sanitize_sheet_title(title: str) -> str:
+            """Sanitize the sheet title by replacing invalid characters with '_' and limiting the length."""
+            # Replace invalid characters with '_'
+            sanitized_title = re.sub(r'[\\/*?:[\]]', '_', title)
+            # Limit the length of the title to 31 characters
+            return sanitized_title[:30]
+
+        def _adjust_column_widths(ws):
+            """Adjust column widths based on content length."""
+            for column_cells in ws.columns:
+                max_length = 0
+                for cell in column_cells:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except TypeError:
+                        pass
+                adjusted_width = (max_length + 2) * 1.2
+                ws.column_dimensions[column_cells[0]
+                                     .column_letter].width = adjusted_width
+
+        def _save_tables_to_excel_prod(workbook: Workbook):
+            user_bucket = Production.get_users_bucket()
+
+            # Create a temporary file-like object to save the updated document
+            temp_doc_io = io.BytesIO()
+            workbook.save(temp_doc_io)
+            # Reset the pointer to the beginning of the stream
+            temp_doc_io.seek(0)
+
+            # Upload the Docx file to the bucket
+            blob = user_bucket.blob(self.tables_save_path)
+            blob.upload_from_file(
+                temp_doc_io,
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+        def _save_tables_to_excel_dev(workbook: Workbook):
             # Save the Excel file
-            wb.save(self.tables_save_path)
-            
+            workbook.save(self.tables_save_path)
+
+        try:
+            workbook = _get_excel_workbook()
+
+            if GlobalConfig.GCP_PROD_ENV:
+                await _save_tables_to_excel_prod(workbook)
+            else:
+                await _save_tables_to_excel_dev(workbook)
+
             # Return url encoded path where the tables are have been saved
-            return urllib.parse.quote(self.tables_save_path)
-        
+            encoded_file_path = urllib.parse.quote(self.tables_save_path)
+            
+            return encoded_file_path
+
         except Exception as e:
             Common.exception_details("tables.save_tables_to_excel", e)
             return ""
