@@ -47,7 +47,7 @@ class CompleteReport:
             format=self.format,
             websocket=self.websocket,
             report_generation_id=self.report_generation_id,
-            urls=self.urls,
+            input_urls=self.urls,
             restrict_search=self.restrict_search
         )
         markdown, path, tables, table_path, urls = await report_executor.run_agent()
@@ -125,7 +125,7 @@ class CompleteReport:
             report_type=self.report_type,
             websocket=self.websocket,
             report_generation_id=self.report_generation_id,
-            urls=self.urls,
+            input_urls=self.urls,
             restrict_search=self.restrict_search
         )
 

@@ -38,15 +38,18 @@ class ResearchAgent:
         parent_query="",
         subtopics=[],
         report_generation_id="",
-        urls: List[str] = [],
-        restrict_search: bool = False
+        input_urls: List[str] = [],
+        visited_urls: set = set(),
+        restrict_search: bool = False,
+        agent: str = "",
+        role: str = ""
     ):
         # Stores the user question (task)
         self.query = query
 
         # Agent type and role of agent
-        self.agent = None
-        self.role = None
+        self.agent = agent
+        self.role = role
 
         # Reference to report config
         self.cfg = Config()
@@ -54,14 +57,14 @@ class ResearchAgent:
         # Type of report
         self.report_type = report_type
 
-        # Specified set of urls to be used
-        self.urls = urls
-
         # Type of search to perform : restricted or mixed
         self.restrict_search = restrict_search
+        
+        # List of input urls to research on
+        self.input_urls = input_urls
 
         # Set to store unique urls
-        self.visited_urls = set()
+        self.visited_urls = visited_urls
 
         # Store user_id
         self.user_id = user_id
@@ -113,25 +116,42 @@ class ResearchAgent:
         try:
             report = ""
             print(f"🔎 Running research for '{self.query}'...")
-            emit_report_status(self.user_id, self.report_generation_id,
-                               f"🔎 Running research for '{self.query}'...")
-
-            # Generate Agent for current task
-            self.agent, self.role = await choose_agent(self.query, self.cfg)
             emit_report_status(
-                self.user_id, self.report_generation_id, self.agent)
-            await stream_output("logs", self.agent, self.websocket)
+                self.user_id,
+                self.report_generation_id,
+                f"🔎 Running research for '{self.query}'..."
+            )
+
+            # Generate Agent for current task if necessary
+            if not (self.agent and self.role):
+                self.agent, self.role = await choose_agent(self.query, self.cfg)
+                emit_report_status(
+                    self.user_id,
+                    self.report_generation_id,
+                    self.agent
+                )
+                await stream_output(
+                    "logs",
+                    self.agent,
+                    self.websocket
+                )
 
             if self.source == "external":
-                emit_report_status(self.user_id, self.report_generation_id,
-                                   "📂 Retrieving context from external search...")
+                emit_report_status(
+                    self.user_id,
+                    self.report_generation_id,
+                    "📂 Retrieving context from external search..."
+                )
 
                 context = await self.get_context_by_search(self.query)
                 self.context.extend(context)
 
             else:
-                emit_report_status(self.user_id, self.report_generation_id,
-                                   "📂 Retrieving context from documents...")
+                emit_report_status(
+                    self.user_id,
+                    self.report_generation_id,
+                    "📂 Retrieving context from documents..."
+                )
 
                 context, self.visited_urls = retrieve_context_from_documents(
                     self.user_id, self.query, max_docs, score_threshold
@@ -150,10 +170,13 @@ class ResearchAgent:
     async def write_report(self, existing_headers: list = []):
         try:
             report = ""
-            
+
             # Write Report
-            emit_report_status(self.user_id, self.report_generation_id,
-                               f"✍️ Writing {get_formatted_report_type(self.report_type)} for research task: {self.query}...")
+            emit_report_status(
+                self.user_id,
+                self.report_generation_id,
+                f"✍️ Writing {get_formatted_report_type(self.report_type)} for research task: {self.query}..."
+            )
             await stream_output(
                 "logs",
                 f"✍️ Writing {self.report_type} for research task: {self.query}...",
@@ -198,51 +221,75 @@ class ResearchAgent:
         Returns: context: List of context
         """
         context = []
-        
+
         # Determine sub-queries based on report type
         sub_queries = [query]
         if self.report_type != "subtopic_report":
             sub_queries.extend(await get_sub_queries(query, self.role, self.cfg))
         else:
             sub_queries = [f"{self.parent_query} - {query}"]
-        
-        await stream_output("logs", f"🧠 I will conduct my research based on the following queries: {', '.join(sub_queries)}...", self.websocket)
-        
+
+        await stream_output(
+            "logs",
+            f"🧠 I will conduct my research based on the following queries: {', '.join(sub_queries)}...",
+            self.websocket
+        )
+
         # Cache scraped sites if custom URLs are provided and search type is restricted
         scraped_sites = None
-        if self.urls and self.restrict_search:
+        if self.restrict_search:
             scraped_sites = await self.scrape_sites_by_query()
-        
+
         async def process_sub_query(sub_query):
             nonlocal scraped_sites
-            emit_report_status(self.user_id, self.report_generation_id, f"🔎 Running research for '{sub_query}'...")
-            await stream_output("logs", f"\n🔎 Running research for '{sub_query}'...", self.websocket)
-            
+            emit_report_status(
+                self.user_id,
+                self.report_generation_id,
+                f"🔎 Running research for '{sub_query}'..."
+            )
+            await stream_output(
+                "logs",
+                f"\n🔎 Running research for '{sub_query}'...",
+                self.websocket
+            )
+
             # Perform scraping if data not already cached
             if not scraped_sites:
                 scraped_sites = await self.scrape_sites_by_query(sub_query)
-            
+
             # Handle scraping failures
             if not scraped_sites:
-                await stream_output("logs", f"Failed to gather content for: {sub_query}", self.websocket)
+                await stream_output(
+                    "logs",
+                    f"Failed to gather content for: {sub_query}",
+                    self.websocket
+                )
                 return None
-            
+
             # Get similar content by query from scraped sites
             content = await self.get_similar_content_by_query(sub_query, scraped_sites)
-            
+
             # Handle content retrieval failures
             if content:
-                await stream_output("logs", f"📃 {content}", self.websocket)
+                await stream_output(
+                    "logs",
+                    f"📃 {content}",
+                    self.websocket
+                )
                 return content
             else:
-                await stream_output("logs", f"Failed to gather content for: {sub_query}", self.websocket)
+                await stream_output(
+                    "logs",
+                    f"Failed to gather content for: {sub_query}",
+                    self.websocket
+                )
                 return None
-        
+
         # Use asyncio.gather for concurrent execution of sub-queries
         tasks = [process_sub_query(sub_query) for sub_query in sub_queries]
         results = await asyncio.gather(*tasks)
         context.extend(filter(None, results))  # Filter out None results
-        
+
         return context
 
     async def get_similar_content_by_query(self, query, pages):
@@ -269,60 +316,64 @@ class ResearchAgent:
         )
         # Summarize Raw Data
         context_compressor = ContextCompressor(
-            documents=pages, embeddings=self.memory.get_embeddings()
+            documents=pages,
+            embeddings=self.memory.get_embeddings()
         )
         # Run Tasks
         return context_compressor.get_context(query, max_results=8)
 
     async def scrape_sites_by_query(self, sub_query: str = ""):
-        """
-        This Python async function scrapes websites based on a query, retrieves URLs if not provided,
-        extracts tables, and then scrapes the content from the URLs.
-
-        Args:
-          sub_query (str): The `sub_query` parameter in the `scrape_sites_by_query` function is a string
-        that represents the query term or keyword used for searching and scraping websites. It is used
-        to retrieve relevant information from the websites based on this query.
-
-        Returns:
-          The function `scrape_sites_by_query` returns the `scraped_content_results` variable, which
-        contains the results of scraping the URLs obtained either from the user-defined URLs or from the
-        retriever if the user-defined URLs are not provided. If an exception occurs during the process,
-        it returns an empty string.
-        """
         try:
-
-            if self.restrict_search:
-                # Start with the input urls
-                new_search_urls = self.urls
-
-            else:
+            # Assign the new_search_urls to the input urls
+            # As per the working of the get_new_urls function,
+            # if this function is called a second time it will return a blank array
+            # as the input_urls will already be marked visited under the 
+            # visited_urls set
+            new_search_urls = await self.get_new_urls(self.input_urls)
+            
+            # If search is not restricted then further scraping and searching is required
+            if not self.restrict_search:
                 # Get Urls
                 retriever = self.retriever(sub_query)
                 search_results = retriever.search(
                     max_results=self.cfg.max_search_results_per_query
                 )
 
+                # If no search results are found then return empty contents
                 if not search_results:
-                    emit_report_status(self.user_id, self.report_generation_id,
-                                       f"🚩 Failed to get search results for : {sub_query}")
+                    emit_report_status(
+                        self.user_id,
+                        self.report_generation_id,
+                        f"🚩 Failed to get search results for : {sub_query}"
+                    )
                     return ""
 
-                new_search_urls = await self.get_new_urls(
-                    [url.get("href") or url.get("link")
-                     or "" for url in search_results]
+                # Retrieve new search urls that are encountered from web search
+                new_search_urls.extend(
+                    await self.get_new_urls(
+                        [url.get("href") or url.get("link")
+                        or "" for url in search_results]
+                    )
                 )
 
-            # Extract tables
+            # Extract tables from gathered urls
             emit_report_status(
-                self.user_id, self.report_generation_id, "📊 Trying to extracting tables...")
+                self.user_id,
+                self.report_generation_id,
+                "📊 Trying to extracting tables..."
+            )
             await self.extract_tables(new_search_urls)
 
             # Scrape Urls
-            emit_report_status(self.user_id, self.report_generation_id,
-                               f"🤔Researching for relevant information...")
+            emit_report_status(
+                self.user_id,
+                self.report_generation_id,
+                f"🤔Researching for relevant information..."
+            )
             await stream_output(
-                "logs", f"🤔Researching for relevant information...\n", self.websocket
+                "logs",
+                f"🤔Researching for relevant information...\n",
+                self.websocket
             )
             scraped_content_results = scrape_urls(new_search_urls, self.cfg)
             return scraped_content_results
@@ -330,7 +381,10 @@ class ResearchAgent:
         except Exception as e:
             Common.exception_details("scrape_sites_by_query", e)
             emit_report_status(
-                self.user_id, self.report_generation_id, "🚩 Failed to get search results...")
+                self.user_id,
+                self.report_generation_id,
+                "🚩 Failed to get search results..."
+            )
             return ""
 
     async def get_new_urls(self, url_set_input):
@@ -339,7 +393,7 @@ class ResearchAgent:
         Returns: list[str]: The new urls from the given url set
         """
 
-        new_urls = self.urls
+        new_urls = []
         for url in url_set_input:
             if url not in self.visited_urls:
                 emit_report_status(
@@ -347,7 +401,10 @@ class ResearchAgent:
                     self.report_generation_id,
                     f"✅ Adding source url to research: {url}..."
                 )
-                await stream_output("logs", f"✅ Adding source url to research: {url}\n")
+                await stream_output(
+                    "logs",
+                    f"✅ Adding source url to research: {url}\n"
+                )
 
                 self.visited_urls.add(url)
                 new_urls.append(url)
@@ -369,8 +426,14 @@ class ResearchAgent:
         """
 
         emit_report_status(
-            self.user_id, self.report_generation_id, "💾 Saving report...")
-        await stream_output("logs", f"💾 Saving report...\n")
+            self.user_id,
+            self.report_generation_id,
+            "💾 Saving report..."
+        )
+        await stream_output(
+            "logs",
+            f"💾 Saving report...\n"
+        )
 
         # Get the complete file path based reports folder, type of report
         file_path = os.path.join(self.dir_path, self.report_type)
@@ -379,30 +442,49 @@ class ResearchAgent:
         os.makedirs(file_path, exist_ok=True)
 
         updated_markdown_report = add_source_urls(
-            markdown_report, self.visited_urls, self.report_type, self.source)
+            markdown_report,
+            self.visited_urls,
+            self.report_type,
+            self.source
+        )
 
         # Save report mardown for future use
         _ = await save_markdown(file_path, updated_markdown_report)
         print("💾 Saved markdown!")
 
         if self.format == "word":
-            emit_report_status(self.user_id, self.report_generation_id,
-                               f"💾 Saving report document format...\n")
-            await stream_output("logs", f"💾 Saving report document format...\n")
+            emit_report_status(
+                self.user_id,
+                self.report_generation_id,
+                f"💾 Saving report document format...\n"
+            )
+            await stream_output(
+                "logs",
+                f"💾 Saving report document format...\n"
+            )
             encoded_file_path = await write_md_to_word(
                 file_path,
                 updated_markdown_report
             )
         else:
             emit_report_status(
-                self.user_id, self.report_generation_id, f"💾 Saving report pdf format...\n")
-            await stream_output("logs", f"💾 Saving report pdf format...\n")
+                self.user_id,
+                self.report_generation_id,
+                f"💾 Saving report pdf format...\n"
+            )
+            await stream_output(
+                "logs",
+                f"💾 Saving report pdf format...\n"
+            )
             encoded_file_path = await write_md_to_pdf(
                 file_path,
                 updated_markdown_report
             )
 
-        await stream_output("logs", f"💾 Saving tables to excel...\n")
+        await stream_output(
+            "logs",
+            f"💾 Saving tables to excel...\n"
+        )
         encoded_table_path = await self.tables_extractor.save_tables_to_excel()
 
         return encoded_file_path, encoded_table_path
@@ -479,6 +561,7 @@ class ResearchAgent:
             task=self.query,
             data=self.context,
             source=self.source,
+            # This is a list of user provided subtopics
             subtopics=self.subtopics
         )
 

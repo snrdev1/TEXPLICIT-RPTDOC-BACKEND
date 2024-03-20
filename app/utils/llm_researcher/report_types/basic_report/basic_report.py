@@ -53,7 +53,7 @@ class BasicReport:
             report_type=self.report_type,
             websocket=self.websocket,
             report_generation_id=self.report_generation_id,
-            urls=self.urls,
+            input_urls=self.urls,
             restrict_search=self.restrict_search
         )
 
