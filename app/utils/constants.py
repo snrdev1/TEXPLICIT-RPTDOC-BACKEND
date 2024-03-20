@@ -10,10 +10,10 @@ PASSWORD_RESET_REQUEST_MAILBODY='''\
     To reset your password, please click on the following link: <a href="{link}" target="_blank">{link}</a>. This link will be valid for the next 24 hours.
     <br/>
     <br/>
-    If you have any difficulties resetting your password or have any concerns about the security of your account, please contact us at support@texplicit2.com.
+    If you have any difficulties resetting your password or have any concerns about the security of your account, please contact us at support@texplicitrw.com.
     <br/>
     <br/>
-    Thank you for using Texplicit2. We are committed to keeping your account secure and providing you with the best possible experience.
+    Thank you for using TexplicitRW. We are committed to keeping your account secure and providing you with the best possible experience.
 
     <br/><br/>
     Warm regards,
@@ -150,10 +150,10 @@ NEW_ACCOUNT_MAILBODY='''\
     To set your password and log in, please click on the following link: <a href="{link}" target="_blank">TexplicitRW</a>. This link will be valid for the next 24 hours.
     <br/>
     <br/>
-    If you have any questions or need assistance, please contact us at support@texplicit2.com.
+    If you have any questions or need assistance, please contact us at support@texplicitrw.com.
     <br/>
     <br/>
-    Thank you for choosing Texplicit2. We look forward to serving you!
+    Thank you for choosing TexplicitRW. We look forward to serving you!
     <br/><br/>
     Warm regards,
     <br/>

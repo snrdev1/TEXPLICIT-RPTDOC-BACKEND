@@ -16,13 +16,14 @@ class CompleteReport:
         user_id: Union[ObjectId, str],
         task: str,
         report_type: str,
-        source: str = "external",
-        format: str = "pdf",
-        report_generation_id: str = "",
-        websocket=None,
-        subtopics: list = [],
-        check_existing_report: bool = False,
-        urls: List[str] = []
+        source: str,
+        format: str,
+        report_generation_id: str,
+        websocket,
+        subtopics: list,
+        check_existing_report: bool,
+        urls: List[str],
+        restrict_search: bool
     ):
         self.user_id = user_id
         self.task = task
@@ -35,6 +36,7 @@ class CompleteReport:
         self.check_existing_report = check_existing_report
         self.urls = urls
         self.assistant = self._create_assistant()
+        self.restrict_search = restrict_search
 
     async def create_report(self, report_type: str) -> tuple:
         report_executor = AgentExecutor(
@@ -45,7 +47,8 @@ class CompleteReport:
             format=self.format,
             websocket=self.websocket,
             report_generation_id=self.report_generation_id,
-            urls=self.urls
+            urls=self.urls,
+            restrict_search=self.restrict_search
         )
         markdown, path, tables, table_path, urls = await report_executor.run_agent()
         return markdown, path, tables, table_path, urls
@@ -122,7 +125,8 @@ class CompleteReport:
             report_type=self.report_type,
             websocket=self.websocket,
             report_generation_id=self.report_generation_id,
-            urls=self.urls
+            urls=self.urls,
+            restrict_search=self.restrict_search
         )
 
     async def _check_existing_report(self) -> str:

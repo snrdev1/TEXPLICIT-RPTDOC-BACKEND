@@ -5,6 +5,7 @@ from typing import List, Union
 
 from bson import ObjectId
 
+from app.utils import Enumerator
 from app.utils.socket import emit_report_status
 
 from ...master.functions import extract_headers, table_of_contents
@@ -17,13 +18,14 @@ class DetailedReport:
         user_id: Union[ObjectId, str],
         task: str,
         report_type: str,
-        source: str = "external",
-        format: str = "pdf",
-        report_generation_id: str = "",
-        websocket=None,
-        subtopics: list = [],
-        check_existing_report: bool = False,
-        urls: List[str] = []
+        source: str,
+        format: str,
+        report_generation_id: str,
+        websocket,
+        subtopics: list,
+        check_existing_report: bool,
+        urls: List[str],
+        restrict_search: bool
     ):
         self.user_id = user_id
         self.task = task
@@ -33,8 +35,9 @@ class DetailedReport:
         self.report_generation_id = report_generation_id
         self.websocket = websocket
         self.subtopics = subtopics
-        self.urls = urls
         self.check_existing_report = check_existing_report
+        self.urls = urls
+        self.restrict_search = restrict_search
         self.main_task_assistant = self._create_task_assistant()
         self.existing_headers = []
 
@@ -42,7 +45,10 @@ class DetailedReport:
         detailed_report_path = await self._check_existing_report()
         if detailed_report_path:
             return await self._handle_existing_report(detailed_report_path)
-
+           
+        # Conduct initial research on provided urls
+        await self._handle_provided_urls()
+            
         subtopics = await self._get_all_subtopics()
 
         (
@@ -76,7 +82,8 @@ class DetailedReport:
             websocket=self.websocket,
             report_generation_id=self.report_generation_id,
             urls=self.urls,
-            subtopics=self.subtopics
+            subtopics=self.subtopics,
+            restrict_search=self.restrict_search
         )
 
     async def _check_existing_report(self) -> str:
@@ -156,14 +163,26 @@ class DetailedReport:
             parent_query=self.task,
             subtopics=self.subtopics,
             report_generation_id=self.report_generation_id,
-            urls=self.urls
+            restrict_search=self.restrict_search
         )
+        
+        # The subtopics should start research from the context gathered by the main assistant
+        subtopic_assistant.context = self.main_task_assistant.context
+        
+        if self.restrict_search:  
+            # If search type is restricted then the existing context should be used for writing report
+            report_markdown = await subtopic_assistant.write_report(
+                existing_headers=self.existing_headers
+            )  
+        else:
+            # If search type is mixed then further research needs to be conducted
+            report_markdown = await subtopic_assistant.conduct_research(
+                max_docs=10, 
+                score_threshold=1, 
+                existing_headers=self.existing_headers
+            )
 
-        report_markdown = await subtopic_assistant.conduct_research(
-            max_docs=10, score_threshold=1, existing_headers=self.existing_headers
-        )
         report_markdown = report_markdown.strip()
-
         # After a subtopic report has been generated then append the headers of the report to existing headers
         self.existing_headers.append({
             "subtopic task": current_subtopic_task,
@@ -191,3 +210,9 @@ class DetailedReport:
             detailed_report
         )
         return detailed_report, detailed_report_path, table_path
+
+    async def _handle_provided_urls(self):
+        # If urls were provided by the user then conduct initial research on those urls
+        
+        if self.urls:
+            self.main_task_assistant.conduct_research()

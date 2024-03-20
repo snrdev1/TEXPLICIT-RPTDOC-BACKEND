@@ -1,7 +1,9 @@
 # Description: Research assistant class that handles the research process for a given question.
 
+import asyncio
 import os
 import time
+from functools import lru_cache
 from typing import List, Union
 
 from bson import ObjectId
@@ -36,7 +38,8 @@ class ResearchAgent:
         parent_query="",
         subtopics=[],
         report_generation_id="",
-        urls: List[str] = []
+        urls: List[str] = [],
+        restrict_search: bool = False
     ):
         # Stores the user question (task)
         self.query = query
@@ -53,6 +56,9 @@ class ResearchAgent:
 
         # Specified set of urls to be used
         self.urls = urls
+
+        # Type of search to perform : restricted or mixed
+        self.restrict_search = restrict_search
 
         # Set to store unique urls
         self.visited_urls = set()
@@ -98,16 +104,16 @@ class ResearchAgent:
         self.report_generation_id = report_generation_id
 
     async def conduct_research(
-        self, 
-        max_docs: int = 15, 
-        score_threshold: float = 1.2, 
-        existing_headers: list = [], 
+        self,
+        max_docs: int = 15,
+        score_threshold: float = 1.2,
+        existing_headers: list = [],
         write_report: bool = True
     ):
         """
         This async function conducts research based on a query, retrieves context from external sources
         or documents, and writes a report if specified.
-        
+
         Args:
           max_docs (int): The `max_docs` parameter in the `conduct_research` method specifies the
         maximum number of documents to retrieve or process during the research operation. In this case,
@@ -124,7 +130,7 @@ class ResearchAgent:
         boolean flag that determines whether a report should be written or not. If `write_report` is set
         to `True`, the method will generate and write a report based on the research conducted. If it is
         set to `. Defaults to True
-        
+
         Returns:
           The `conduct_research` method returns the `report` generated during the research process. If
         an exception occurs during the research process, the method catches the exception, logs the
@@ -146,25 +152,27 @@ class ResearchAgent:
                 emit_report_status(self.user_id, self.report_generation_id,
                                    "📂 Retrieving context from external search...")
 
-                self.context = await self.get_context_by_search(self.query)
+                context = await self.get_context_by_search(self.query)
+                self.context.extend(context)
 
             else:
                 emit_report_status(self.user_id, self.report_generation_id,
                                    "📂 Retrieving context from documents...")
 
-                self.context, self.visited_urls = retrieve_context_from_documents(
+                context, self.visited_urls = retrieve_context_from_documents(
                     self.user_id, self.query, max_docs, score_threshold
                 )
-                
+                self.context.extend(context)
+
             if write_report:
                 report = await self.write_report(existing_headers)
-                
+
             return report
 
         except Exception as e:
             Common.exception_details("ResearchAgent.conduct_research", e)
             return report
-        
+
     async def write_report(self, existing_headers: list = []):
         try:
             report = ""
@@ -206,54 +214,65 @@ class ResearchAgent:
             time.sleep(2)
 
             return report
-        
+
         except Exception as e:
             Common.exception_details("ResearchAgent.conduct_research", e)
             return report
 
     async def get_context_by_search(self, query):
-        """
-        Generates the context for the research task by searching the query and scraping the results
+        """Generates the context for the research task by searching the query and scraping the results
         Returns: context: List of context
         """
         context = []
-        sub_queries = [query] if self.report_type != "subtopic_report" else [
-            f"{self.parent_query} - {query}"]
-
         if self.report_type != "subtopic_report":
+            # If report_type is a basic report then we need to gather multiple sub queries for research
+            sub_queries = [query]
             sub_queries.extend(await get_sub_queries(query, self.role, self.cfg))
+        else:
+            # If report_type is a subtopic report then
+            # the subquery and parent query has already been provided
+            sub_queries = [f"{self.parent_query} - {query}"]
 
         await stream_output("logs", f"🧠 I will conduct my research based on the following queries: {', '.join(sub_queries)}...", self.websocket)
 
-        # If custom urls are provided then scraping should be done only once
+        # If custom urls are provided and search type is restricted
+        # then scraping should be done only once
         # and the results should be shared amongst all queries
-        if self.urls:
+        if self.urls and self.restrict_search:
             scraped_sites = await self.scrape_sites_by_query()
+        else:
+            scraped_sites = None
 
-        # Get scraped data from sites based on sub-queries
-        for sub_query in sub_queries:
-            emit_report_status(self.user_id, self.report_generation_id,
-                               f"🔎 Running research for '{sub_query}'...")
-            await stream_output("logs", f"\n🔎 Running research for '{sub_query}'...", self.websocket)
-
-            if not self.urls:
-                scraped_sites = await self.scrape_sites_by_query(sub_query)
-
-            if scraped_sites:
-                content = await self.get_similar_content_by_query(sub_query, scraped_sites)
-                if content:
-                    await stream_output("logs", f"📃 {content}", self.websocket)
-                    context.append(content)
-                else:
-                    await stream_output("logs", f"Failed to gather content for : {sub_query}", self.websocket)
+        # Use asyncio.gather to scrape multiple sub-queries concurrently
+        scraped_results = await asyncio.gather(*[self.scrape_and_get_content(sub_query, scraped_sites) for sub_query in sub_queries])
+        context.extend([result for result in scraped_results if result])
 
         return context
+
+    @lru_cache(maxsize=128)
+    async def scrape_and_get_content(self, sub_query, scraped_sites):
+        content = None
+        emit_report_status(self.user_id, self.report_generation_id,
+                           f"🔎 Running research for '{sub_query}'...")
+        await stream_output("logs", f"\n🔎 Running research for '{sub_query}'...", self.websocket)
+
+        if not scraped_sites:
+            scraped_sites = await self.scrape_sites_by_query(sub_query)
+
+        if scraped_sites:
+            content = await self.get_similar_content_by_query(sub_query, scraped_sites)
+            if content:
+                await stream_output("logs", f"📃 {content}", self.websocket)
+        else:
+            await stream_output("logs", f"Failed to gather content for : {sub_query}", self.websocket)
+
+        return content
 
     async def get_similar_content_by_query(self, query, pages):
         """
         This Python async function retrieves relevant content based on a query by summarizing raw data
         and running tasks using a ContextCompressor.
-        
+
         Args:
           query: The `query` parameter is the search query based on which relevant content will be
         retrieved.
@@ -261,7 +280,7 @@ class ResearchAgent:
         documents or content that you want to search for relevant content based on the provided query.
         It is used by the `ContextCompressor` to compress the context and find similar content based on
         the query.
-        
+
         Returns:
           The `get_similar_content_by_query` function returns the context compressor's result of getting
         relevant content based on the provided query, with a maximum of 8 results.
@@ -296,11 +315,11 @@ class ResearchAgent:
         """
         try:
 
-            # Use the user-defined urls for report generation
-            new_search_urls = self.urls
+            if self.restrict_search:
+                # Start with the input urls
+                new_search_urls = self.urls
 
-            # If input set of urls are not defined then use a retriever to get the urls
-            if not self.urls:
+            else:
                 # Get Urls
                 retriever = self.retriever(sub_query)
                 search_results = retriever.search(
@@ -343,11 +362,14 @@ class ResearchAgent:
         Returns: list[str]: The new urls from the given url set
         """
 
-        new_urls = []
+        new_urls = self.urls
         for url in url_set_input:
             if url not in self.visited_urls:
-                emit_report_status(self.user_id, self.report_generation_id,
-                                   f"✅ Adding source url to research: {url}...")
+                emit_report_status(
+                    self.user_id,
+                    self.report_generation_id,
+                    f"✅ Adding source url to research: {url}..."
+                )
                 await stream_output("logs", f"✅ Adding source url to research: {url}\n")
 
                 self.visited_urls.add(url)
@@ -359,17 +381,18 @@ class ResearchAgent:
         """
         This Python async function saves a report in markdown format, converts it to either Word or PDF
         format based on user preference, and saves tables to Excel.
-        
+
         Args:
           markdown_report: The `save_report` method you provided is an asynchronous function that saves
         a report in different formats based on the specified format ("word" or "pdf"). Here's a
         breakdown of the steps it performs:
-        
+
         Returns:
           The `save_report` method returns two values: `encoded_file_path` and `encoded_table_path`.
         """
-        
-        emit_report_status(self.user_id, self.report_generation_id, "💾 Saving report...")
+
+        emit_report_status(
+            self.user_id, self.report_generation_id, "💾 Saving report...")
         await stream_output("logs", f"💾 Saving report...\n")
 
         # Get the complete file path based reports folder, type of report
@@ -377,7 +400,7 @@ class ResearchAgent:
 
         # Ensure that this file path exists
         os.makedirs(file_path, exist_ok=True)
-        
+
         updated_markdown_report = add_source_urls(
             markdown_report, self.visited_urls, self.report_type, self.source)
 
@@ -404,13 +427,13 @@ class ResearchAgent:
 
         await stream_output("logs", f"💾 Saving tables to excel...\n")
         encoded_table_path = await self.tables_extractor.save_tables_to_excel()
-        
+
         return encoded_file_path, encoded_table_path
 
     async def get_report_markdown(self, report_type):
         """
         This async function generates a markdown report based on the specified report type.
-        
+
         Args:
           report_type: The `report_type` parameter in the `get_report_markdown` function is used to
         specify the type of report for which you want to generate the markdown. It could be a string
@@ -476,10 +499,10 @@ class ResearchAgent:
 
     async def get_subtopics(self):
         subtopics = await construct_subtopics(
-            task = self.query, 
+            task=self.query,
             data=self.context,
-            source = self.source,
-            subtopics = self.subtopics
+            source=self.source,
+            subtopics=self.subtopics
         )
 
         return subtopics
@@ -543,7 +566,8 @@ class ResearchAgent:
                     self.websocket,
                 )
 
-                tables = timeout_handler([], 10, self.tables_extractor.extract_tables, url)
+                tables = timeout_handler(
+                    [], 10, self.tables_extractor.extract_tables, url)
                 if len(tables):
                     new_tables = {"tables": tables, "url": url}
                     print(f"💎 Found table/s from {url}")

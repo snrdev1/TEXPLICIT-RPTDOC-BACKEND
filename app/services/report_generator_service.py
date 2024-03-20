@@ -30,7 +30,8 @@ def report_generate(
     format: str,
     report_generation_id: Union[int, None],
     subtopics: list,
-    urls: List[str]
+    urls: List[str],
+    restrict_search: bool
 ) -> None:
 
     def transform_data(report_document, report_id: Union[ObjectId, str] = ""):
@@ -67,6 +68,7 @@ def report_generate(
             "source": source,
             "format": format,
             "urls": urls,
+            "restrict_search": restrict_search,
             "report_generation_id": report_generation_id
         }
         insert_response = _insert_document_into_db(document_data)
@@ -94,7 +96,8 @@ def report_generate(
                 format=format,
                 report_generation_id=report_generation_id,
                 subtopics=subtopics,
-                urls=urls
+                urls=urls,
+                restrict_search=restrict_search
             )
         )
 
@@ -153,6 +156,7 @@ def report_generate(
                 "source": source,
                 "format": format,
                 "urls": list(report_urls),
+                "restrict_search": restrict_search,
                 "report_generation_id": report_generation_id,
                 "report_generation_time": report_generation_time,
                 "report_audio": report_audio

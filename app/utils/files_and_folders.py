@@ -92,7 +92,6 @@ def get_report_directory(user_id: Union[str, ObjectId], question: str = "", sour
 
 
 def get_report_path(report_document):
-    print("report_document  : ", report_document)
     file_path = urllib.parse.unquote(report_document["report_path"])
     print("📡 file_path : ", file_path)
 
