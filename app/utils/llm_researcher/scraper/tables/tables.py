@@ -408,6 +408,9 @@ class TableExtractor:
             workbook.save(self.tables_save_path)
 
         try:
+            if not self.tables:
+                return ""
+            
             workbook = _get_excel_workbook()
 
             if GlobalConfig.GCP_PROD_ENV:
