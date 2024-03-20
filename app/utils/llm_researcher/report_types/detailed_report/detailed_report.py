@@ -45,10 +45,10 @@ class DetailedReport:
         detailed_report_path = await self._check_existing_report()
         if detailed_report_path:
             return await self._handle_existing_report(detailed_report_path)
-           
+
         # Conduct initial research on provided urls
         await self._handle_provided_urls()
-            
+
         subtopics = await self._get_all_subtopics()
 
         (
@@ -165,20 +165,20 @@ class DetailedReport:
             report_generation_id=self.report_generation_id,
             restrict_search=self.restrict_search
         )
-        
+
         # The subtopics should start research from the context gathered by the main assistant
         subtopic_assistant.context = self.main_task_assistant.context
-        
-        if self.restrict_search:  
+
+        if self.restrict_search:
             # If search type is restricted then the existing context should be used for writing report
             report_markdown = await subtopic_assistant.write_report(
                 existing_headers=self.existing_headers
-            )  
+            )
         else:
             # If search type is mixed then further research needs to be conducted
             report_markdown = await subtopic_assistant.conduct_research(
-                max_docs=10, 
-                score_threshold=1, 
+                max_docs=10,
+                score_threshold=1,
                 existing_headers=self.existing_headers
             )
 
@@ -195,7 +195,8 @@ class DetailedReport:
             return "", "", []
 
         self.main_task_assistant.visited_urls.update(
-            subtopic_assistant.visited_urls)
+            subtopic_assistant.visited_urls
+        )
 
         return report_markdown, "", subtopic_assistant.tables_extractor.tables
 
@@ -213,6 +214,6 @@ class DetailedReport:
 
     async def _handle_provided_urls(self):
         # If urls were provided by the user then conduct initial research on those urls
-        
+
         if self.urls:
             self.main_task_assistant.conduct_research()

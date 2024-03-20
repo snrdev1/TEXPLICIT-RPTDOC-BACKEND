@@ -110,32 +110,6 @@ class ResearchAgent:
         existing_headers: list = [],
         write_report: bool = True
     ):
-        """
-        This async function conducts research based on a query, retrieves context from external sources
-        or documents, and writes a report if specified.
-
-        Args:
-          max_docs (int): The `max_docs` parameter in the `conduct_research` method specifies the
-        maximum number of documents to retrieve or process during the research operation. In this case,
-        the default value is set to 15, meaning that by default, the method will retrieve or process up
-        to 15 documents unless a. Defaults to 15
-          score_threshold (float): The `score_threshold` parameter in the `conduct_research` method is
-        used to set a threshold value for the score of documents retrieved during the research process.
-        Only documents with a score higher than this threshold will be considered relevant for the
-        research. The default value for `score_threshold` is set to
-          existing_headers (list): The `existing_headers` parameter in the `conduct_research` method is
-        a list that contains headers that are already present in a report. This parameter allows you to
-        pass a list of existing headers that you want to include in the report being generated.
-          write_report (bool): The `write_report` parameter in the `conduct_research` method is a
-        boolean flag that determines whether a report should be written or not. If `write_report` is set
-        to `True`, the method will generate and write a report based on the research conducted. If it is
-        set to `. Defaults to True
-
-        Returns:
-          The `conduct_research` method returns the `report` generated during the research process. If
-        an exception occurs during the research process, the method catches the exception, logs the
-        details, and then returns an empty string as the report.
-        """
         try:
             report = ""
             print(f"🔎 Running research for '{self.query}'...")
@@ -176,40 +150,40 @@ class ResearchAgent:
     async def write_report(self, existing_headers: list = []):
         try:
             report = ""
-            # Write Research Report
-            if len("".join(self.context)) > 50:
-                emit_report_status(self.user_id, self.report_generation_id,
-                                   f"✍️ Writing {get_formatted_report_type(self.report_type)} for research task: {self.query}...")
-                await stream_output(
-                    "logs",
-                    f"✍️ Writing {self.report_type} for research task: {self.query}...",
-                    self.websocket,
-                )
+            
+            # Write Report
+            emit_report_status(self.user_id, self.report_generation_id,
+                               f"✍️ Writing {get_formatted_report_type(self.report_type)} for research task: {self.query}...")
+            await stream_output(
+                "logs",
+                f"✍️ Writing {self.report_type} for research task: {self.query}...",
+                self.websocket,
+            )
 
-                if self.report_type == "custom_report":
-                    self.role = (
-                        self.cfg.agent_role if self.cfg.agent_role else self.role
-                    )
-                elif self.report_type == "subtopic_report":
-                    report = await generate_report(
-                        query=self.query,
-                        context=self.context,
-                        agent_role_prompt=self.role,
-                        report_type=self.report_type,
-                        websocket=self.websocket,
-                        cfg=self.cfg,
-                        main_topic=self.parent_query,
-                        existing_headers=existing_headers
-                    )
-                else:
-                    report = await generate_report(
-                        query=self.query,
-                        context=self.context,
-                        agent_role_prompt=self.role,
-                        report_type=self.report_type,
-                        websocket=self.websocket,
-                        cfg=self.cfg,
-                    )
+            if self.report_type == "custom_report":
+                self.role = (
+                    self.cfg.agent_role if self.cfg.agent_role else self.role
+                )
+            elif self.report_type == "subtopic_report":
+                report = await generate_report(
+                    query=self.query,
+                    context=self.context,
+                    agent_role_prompt=self.role,
+                    report_type=self.report_type,
+                    websocket=self.websocket,
+                    cfg=self.cfg,
+                    main_topic=self.parent_query,
+                    existing_headers=existing_headers
+                )
+            else:
+                report = await generate_report(
+                    query=self.query,
+                    context=self.context,
+                    agent_role_prompt=self.role,
+                    report_type=self.report_type,
+                    websocket=self.websocket,
+                    cfg=self.cfg,
+                )
 
             time.sleep(2)
 
@@ -220,53 +194,56 @@ class ResearchAgent:
             return report
 
     async def get_context_by_search(self, query):
-        """Generates the context for the research task by searching the query and scraping the results
+        """ Generates the context for the research task by searching the query and scraping the results
         Returns: context: List of context
         """
         context = []
+        
+        # Determine sub-queries based on report type
+        sub_queries = [query]
         if self.report_type != "subtopic_report":
-            # If report_type is a basic report then we need to gather multiple sub queries for research
-            sub_queries = [query]
             sub_queries.extend(await get_sub_queries(query, self.role, self.cfg))
         else:
-            # If report_type is a subtopic report then
-            # the subquery and parent query has already been provided
             sub_queries = [f"{self.parent_query} - {query}"]
-
+        
         await stream_output("logs", f"🧠 I will conduct my research based on the following queries: {', '.join(sub_queries)}...", self.websocket)
-
-        # If custom urls are provided and search type is restricted
-        # then scraping should be done only once
-        # and the results should be shared amongst all queries
+        
+        # Cache scraped sites if custom URLs are provided and search type is restricted
+        scraped_sites = None
         if self.urls and self.restrict_search:
             scraped_sites = await self.scrape_sites_by_query()
-        else:
-            scraped_sites = None
-
-        # Use asyncio.gather to scrape multiple sub-queries concurrently
-        scraped_results = await asyncio.gather(*[self.scrape_and_get_content(sub_query, scraped_sites) for sub_query in sub_queries])
-        context.extend([result for result in scraped_results if result])
-
-        return context
-
-    @lru_cache(maxsize=128)
-    async def scrape_and_get_content(self, sub_query, scraped_sites):
-        content = None
-        emit_report_status(self.user_id, self.report_generation_id,
-                           f"🔎 Running research for '{sub_query}'...")
-        await stream_output("logs", f"\n🔎 Running research for '{sub_query}'...", self.websocket)
-
-        if not scraped_sites:
-            scraped_sites = await self.scrape_sites_by_query(sub_query)
-
-        if scraped_sites:
+        
+        async def process_sub_query(sub_query):
+            nonlocal scraped_sites
+            emit_report_status(self.user_id, self.report_generation_id, f"🔎 Running research for '{sub_query}'...")
+            await stream_output("logs", f"\n🔎 Running research for '{sub_query}'...", self.websocket)
+            
+            # Perform scraping if data not already cached
+            if not scraped_sites:
+                scraped_sites = await self.scrape_sites_by_query(sub_query)
+            
+            # Handle scraping failures
+            if not scraped_sites:
+                await stream_output("logs", f"Failed to gather content for: {sub_query}", self.websocket)
+                return None
+            
+            # Get similar content by query from scraped sites
             content = await self.get_similar_content_by_query(sub_query, scraped_sites)
+            
+            # Handle content retrieval failures
             if content:
                 await stream_output("logs", f"📃 {content}", self.websocket)
-        else:
-            await stream_output("logs", f"Failed to gather content for : {sub_query}", self.websocket)
-
-        return content
+                return content
+            else:
+                await stream_output("logs", f"Failed to gather content for: {sub_query}", self.websocket)
+                return None
+        
+        # Use asyncio.gather for concurrent execution of sub-queries
+        tasks = [process_sub_query(sub_query) for sub_query in sub_queries]
+        results = await asyncio.gather(*tasks)
+        context.extend(filter(None, results))  # Filter out None results
+        
+        return context
 
     async def get_similar_content_by_query(self, query, pages):
         """
