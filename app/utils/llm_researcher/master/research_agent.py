@@ -402,9 +402,8 @@ class ResearchAgent:
                 updated_markdown_report
             )
 
-        encoded_table_path = ""
-        # await stream_output("logs", f"💾 Saving tables to excel...\n")
-        # encoded_table_path = self.tables_extractor.save_tables_to_excel()
+        await stream_output("logs", f"💾 Saving tables to excel...\n")
+        encoded_table_path = await self.tables_extractor.save_tables_to_excel()
         
         return encoded_file_path, encoded_table_path
 

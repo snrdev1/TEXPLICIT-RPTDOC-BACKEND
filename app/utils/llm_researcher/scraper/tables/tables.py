@@ -279,7 +279,7 @@ class TableExtractor:
 
         return combined_html
 
-    def save_tables_to_excel(self):
+    async def save_tables_to_excel(self):
         """Convert each table inside the output list to an Excel sheet with the title of the table as sheet name.
         Include a hyperlinked URL to the table at the top of each sheet. Also, insert a sheet at the beginning
         titled 'List of tables' containing a list of all tables in the file along with their URLs."""
@@ -328,7 +328,7 @@ class TableExtractor:
             tables = table_data["tables"]
             url = table_data["url"]
             
-            for index, table in enumerate(tables):
+            for table in tables:
                 title = sanitize_sheet_title(table['title'])
                 values = table['values']
 

@@ -6,7 +6,7 @@ import urllib
 from datetime import datetime, timedelta
 from typing import List, Tuple, Union
 from urllib.parse import unquote, urlparse, urlunparse
-
+import platform
 from bson import ObjectId
 
 from app.config import Config
@@ -83,6 +83,8 @@ def report_generate(
         return str(insert_response["inserted_id"])
 
     def run_research() -> Tuple[str, str]:
+        if platform.system()=='Windows':
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         return asyncio.run(
             research(
                 user_id,
