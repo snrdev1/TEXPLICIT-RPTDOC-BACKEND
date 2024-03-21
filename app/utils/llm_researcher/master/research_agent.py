@@ -360,7 +360,7 @@ class ResearchAgent:
             emit_report_status(
                 self.user_id,
                 self.report_generation_id,
-                "📊 Trying to extracting tables..."
+                "📊 Trying to extract tables..."
             )
             await self.extract_tables(new_search_urls)
 
@@ -448,7 +448,7 @@ class ResearchAgent:
             self.source
         )
 
-        # Save report mardown for future use
+        # Save report markdown for future use
         _ = await save_markdown(file_path, updated_markdown_report)
         print("💾 Saved markdown!")
 
