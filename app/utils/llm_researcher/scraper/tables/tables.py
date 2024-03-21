@@ -414,9 +414,9 @@ class TableExtractor:
             workbook = _get_excel_workbook()
 
             if GlobalConfig.GCP_PROD_ENV:
-                await _save_tables_to_excel_prod(workbook)
+                _save_tables_to_excel_prod(workbook)
             else:
-                await _save_tables_to_excel_dev(workbook)
+                _save_tables_to_excel_dev(workbook)
 
             # Return url encoded path where the tables are have been saved
             encoded_file_path = urllib.parse.quote(self.tables_save_path)
