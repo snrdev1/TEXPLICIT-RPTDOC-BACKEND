@@ -15,6 +15,7 @@ from app.utils.formatter import get_formatted_report_type
 from app.utils.production import Production
 from app.utils.socket import emit_report_status
 from app.utils.timer import timeout_handler
+from app.utils.validator import Subtopic
 
 from ..config import Config
 from ..context.compression import ContextCompressor
@@ -35,9 +36,9 @@ class ResearchAgent:
         format: str,
         report_type: str = Enumerator.ReportType.ResearchReport.value,
         websocket=None,
-        parent_query="",
-        subtopics=[],
-        report_generation_id="",
+        parent_query: str="",
+        subtopics: List[Subtopic]=[],
+        report_generation_id:str ="",
         input_urls: List[str] = [],
         visited_urls: set = set(),
         restrict_search: bool = False,
@@ -46,6 +47,9 @@ class ResearchAgent:
     ):
         # Stores the user question (task)
         self.query = query
+        
+        # Stores the report generation id
+        self.report_generation_id = report_generation_id
 
         # Agent type and role of agent
         self.agent = agent
@@ -102,9 +106,6 @@ class ResearchAgent:
 
         # Stores all the subtopics
         self.subtopics = subtopics
-
-        # Stores the report generation id
-        self.report_generation_id = report_generation_id
 
     async def conduct_research(
         self,
@@ -240,7 +241,7 @@ class ResearchAgent:
         if self.restrict_search:
             scraped_sites = await self.scrape_sites_by_query()
 
-        async def process_sub_query(sub_query):
+        async def process_sub_query(sub_query: str):
             nonlocal scraped_sites
             emit_report_status(
                 self.user_id,
@@ -292,23 +293,7 @@ class ResearchAgent:
 
         return context
 
-    async def get_similar_content_by_query(self, query, pages):
-        """
-        This Python async function retrieves relevant content based on a query by summarizing raw data
-        and running tasks using a ContextCompressor.
-
-        Args:
-          query: The `query` parameter is the search query based on which relevant content will be
-        retrieved.
-          pages: The `pages` parameter in the `get_similar_content_by_query` function is a list of
-        documents or content that you want to search for relevant content based on the provided query.
-        It is used by the `ContextCompressor` to compress the context and find similar content based on
-        the query.
-
-        Returns:
-          The `get_similar_content_by_query` function returns the context compressor's result of getting
-        relevant content based on the provided query, with a maximum of 8 results.
-        """
+    async def get_similar_content_by_query(self, query: str, pages):
         await stream_output(
             "logs",
             f"📃 Getting relevant content based on query: {query}...",
@@ -387,11 +372,7 @@ class ResearchAgent:
             )
             return ""
 
-    async def get_new_urls(self, url_set_input):
-        """Gets the new urls from the given url set.
-        Args: url_set_input (set[str]): The url set to get the new urls from
-        Returns: list[str]: The new urls from the given url set
-        """
+    async def get_new_urls(self, url_set_input: list):
 
         new_urls = []
         for url in url_set_input:
@@ -411,7 +392,7 @@ class ResearchAgent:
 
         return new_urls
 
-    async def save_report(self, markdown_report):
+    async def save_report(self, markdown_report: str):
         """
         This Python async function saves a report in markdown format, converts it to either Word or PDF
         format based on user preference, and saves tables to Excel.
@@ -489,7 +470,7 @@ class ResearchAgent:
 
         return encoded_file_path, encoded_table_path
 
-    async def get_report_markdown(self, report_type):
+    async def get_report_markdown(self, report_type: str):
         """
         This async function generates a markdown report based on the specified report type.
 
@@ -524,7 +505,7 @@ class ResearchAgent:
 
         return None
 
-    async def check_existing_report(self, report_type):
+    async def check_existing_report(self, report_type: str):
         """
         The function `check_existing_report` checks if a report of a given type already exists in a
         directory or a Google Cloud Storage bucket.

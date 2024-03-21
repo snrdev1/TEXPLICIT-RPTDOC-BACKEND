@@ -110,7 +110,7 @@ def generate_outline_report_prompt(
     )
 
 
-def get_report_by_type(report_type):
+def get_report_by_type(report_type: str):
     report_type_mapping = {
         Enumerator.ReportType.ResearchReport.value: generate_report_prompt,
         Enumerator.ReportType.ResourceReport.value: generate_resource_report_prompt,
@@ -150,7 +150,7 @@ def auto_agent_instructions() -> str:
     """
 
 
-def generate_summary_prompt(query, data):
+def generate_summary_prompt(query: str, data):
     """Generates the summary prompt for the given question and text.
     Args: question (str): The question to generate the summary prompt for
             text (str): The text to generate the summary prompt for
@@ -172,11 +172,11 @@ def generate_summary_prompt(query, data):
 def generate_subtopic_report_prompt(
     current_subtopic,
     existing_headers,
-    main_topic,
+    main_topic: str,
     context,
     report_format="apa",
-    total_words=1000,
-    source="external",
+    total_words: int = 1000,
+    source:str = "external",
 ) -> str:
     source_hyperlinks = ""
     if source == "external":

@@ -58,7 +58,7 @@ def get_retriever(retriever):
     return retriever
 
 
-async def get_sub_queries(query, agent_role_prompt, cfg):
+async def get_sub_queries(query, agent_role_prompt: str, cfg):
     """
     Gets the sub queries
     Args:
@@ -108,7 +108,7 @@ async def stream_output(type, output, websocket=None, logging=True):
         await websocket.send_json({"type": type, "output": output})
 
 
-def scrape_urls(urls, cfg):
+def scrape_urls(urls, cfg) -> list:
     content = []
     user_agent = (
         cfg.user_agent
@@ -132,7 +132,7 @@ async def generate_report(
     all_subtopics: list = [],
     main_topic: str = "",
     existing_headers: list = [],
-):
+) -> str:
     try:
         generate_prompt = get_report_by_type(report_type)
 
@@ -164,7 +164,7 @@ async def generate_report(
 
 def add_source_urls(
     report_markdown: str, visited_urls: set, report_type: str, source: str
-):
+) -> str:
     """
     The function takes a markdown report, a set of visited URLs, a report type, and a source, and
     returns the report with added source URLs.
@@ -206,7 +206,7 @@ def add_source_urls(
 
 
 # Function to extract headers from markdown text
-def extract_headers(markdown_text: str):
+def extract_headers(markdown_text: str) -> list:
     headers = []
     parsed_md = markdown.markdown(markdown_text)  # Parse markdown text
     lines = parsed_md.split("\n")  # Split text into lines
@@ -239,7 +239,7 @@ def extract_headers(markdown_text: str):
     return headers  # Return the list of headers
 
 
-def table_of_contents(markdown_text: str):
+def table_of_contents(markdown_text: str) -> str:
     try:
         # Function to generate table of contents recursively
         def generate_table_of_contents(headers, indent_level=0):
