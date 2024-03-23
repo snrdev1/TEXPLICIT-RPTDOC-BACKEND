@@ -6,6 +6,7 @@ from bson import ObjectId
 from ...services import user_service as UserService
 from ..enumerator import Enumerator
 from ...utils.common import Common
+from ..parser import Parser
 
 class Subscription:
     def __init__(self, user_id: Union[str, ObjectId]):
@@ -27,9 +28,10 @@ class Subscription:
         try:
             current_date = datetime.utcnow()
             subscription_duration = self.user_permissions.get("subscription_duration", {})
-            start_date = datetime.strptime(subscription_duration.get("start_date", current_date)["$date"], '%Y-%m-%dT%H:%M:%S.%fZ')
-            end_date = datetime.strptime(subscription_duration.get("end_date", current_date)["$date"], '%Y-%m-%dT%H:%M:%S.%fZ')
-
+                        
+            start_date = Parser.convert_to_datetime(subscription_duration.get("start_date"))
+            end_date = Parser.convert_to_datetime(subscription_duration.get("end_date"))
+                
             # print("check_subscription_duration : ", start_date <= current_date < end_date)
 
             return start_date <= current_date < end_date
