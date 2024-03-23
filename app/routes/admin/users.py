@@ -7,7 +7,7 @@ from flask import Blueprint, request
 
 from app.auth.userauthorization import admin, authorized
 from app.services import UserService
-from app.utils import Common, Enumerator, Messages, Response, files_and_folders
+from app.utils import Common, Enumerator, Messages, Response, files_and_folders, Parser
 from app.utils.validator import AdminUserPermissions, User
 
 admin_users = Blueprint("admin_users", __name__, url_prefix="/admin/user")
@@ -106,8 +106,8 @@ def admin_add_update_user(logged_in_user):
             permissions={
                 "menu": request_params.get("menu", []),
                 "subscription_duration": {
-                    "start_date": request_params.get("start_date", datetime.utcnow()),
-                    "end_date": request_params.get("end_date", datetime.utcnow()),
+                    "start_date": Parser.convert_to_datetime(request_params.get("start_date")),
+                    "end_date": Parser.convert_to_datetime(request_params.get("end_date")),
                 },
                 "document": {
                     "allowed": {
