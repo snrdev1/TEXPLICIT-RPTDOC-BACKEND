@@ -12,8 +12,9 @@ async def research(
     source: str,
     format: str,
     report_generation_id: Union[str, None],
-    subtopics: list = [],
-    urls: List[str] = []
+    subtopics: list,
+    urls: List[str],
+    restrict_search: bool
 ):
     if task:
         agent_executor = AgentExecutor(
@@ -26,7 +27,8 @@ async def research(
             report_generation_id=report_generation_id,
             subtopics=subtopics,
             check_existing_report=False,
-            urls=urls
+            urls=urls,
+            restrict_search=restrict_search
         )
         report_markdown, report_path, tables, table_path, report_urls = await agent_executor.run_agent()
         return report_markdown, report_path, tables, table_path, report_urls

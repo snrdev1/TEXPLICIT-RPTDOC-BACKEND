@@ -15,13 +15,14 @@ class BasicReport:
         user_id: Union[ObjectId, str],
         task: str,
         report_type: str,
-        source: str = "external",
-        format: str = "pdf",
-        report_generation_id: str = "",
-        websocket=None,
-        subtopics: list = [],
-        check_existing_report: bool = False,
-        urls: List[str] = []
+        source: str,
+        format: str,
+        report_generation_id: str,
+        websocket,
+        subtopics: list,
+        check_existing_report: bool,
+        urls: List[str],
+        restrict_search: bool 
     ):
         self.user_id = user_id
         self.task = task
@@ -33,6 +34,7 @@ class BasicReport:
         self.subtopics = subtopics
         self.check_existing_report = check_existing_report
         self.urls = urls
+        self.restrict_search = restrict_search
         self.assistant = self._create_research_assistant()
 
     async def generate_report(self) -> tuple:
@@ -51,7 +53,8 @@ class BasicReport:
             report_type=self.report_type,
             websocket=self.websocket,
             report_generation_id=self.report_generation_id,
-            urls=self.urls
+            input_urls=self.urls,
+            restrict_search=self.restrict_search
         )
 
     async def _check_existing_report(self) -> str:

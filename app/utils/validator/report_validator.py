@@ -26,12 +26,12 @@ class ReportGenerationParameters(BaseModel):
     report_generation_id: str = ""
     subtopics: List[Subtopic] = []
     urls: List[str] = []
+    restrict_search: bool = False
     check_existing_report: bool = False
 
     @root_validator
     def check_values(cls, values):
-        report_type_values = [
-            report_type.value for report_type in Enumerator.ReportType.__members__.values()]
+        report_type_values = [report_type.value for report_type in Enumerator.ReportType.__members__.values()]
         if values['report_type'] not in report_type_values:
             raise ValueError(Messages.INVALID_REPORT_TYPE)
 

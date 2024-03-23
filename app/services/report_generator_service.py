@@ -6,13 +6,13 @@ import urllib
 from datetime import datetime, timedelta
 from typing import List, Tuple, Union
 from urllib.parse import unquote, urlparse, urlunparse
-
+import platform
 from bson import ObjectId
 
 from app.config import Config
 from app.models.mongoClient import MongoClient
 from app.utils.email_helper import send_mail
-from app.utils.files_and_folders import get_report_directory, get_report_path
+from app.utils.files_and_folders import get_report_directory, get_report_path, get_report_data_table_path
 from app.utils.formatter import cursor_to_dict, get_base64_encoding
 from app.utils.llm_researcher.llm_researcher import research
 from app.utils.socket import emit_report_status
@@ -30,7 +30,8 @@ def report_generate(
     format: str,
     report_generation_id: Union[int, None],
     subtopics: list,
-    urls: List[str]
+    urls: List[str],
+    restrict_search: bool
 ) -> None:
 
     def transform_data(report_document, report_id: Union[ObjectId, str] = ""):
@@ -67,6 +68,7 @@ def report_generate(
             "source": source,
             "format": format,
             "urls": urls,
+            "restrict_search": restrict_search,
             "report_generation_id": report_generation_id
         }
         insert_response = _insert_document_into_db(document_data)
@@ -83,6 +85,8 @@ def report_generate(
         return str(insert_response["inserted_id"])
 
     def run_research() -> Tuple[str, str]:
+        if platform.system()=='Windows':
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         return asyncio.run(
             research(
                 user_id,
@@ -92,7 +96,8 @@ def report_generate(
                 format=format,
                 report_generation_id=report_generation_id,
                 subtopics=subtopics,
-                urls=urls
+                urls=urls,
+                restrict_search=restrict_search
             )
         )
 
@@ -151,6 +156,7 @@ def report_generate(
                 "source": source,
                 "format": format,
                 "urls": list(report_urls),
+                "restrict_search": restrict_search,
                 "report_generation_id": report_generation_id,
                 "report_generation_time": report_generation_time,
                 "report_audio": report_audio
@@ -692,6 +698,35 @@ def get_file_contents(report_document):
             report_document["task"],
             report_document["createdOn"],
         )
+
+        if Config.GCP_PROD_ENV:
+            user_bucket = Production.get_users_bucket()
+            blob = user_bucket.blob(file_path)
+            bytes = blob.download_as_bytes()
+            return io.BytesIO(bytes), file_name
+        else:
+            if os.path.exists(file_path):
+                with open(file_path, 'rb') as file_handle:
+                    file_bytes = file_handle.read()
+                    return io.BytesIO(file_bytes), file_name
+
+    except Exception as e:
+        Common.exception_details(
+            "report_generator_service.get_file_contents", e)
+        return None, None
+    
+
+def get_data_table_contents(report_document):
+    try:
+        file_path = get_report_data_table_path(report_document)
+
+        print(f"file_path : {file_path}")
+        report_file_name = get_report_download_filename(
+            report_document["report_type"],
+            report_document["task"],
+            report_document["createdOn"],
+        )
+        file_name = f"{report_file_name}_data_tables"
 
         if Config.GCP_PROD_ENV:
             user_bucket = Production.get_users_bucket()

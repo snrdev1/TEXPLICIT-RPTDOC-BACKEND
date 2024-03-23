@@ -10,7 +10,8 @@ from langchain.output_parsers import PydanticOutputParser
 from langchain.prompts import PromptTemplate
 from langchain_community.adapters import openai as lc_openai
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.pydantic_v1 import BaseModel, Field, validator
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 
@@ -97,51 +98,55 @@ async def send_google_chat_completion_request(
 ):
     print(f"🤖 Calling {model}...")
 
-    llm = ChatGoogleGenerativeAI(model=model, convert_system_message_to_human=True,
-                                 temperature=temperature, max_output_tokens=max_tokens)
+    llm = ChatGoogleGenerativeAI(
+        model=model, 
+        convert_system_message_to_human=True,
+        temperature=temperature, 
+        max_output_tokens=max_tokens
+    )
+    
     converted_messages = convert_messages(messages)
     result = llm.invoke(converted_messages)
 
     return result.content
 
-
 async def send_oepnai_chat_completion_request(
     messages, model, temperature, max_tokens, stream, llm_provider, websocket=None
 ):
-    print(f"🤖 Calling {model}...")
-
-    if not stream:
-        result = lc_openai.chat.completions.create(
-            model=model,  # Change model here to use different models
-            messages=messages,
+    print(f"\n🤖 Calling {model}...\n")
+    
+    if not stream:        
+        chat = ChatOpenAI(
+            model=model, 
             temperature=temperature,
-            max_tokens=max_tokens,
-            provider=llm_provider,  # Change provider here to use a different API
+            max_tokens=max_tokens
         )
-        return result["choices"][0]["message"]["content"]
+
+        output = await chat.ainvoke(messages)
+        
+        return output.content
+        
     else:
         return await stream_response(
             model, messages, temperature, max_tokens, llm_provider, websocket
         )
 
-
 async def stream_response(
     model, messages, temperature, max_tokens, llm_provider, websocket=None
 ):
     print(f"\n🤖 Calling {model}...\n")
+    
+    chat = ChatOpenAI(
+        model=model, 
+        temperature=temperature,
+        max_tokens=max_tokens
+    )
 
     paragraph = ""
     response = ""
-
-    for chunk in lc_openai.chat.completions.create(
-        model=model,
-        messages=messages,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        provider=llm_provider,
-        stream=True,
-    ):
-        content = chunk["choices"][0].get("delta", {}).get("content")
+    
+    async for chunk in chat.astream(messages):
+        content = chunk.content
         if content is not None:
             response += content
             paragraph += content
@@ -151,6 +156,7 @@ async def stream_response(
                 else:
                     print(f"{Fore.GREEN}{paragraph}{Style.RESET_ALL}")
                 paragraph = ""
+                
     return response
 
 

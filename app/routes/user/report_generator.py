@@ -38,7 +38,9 @@ def generate_report(logged_in_user):
             report_generation_id=request_params.get(
                 "report_generation_id", None),
             subtopics=request_params.get("subtopics", []),
-            urls=request_params.get("urls", [])
+            urls=request_params.get("urls", []),
+            restrict_search=request_params.get(
+                "restrict_search", False)
         ).dict()
 
         # Check subscription validity before generating report
@@ -59,7 +61,8 @@ def generate_report(logged_in_user):
                 report_generation_info.get("format"),
                 report_generation_info.get("report_generation_id"),
                 report_generation_info.get("subtopics"),
-                report_generation_info.get("urls")
+                report_generation_info.get("urls"),
+                report_generation_info.get("restrict_search")
             ),
         )
         t1.start()
@@ -142,6 +145,28 @@ def download_report(logged_in_user, reportid):
 
     except Exception as e:
         Common.exception_details("mydocuments.py : download_report", e)
+        return Response.server_error()
+
+
+@report_generator.route("/download/data-table/<reportid>", methods=["GET"])
+@authorized
+def download_report_data_table(logged_in_user, reportid):
+    try:
+        user_id = str(logged_in_user["_id"])
+
+        report_document = ReportGeneratorService.get_report_from_db(reportid)
+        if report_document:
+            if user_id != str(report_document["createdBy"]["_id"]):
+                return Response.custom_response([], Messages.UNAUTHORIZED, False, 401)
+
+            file_bytes, file_name = ReportGeneratorService.get_data_table_contents(report_document)
+
+            return send_file(file_bytes, as_attachment=True, download_name=file_name)
+
+        return Response.custom_response([], Messages.MISSING_REPORT, False, 400)
+
+    except Exception as e:
+        Common.exception_details("mydocuments.py : download_report_data_table", e)
         return Response.server_error()
 
 
