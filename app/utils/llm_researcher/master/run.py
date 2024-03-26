@@ -66,7 +66,7 @@ class AgentExecutor:
         report: ReportGenerationOutput = await executor.generate_report()
 
         end_time = datetime.datetime.now(datetime.timezone.utc)
-        print({"type": "path", "output": report.get("report_path")})
+        print({"type": "path", "output": report.report_path})
         print({"type": "logs", "output": f"\nEnd time: {end_time}\n"})
         print({"type": "logs", "output": f"\nTotal run time: {end_time - start_time}\n"})
 
