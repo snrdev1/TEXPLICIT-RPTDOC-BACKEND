@@ -83,9 +83,12 @@ class Parser:
         using the `fromisoformat` method. If it is a dictionary, it extracts the date string and
         converts it to a datetime object using `strptime`. If the input `date`
         """
+        
+        print("Type of date : ", type(date))
+        
         if isinstance(date, str):
             return datetime.datetime.fromisoformat(date.replace('Z', '+00:00'))
         elif isinstance(date, dict):
-            return datetime.datetime.strptime(date["$date"], '%Y-%m-%dT%H:%M:%SZ')
+            return datetime.datetime.strptime(date["$date"], '%Y-%m-%dT%H:%M:%S.%fZ')
         else:
             return date if date else current_date
