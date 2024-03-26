@@ -12,7 +12,7 @@ from app.config import Config
 from app.utils.validator import ReportGenerationParameters
 
 from ...auth import authorized
-from ...services import report_generator_service as ReportGeneratorService
+from ...services import report_generator_service as ReportGeneratorService, MyDocumentsService
 from ...utils import (Common, Enumerator, Messages, Production, Response,
                       Subscription)
 from ...utils.files_and_folders import get_report_audio_path
@@ -31,16 +31,13 @@ def generate_report(logged_in_user):
         report_generation_info = ReportGenerationParameters(
             user_id=user_id,
             task=request_params.get("task"),
-            report_type=request_params.get(
-                "report_type", Enumerator.ReportType.ResearchReport.value),
+            report_type=request_params.get("report_type", Enumerator.ReportType.ResearchReport.value),
             source=request_params.get("source", "external"),
             format=request_params.get("format", "pdf"),
-            report_generation_id=request_params.get(
-                "report_generation_id", None),
+            report_generation_id=request_params.get("report_generation_id", None),
             subtopics=request_params.get("subtopics", []),
             urls=request_params.get("urls", []),
-            restrict_search=request_params.get(
-                "restrict_search", False)
+            restrict_search=request_params.get("restrict_search", False)
         ).dict()
 
         # Check subscription validity before generating report
@@ -49,6 +46,13 @@ def generate_report(logged_in_user):
         ) and subscription.check_subscription_report(report_generation_info.get("report_type"))
         if not subscription_validity:
             return Response.subscription_invalid(Messages.INVALID_SUBSCRIPTION_REPORT)
+        
+        # Ok now if the source points to my documents and there are no my documents then error has to be generated
+        if report_generation_info.get("source") == "my_documents":
+            docs = MyDocumentsService().get_all_files(user_id, None)[0].get("uploaded", [])
+             
+            if not len(docs):
+                return Response.custom_response([], "No documents available. Please upload the documents to proceed.", True, 400)
 
         # Getting response and emitting it in a separate non-blocking thread
         t1 = threading.Thread(
@@ -125,13 +129,13 @@ def retrieve_pending_reports(logged_in_user):
         return Response.server_error()
 
 
-@report_generator.route("/download/<reportid>", methods=["GET"])
+@report_generator.route("/download/<report_id>", methods=["GET"])
 @authorized
-def download_report(logged_in_user, reportid):
+def download_report(logged_in_user, report_id):
     try:
         user_id = str(logged_in_user["_id"])
 
-        report_document = ReportGeneratorService.get_report_from_db(reportid)
+        report_document = ReportGeneratorService.get_report_from_db(report_id)
         if report_document:
             if user_id != str(report_document["createdBy"]["_id"]):
                 return Response.custom_response([], Messages.UNAUTHORIZED, False, 401)
@@ -148,13 +152,13 @@ def download_report(logged_in_user, reportid):
         return Response.server_error()
 
 
-@report_generator.route("/download/data-table/<reportid>", methods=["GET"])
+@report_generator.route("/download/data-table/<report_id>", methods=["GET"])
 @authorized
-def download_report_data_table(logged_in_user, reportid):
+def download_report_data_table(logged_in_user, report_id):
     try:
         user_id = str(logged_in_user["_id"])
 
-        report_document = ReportGeneratorService.get_report_from_db(reportid)
+        report_document = ReportGeneratorService.get_report_from_db(report_id)
         if report_document:
             if user_id != str(report_document["createdBy"]["_id"]):
                 return Response.custom_response([], Messages.UNAUTHORIZED, False, 401)
@@ -170,13 +174,13 @@ def download_report_data_table(logged_in_user, reportid):
         return Response.server_error()
 
 
-@report_generator.route("/audio/download/<reportid>", methods=["GET"])
+@report_generator.route("/audio/download/<report_id>", methods=["GET"])
 @authorized
-def download_report_audio(logged_in_user, reportid):
+def download_report_audio(logged_in_user, report_id):
     try:
         user_id = str(logged_in_user["_id"])
 
-        report_document = ReportGeneratorService.get_report_from_db(reportid)
+        report_document = ReportGeneratorService.get_report_from_db(report_id)
         if not report_document:
             return Response.custom_response([], Messages.MISSING_REPORT, False, 400)
 

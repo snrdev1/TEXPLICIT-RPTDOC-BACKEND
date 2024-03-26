@@ -1,10 +1,11 @@
 # basic_report.py
 
-from typing import Union, List
+from typing import List, Union
 
 from bson import ObjectId
 
 from app.utils.socket import emit_report_status
+from app.utils.validator import ReportGenerationOutput
 
 from ...master.research_agent import ResearchAgent
 
@@ -20,9 +21,8 @@ class BasicReport:
         report_generation_id: str,
         websocket,
         subtopics: list,
-        check_existing_report: bool,
         urls: List[str],
-        restrict_search: bool 
+        restrict_search: bool
     ):
         self.user_id = user_id
         self.task = task
@@ -32,17 +32,29 @@ class BasicReport:
         self.report_generation_id = report_generation_id
         self.websocket = websocket
         self.subtopics = subtopics
-        self.check_existing_report = check_existing_report
         self.urls = urls
         self.restrict_search = restrict_search
         self.assistant = self._create_research_assistant()
 
-    async def generate_report(self) -> tuple:
-        path = await self._check_existing_report()
-        if path:
-            return await self._handle_existing_report(path)
+    async def generate_report(self) -> ReportGenerationOutput:
+        print("🚦 Starting research")
+        emit_report_status(
+            self.user_id, self.report_generation_id, "🚦 Starting research..."
+        )
+        report_markdown = await self.assistant.conduct_research()
 
-        return await self._conduct_research()
+        report_markdown = report_markdown.strip()
+
+        report_path, table_path = await self.assistant.save_report(report_markdown)
+
+        return ReportGenerationOutput(
+            report_markdown=report_markdown,
+            report_path=report_path,
+            tables=self.assistant.tables_extractor.tables,
+            table_path=table_path,
+            visited_urls=self.assistant.visited_urls,
+            error_log=self.assistant.error_log
+        )
 
     def _create_research_assistant(self) -> ResearchAgent:
         return ResearchAgent(
@@ -55,45 +67,4 @@ class BasicReport:
             report_generation_id=self.report_generation_id,
             input_urls=self.urls,
             restrict_search=self.restrict_search
-        )
-
-    async def _check_existing_report(self) -> str:
-        if self.check_existing_report:
-            return await self.assistant.check_existing_report(self.report_type)
-        return None
-
-    async def _handle_existing_report(self, path: str) -> tuple:
-        emit_report_status(
-            self.user_id, self.report_generation_id, "💎 Found existing report..."
-        )
-        await self.assistant.extract_tables()
-        report_markdown = await self.assistant.get_report_markdown(self.report_type)
-        report_markdown = report_markdown.strip()
-
-        return (
-            report_markdown,
-            path,
-            self.assistant.tables_extractor.tables,
-            self.assistant.visited_urls,
-        )
-
-    async def _conduct_research(self) -> tuple:
-        print("🚦 Starting research")
-        emit_report_status(
-            self.user_id, self.report_generation_id, "🚦 Starting research..."
-        )
-        report_markdown = await self.assistant.conduct_research()
-
-        report_markdown = report_markdown.strip()
-        if len(report_markdown) == 0:
-            return "", "", [], set()
-
-        report_path, table_path = await self.assistant.save_report(report_markdown)
-
-        return (
-            report_markdown,
-            report_path,
-            self.assistant.tables_extractor.tables,
-            table_path,
-            self.assistant.visited_urls,
         )

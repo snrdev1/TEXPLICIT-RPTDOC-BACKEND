@@ -7,6 +7,7 @@ from bson import ObjectId
 
 from app.utils import Enumerator
 from app.utils.socket import emit_report_status
+from app.utils.validator import ReportGenerationOutput
 
 from ...master.functions import extract_headers, table_of_contents
 from ...master.research_agent import ResearchAgent
@@ -23,7 +24,6 @@ class DetailedReport:
         report_generation_id: str,
         websocket,
         subtopics: list,
-        check_existing_report: bool,
         urls: List[str],
         restrict_search: bool
     ):
@@ -35,7 +35,6 @@ class DetailedReport:
         self.report_generation_id = report_generation_id
         self.websocket = websocket
         self.subtopics = subtopics
-        self.check_existing_report = check_existing_report
         self.urls = urls
         self.restrict_search = restrict_search
         self.main_task_assistant = self._create_task_assistant()
@@ -45,12 +44,7 @@ class DetailedReport:
         # This is a global variable to store the entire url list accumulated at any point through searching and scraping
         self.global_urls = set(self.urls)
 
-    async def generate_report(self) -> tuple:
-        # Handle existing reports if check_existing_report is True
-        detailed_report_path = await self._check_existing_report()
-        if detailed_report_path:
-            return await self._handle_existing_report(detailed_report_path)
-
+    async def generate_report(self) -> ReportGenerationOutput:
         # Conduct initial research using the main assistant
         await self._initial_research()
 
@@ -73,12 +67,13 @@ class DetailedReport:
             table_path
         ) = await self._construct_detailed_report(subtopics_reports_body)
 
-        return (
-            detailed_report,
-            detailed_report_path,
-            self.main_task_assistant.tables_extractor.tables,
-            table_path,
-            self.main_task_assistant.visited_urls,
+        return ReportGenerationOutput(
+            report_markdown=detailed_report,
+            report_path=detailed_report_path,
+            tables=self.main_task_assistant.tables_extractor.tables,
+            table_path=table_path,
+            visited_urls=self.main_task_assistant.visited_urls,
+            error_log=self.main_task_assistant.error_log
         )
 
     def _create_task_assistant(self) -> ResearchAgent:
@@ -94,13 +89,6 @@ class DetailedReport:
             subtopics=self.subtopics,
             restrict_search=self.restrict_search
         )
-
-    async def _check_existing_report(self) -> str:
-        if self.check_existing_report:
-            return await self.main_task_assistant.check_existing_report(
-                self.report_type
-            )
-        return None
 
     async def _handle_existing_report(self, path: str) -> tuple:
         emit_report_status(
