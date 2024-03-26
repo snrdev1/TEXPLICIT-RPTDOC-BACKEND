@@ -2,6 +2,7 @@ import datetime
 from typing import Union
 
 import jwt
+from dateutil import parser
 
 from app.config import Config
 from app.utils.common import Common
@@ -64,31 +65,24 @@ class Parser:
             return None
 
     @staticmethod
-    def convert_to_datetime(date, current_date=datetime.datetime.utcnow()):
+    def convert_to_datetime(date=datetime.datetime.now(datetime.timezone.utc)):
         """
-        The function `convert_to_datetime` converts a date string or dictionary to a datetime object,
-        using the current date if no date is provided.
+        The function `convert_to_datetime` converts a date string or dictionary to a datetime object
+        using the `isoparse` method from the `dateutil.parser` module.
         
         Args:
-          date: The `date` parameter in the `convert_to_datetime` function can be either a string, a
-        dictionary, or a datetime object.
-          current_date: The `current_date` parameter in the `convert_to_datetime` function is a datetime
-        object representing the current date and time. If no value is provided for `current_date` when
-        calling the function, it defaults to the current UTC date and time obtained using
-        `datetime.datetime.utcnow()`.
+          date: The `date` parameter in the `convert_to_datetime` function is a datetime object with the
+        current date and time in UTC timezone by default. If a dictionary is passed instead of a
+        datetime object, it extracts the value associated with the key "" from the dictionary and
+        converts it to a datetime
         
         Returns:
-          The function `convert_to_datetime` returns a datetime object. The function first checks if the
-        input `date` is a string or a dictionary. If it is a string, it converts it to a datetime object
-        using the `fromisoformat` method. If it is a dictionary, it extracts the date string and
-        converts it to a datetime object using `strptime`. If the input `date`
+          The function `convert_to_datetime` returns a datetime object parsed from the input date
+        content. If the input date is in dictionary format, it extracts the date value from the key
+        "" before parsing it.
         """
+        date_content = date
+        if isinstance(date, dict):
+            date_content = date["$date"]
         
-        print("Type of date : ", type(date))
-        
-        if isinstance(date, str):
-            return datetime.datetime.fromisoformat(date.replace('Z', '+00:00'))
-        elif isinstance(date, dict):
-            return datetime.datetime.strptime(date["$date"], '%Y-%m-%dT%H:%M:%S.%fZ')
-        else:
-            return date if date else current_date
+        return parser.isoparse(date_content)
