@@ -91,7 +91,7 @@ def folder_content(logged_in_user, _id):
         docs = MyDocumentsService().get_folder_contents(user_id, _id)
 
         if docs:
-            return Response.custom_response(docs, Messages.OK_FILE_RETRIVE, True, 200)
+            return Response.custom_response(docs, Messages.OK_FILE_RETRIEVE, True, 200)
         else:
             return Response.custom_response(
                 [], Messages.ERROR_FILE_RETRIEVE, False, 200
@@ -163,7 +163,7 @@ def get_documents(logged_in_user):
 
         if docs and len(docs) > 0:
             return Response.custom_response(
-                docs[0], Messages.OK_FILE_RETRIVE, True, 200
+                docs[0], Messages.OK_FILE_RETRIEVE, True, 200
             )
         else:
             return Response.custom_response(
@@ -191,7 +191,7 @@ def get_folders(logged_in_user):
         user_id = logged_in_user["_id"]
         folders = MyDocumentsService().get_all_folders(user_id)
 
-        return Response.custom_response(folders, Messages.OK_FOLDER_RETRIVE, True, 200)
+        return Response.custom_response(folders, Messages.OK_FOLDER_RETRIEVE, True, 200)
 
     except Exception as e:
         Common.exception_details("mydocuments.py : get_folders", e)
@@ -233,7 +233,7 @@ def get_document(logged_in_user, document_id):
 
         if response:
             return Response.custom_response(
-                response, Messages.OK_FILE_RETRIVE, True, 200
+                response, Messages.OK_FILE_RETRIEVE, True, 200
             )
         else:
             return Response.custom_response(

@@ -355,7 +355,7 @@ class MyDocumentsService:
 
         return cursor_to_dict(response)[0]
     
-    def get_files(self, file_ids):
+    def get_files_by_id(self, file_ids):
         """
         The function `get_file` retrieves files from a MongoDB database based on their IDs.
 
@@ -2202,7 +2202,7 @@ class MyDocumentsService:
 
     def share_document_via_email(self, user_id, document_ids, email_ids, subject: str, message: str):
         try:
-            files = self.get_files(document_ids)
+            files = self.get_files_by_id(document_ids)
             virtual_file_names = [file["virtualFileName"] for file in files]
             user = UserService.get_user_by_id(user_id)
             file_details = [MyDocumentsService().get_file_contents(virtual_file_name) for virtual_file_name in virtual_file_names]

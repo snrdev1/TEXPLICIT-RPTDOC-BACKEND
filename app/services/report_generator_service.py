@@ -365,13 +365,13 @@ def get_all_reports_from_db(
     return cursor_to_dict(response)
 
 
-def get_report_from_db(reportid: Union[str, ObjectId]):
+def get_report_from_db(report_id: Union[str, ObjectId]):
     """
     The function `get_report_from_db` retrieves a report from a MongoDB database based on the
     provided report ID.
 
     Args:
-      reportid: The `reportid` parameter is the unique identifier of the report that you want to
+      report_id: The `report_id` parameter is the unique identifier of the report that you want to
     retrieve from the database.
 
     Returns:
@@ -380,7 +380,7 @@ def get_report_from_db(reportid: Union[str, ObjectId]):
     m_db = MongoClient.connect()
     response = m_db[Config.MONGO_REPORTS_MASTER_COLLECTION].aggregate(
         [
-            {"$match": {"_id": ObjectId(reportid)}},
+            {"$match": {"_id": ObjectId(report_id)}},
             {
                 "$addFields": {
                     "_id": {"$toString": "$_id"},
