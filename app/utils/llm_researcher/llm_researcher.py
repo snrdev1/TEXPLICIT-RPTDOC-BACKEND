@@ -2,6 +2,7 @@ from typing import List, Union
 
 from bson import ObjectId
 
+from ..validator import ReportGenerationOutput
 from .master.run import AgentExecutor
 
 
@@ -15,23 +16,21 @@ async def research(
     subtopics: list,
     urls: List[str],
     restrict_search: bool
-):
-    if task:
-        agent_executor = AgentExecutor(
-            user_id=user_id,
-            task=task,
-            report_type=report_type,
-            websocket=None,
-            source=source,
-            format=format,
-            report_generation_id=report_generation_id,
-            subtopics=subtopics,
-            check_existing_report=False,
-            urls=urls,
-            restrict_search=restrict_search
-        )
-        report_markdown, report_path, tables, table_path, report_urls = await agent_executor.run_agent()
-        return report_markdown, report_path, tables, table_path, report_urls
-    else:
-        print("⚠️ Error! Not enough parameters provided.")
-        return "", "", [], "", set()
+) -> ReportGenerationOutput:
+
+    agent_executor = AgentExecutor(
+        user_id=user_id,
+        task=task,
+        report_type=report_type,
+        websocket=None,
+        source=source,
+        format=format,
+        report_generation_id=report_generation_id,
+        subtopics=subtopics,
+        urls=urls,
+        restrict_search=restrict_search
+    )
+
+    report: ReportGenerationOutput = await agent_executor.run_agent()
+
+    return report

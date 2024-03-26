@@ -19,7 +19,7 @@ from sumy.summarizers.text_rank import TextRankSummarizer
 
 from app.config import Config
 from app.models.mongoClient import MongoClient
-from app.utils import Common, Subscription, files_and_folders
+from app.utils import Common, files_and_folders
 from app.utils.email_helper import send_mail
 from app.utils.formatter import cursor_to_dict, get_base64_encoding
 from app.utils.llm.llm_highlights import generate_highlights

@@ -1,5 +1,4 @@
 import datetime
-from typing import Union
 
 import jwt
 from dateutil import parser

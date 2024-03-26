@@ -129,13 +129,13 @@ def retrieve_pending_reports(logged_in_user):
         return Response.server_error()
 
 
-@report_generator.route("/download/<reportid>", methods=["GET"])
+@report_generator.route("/download/<report_id>", methods=["GET"])
 @authorized
-def download_report(logged_in_user, reportid):
+def download_report(logged_in_user, report_id):
     try:
         user_id = str(logged_in_user["_id"])
 
-        report_document = ReportGeneratorService.get_report_from_db(reportid)
+        report_document = ReportGeneratorService.get_report_from_db(report_id)
         if report_document:
             if user_id != str(report_document["createdBy"]["_id"]):
                 return Response.custom_response([], Messages.UNAUTHORIZED, False, 401)
@@ -152,13 +152,13 @@ def download_report(logged_in_user, reportid):
         return Response.server_error()
 
 
-@report_generator.route("/download/data-table/<reportid>", methods=["GET"])
+@report_generator.route("/download/data-table/<report_id>", methods=["GET"])
 @authorized
-def download_report_data_table(logged_in_user, reportid):
+def download_report_data_table(logged_in_user, report_id):
     try:
         user_id = str(logged_in_user["_id"])
 
-        report_document = ReportGeneratorService.get_report_from_db(reportid)
+        report_document = ReportGeneratorService.get_report_from_db(report_id)
         if report_document:
             if user_id != str(report_document["createdBy"]["_id"]):
                 return Response.custom_response([], Messages.UNAUTHORIZED, False, 401)
@@ -174,13 +174,13 @@ def download_report_data_table(logged_in_user, reportid):
         return Response.server_error()
 
 
-@report_generator.route("/audio/download/<reportid>", methods=["GET"])
+@report_generator.route("/audio/download/<report_id>", methods=["GET"])
 @authorized
-def download_report_audio(logged_in_user, reportid):
+def download_report_audio(logged_in_user, report_id):
     try:
         user_id = str(logged_in_user["_id"])
 
-        report_document = ReportGeneratorService.get_report_from_db(reportid)
+        report_document = ReportGeneratorService.get_report_from_db(report_id)
         if not report_document:
             return Response.custom_response([], Messages.MISSING_REPORT, False, 400)
 

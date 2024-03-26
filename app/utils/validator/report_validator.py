@@ -1,4 +1,4 @@
-from typing import List, Literal, Union
+from typing import List, Literal, Union, Optional
 
 from pydantic import BaseModel, Field, root_validator
 
@@ -27,11 +27,11 @@ class ReportGenerationParameters(BaseModel):
     subtopics: List[Subtopic] = []
     urls: List[str] = []
     restrict_search: bool = False
-    check_existing_report: bool = False
 
     @root_validator
     def check_values(cls, values):
-        report_type_values = [report_type.value for report_type in Enumerator.ReportType.__members__.values()]
+        report_type_values = [
+            report_type.value for report_type in Enumerator.ReportType.__members__.values()]
         if values['report_type'] not in report_type_values:
             raise ValueError(Messages.INVALID_REPORT_TYPE)
 
@@ -39,3 +39,12 @@ class ReportGenerationParameters(BaseModel):
             raise ValueError("Output format not supported!")
 
         return values
+
+
+class ReportGenerationOutput(BaseModel):
+    report_markdown: str
+    report_path: str
+    visited_urls: List[str]
+    tables: Optional[list]
+    table_path: Optional[str]
+    error_log: Optional[List[str]]

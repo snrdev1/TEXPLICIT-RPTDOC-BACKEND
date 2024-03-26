@@ -4,6 +4,7 @@ from typing import List, Union
 from bson import ObjectId
 
 from app.utils import Enumerator
+from app.utils.validator import ReportGenerationOutput
 
 
 class AgentExecutor:
@@ -17,7 +18,6 @@ class AgentExecutor:
         report_generation_id: str = "",
         websocket=None,
         subtopics: list = [],
-        check_existing_report: bool = False,
         urls: List[str] = [],
         restrict_search: bool = False
     ):
@@ -29,7 +29,6 @@ class AgentExecutor:
         self.report_generation_id = report_generation_id
         self.websocket = websocket
         self.subtopics = subtopics
-        self.check_existing_report = check_existing_report
         self.urls = urls
         self.restrict_search = restrict_search
 
@@ -46,8 +45,8 @@ class AgentExecutor:
 
         return executor
 
-    async def run_agent(self) -> tuple:
-        start_time = datetime.datetime.utcnow()
+    async def run_agent(self) -> ReportGenerationOutput:
+        start_time = datetime.datetime.now(datetime.timezone.utc)
         print({"type": "logs", "output": f"Start time: {str(start_time)}\n\n"})
 
         Executor = self.get_report_executor()
@@ -60,15 +59,15 @@ class AgentExecutor:
             report_generation_id=self.report_generation_id,
             websocket=self.websocket,
             subtopics=self.subtopics,
-            check_existing_report=self.check_existing_report,
             urls=self.urls,
             restrict_search=self.restrict_search
         )
-        report_markdown, report_path, tables, table_path, urls = await executor.generate_report()
 
-        end_time = datetime.datetime.utcnow()
-        print({"type": "path", "output": report_path})
+        report: ReportGenerationOutput = await executor.generate_report()
+
+        end_time = datetime.datetime.now(datetime.timezone.utc)
+        print({"type": "path", "output": report.get("report_path")})
         print({"type": "logs", "output": f"\nEnd time: {end_time}\n"})
         print({"type": "logs", "output": f"\nTotal run time: {end_time - start_time}\n"})
 
-        return report_markdown, report_path, tables, table_path, urls
+        return report
