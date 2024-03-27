@@ -701,7 +701,12 @@ def _common_user_pipeline() -> list:
                 },
                 "permissions.subscription_duration": {
                     "$cond": {
-                        "if": {"$ifNull": ["$permissions.subscription_duration", False]},
+                        "if": {
+                            "$and": [
+                                { "$ifNull": ["$permissions", False] },
+                                { "$ifNull": ["$permissions.subscription_duration", False] }
+                            ]
+                        },
                         "then": {
                             "start_date": {
                                 "$toString": "$permissions.subscription_duration.start_date"
