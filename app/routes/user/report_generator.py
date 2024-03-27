@@ -12,7 +12,8 @@ from app.config import Config
 from app.utils.validator import ReportGenerationParameters
 
 from ...auth import authorized
-from ...services import report_generator_service as ReportGeneratorService, MyDocumentsService
+from ...services import MyDocumentsService
+from ...services import report_generator_service as ReportGeneratorService
 from ...utils import (Common, Enumerator, Messages, Production, Response,
                       Subscription)
 from ...utils.files_and_folders import get_report_audio_path
@@ -281,4 +282,24 @@ def share_report(logged_in_user):
 
     except Exception as e:
         Common.exception_details("mydocuments.py : share_document", e)
+        return Response.server_error()
+
+
+@report_generator.route("/delete", methods=["DELETE"])
+@authorized
+def delete_reports(logged_in_user):
+    try:
+        user_id = str(logged_in_user["_id"])
+        report_ids = request.args.getlist("reportIds")
+
+        report_document = ReportGeneratorService.delete_reports_from_db(user_id, report_ids).get("delete_count", 0)
+        return Response.custom_response(
+            [{"delete_count": report_document}], 
+            Messages.OK_REPORTS_DELETED, 
+            True, 
+            200
+        )
+
+    except Exception as e:
+        Common.exception_details("mydocuments.py : delete_reports", e)
         return Response.server_error()
