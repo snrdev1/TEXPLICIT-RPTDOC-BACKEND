@@ -609,14 +609,14 @@ def _update_document_in_db(query: dict, update_data: dict) -> dict:
         return {"updated_count": 0}
 
 
-def delete_reports_from_db(user_id: Union[str, ObjectId], report_ids: List[Union[str, ObjectId]]) -> dict:
+def delete_reports_from_db(user_id: Union[str, ObjectId], report_ids: Union[str, ObjectId]) -> dict:
     m_db = MongoClient.connect()
 
     # Convert report_ids from string to ObjectId
     report_ids = [ObjectId(report_id) for report_id in report_ids]
 
     response = m_db[Config.MONGO_REPORTS_MASTER_COLLECTION].delete_many(
-        {"_id": {"$in": report_ids}, "createdBy._id": user_id}
+        {"_id": {"$in": report_ids}, "createdBy._id": ObjectId(user_id)}
     )
 
     return {"deleted_count": response.deleted_count}
