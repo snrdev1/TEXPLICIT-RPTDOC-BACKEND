@@ -698,6 +698,25 @@ def _common_user_pipeline() -> list:
                         "then": {"$concat": [user_image_route, "$image"]},
                         "else": "$image",
                     }
+                },
+                "permissions.subscription_duration": {
+                    "$cond": {
+                        "if": {
+                            "$and": [
+                                { "$ifNull": ["$permissions", False] },
+                                { "$ifNull": ["$permissions.subscription_duration", False] }
+                            ]
+                        },
+                        "then": {
+                            "start_date": {
+                                "$toString": "$permissions.subscription_duration.start_date"
+                            },
+                            "end_date": {
+                                "$toString": "$permissions.subscription_duration.end_date"
+                            }
+                        },
+                        "else": "$permissions.subscription_duration"
+                    }
                 }
             }
         ),

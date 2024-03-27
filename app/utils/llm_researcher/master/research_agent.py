@@ -105,6 +105,9 @@ class ResearchAgent:
 
         # Stores the report generation id
         self.report_generation_id = report_generation_id
+        
+        # To record the error logs while generating the report
+        self.error_log = []
 
     async def conduct_research(
         self,
@@ -165,6 +168,7 @@ class ResearchAgent:
 
         except Exception as e:
             Common.exception_details("ResearchAgent.conduct_research", e)
+            self.error_log.append(e)
             return report
 
     async def write_report(self, existing_headers: list = []):
@@ -214,6 +218,7 @@ class ResearchAgent:
 
         except Exception as e:
             Common.exception_details("ResearchAgent.conduct_research", e)
+            self.error_log.append(e)
             return report
 
     async def get_context_by_search(self, query):
@@ -385,6 +390,7 @@ class ResearchAgent:
                 self.report_generation_id,
                 "🚩 Failed to get search results..."
             )
+            self.error_log.append("🚩 Failed to get search results...")
             return ""
 
     async def get_new_urls(self, url_set_input):

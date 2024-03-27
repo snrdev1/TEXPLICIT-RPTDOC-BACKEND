@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 from typing import Union
 
 from bson import ObjectId
@@ -16,25 +16,25 @@ class Subscription:
 
     def check_subscription_duration(self) -> bool:
         """
-        The function `check_subscription_duration` checks if the current date falls within a specified
-        subscription duration.
+        The function `check_subscription_duration` checks if the current date falls within the
+        subscription duration specified by start and end dates.
         
         Returns:
           The function `check_subscription_duration` is returning a boolean value. It checks if the
-        current date falls within the subscription duration specified by the start date and end date,
-        and returns `True` if it does, and `False` if there is an exception or if the current date is
-        outside the subscription duration.
+        current date falls within the subscription duration specified by the `start_date` and `end_date`
+        in the user's permissions. If the current date is within the subscription duration, it returns
+        `True`, otherwise it returns `False`.
         """
         try:
-            current_date = datetime.utcnow()
+            current_date = datetime.datetime.now(datetime.timezone.utc)
             subscription_duration = self.user_permissions.get("subscription_duration", {})
                         
             start_date = Parser.convert_to_datetime(subscription_duration.get("start_date"))
             end_date = Parser.convert_to_datetime(subscription_duration.get("end_date"))
-                
+    
             # print("check_subscription_duration : ", start_date <= current_date < end_date)
 
-            return start_date <= current_date < end_date
+            return start_date <= current_date <= end_date
 
         except Exception as e:
             Common.exception_details("Subscription.check_subscription_duration", e)

@@ -1,21 +1,25 @@
 import asyncio
+import datetime
 import io
 import os
+import platform
 import re
 import urllib
-from datetime import datetime, timedelta
 from typing import List, Tuple, Union
 from urllib.parse import unquote, urlparse, urlunparse
-import platform
+
 from bson import ObjectId
 
 from app.config import Config
 from app.models.mongoClient import MongoClient
 from app.utils.email_helper import send_mail
-from app.utils.files_and_folders import get_report_directory, get_report_path, get_report_data_table_path
+from app.utils.files_and_folders import (get_report_data_table_path,
+                                         get_report_directory, get_report_path)
 from app.utils.formatter import cursor_to_dict, get_base64_encoding
 from app.utils.llm_researcher.llm_researcher import research
 from app.utils.socket import emit_report_status
+from app.utils.validator import (ReportGenerationOutput,
+                                 ReportGenerationParameters)
 
 from ..utils import (AudioGenerator, Common, Enumerator, Production, Response,
                      send_mail)
@@ -23,15 +27,7 @@ from . import user_service as UserService
 
 
 def report_generate(
-    user_id: Union[str, ObjectId],
-    task: str,
-    report_type: str,
-    source: str,
-    format: str,
-    report_generation_id: Union[int, None],
-    subtopics: list,
-    urls: List[str],
-    restrict_search: bool
+    params: ReportGenerationParameters
 ) -> None:
 
     def transform_data(report_document, report_id: Union[ObjectId, str] = ""):
@@ -55,27 +51,17 @@ def report_generate(
         return report_document
 
     def emit_and_save_pending_report() -> str:
-        document_data = {
-            "status": {
-                "value": int(Enumerator.ReportStep.Pending.value),
-                "ref": "pending",
-            },
-            "task": task,
-            "subtopics": subtopics,
-            "report_type": report_type,
-            "createdBy": {"_id": ObjectId(user_id), "ref": "user"},
-            "createdOn": datetime.utcnow(),
-            "source": source,
-            "format": format,
-            "urls": urls,
-            "restrict_search": restrict_search,
-            "report_generation_id": report_generation_id
-        }
+        document_data = params.dict(exclude={'user_id'})
+        document_data.update({
+            "status": {"value": int(Enumerator.ReportStep.Pending.value), "ref": "pending"},
+            "createdBy": {"_id": ObjectId(params.user_id), "ref": "user"},
+            "createdOn": datetime.datetime.now(datetime.timezone.utc),
+        })
         insert_response = _insert_document_into_db(document_data)
 
         # Also emit the new document inserted as pending
         Response.socket_response(
-            event=f"{user_id}_report_pending",
+            event=f"{params.user_id}_report_pending",
             data=transform_data(document_data),
             message="Report generation successfully started!",
             success=True,
@@ -84,21 +70,14 @@ def report_generate(
 
         return str(insert_response["inserted_id"])
 
-    def run_research() -> Tuple[str, str]:
-        if platform.system()=='Windows':
-            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    def run_research() -> ReportGenerationOutput:
+        
+        if platform.system() == 'Windows':
+            asyncio.set_event_loop_policy(
+                asyncio.WindowsSelectorEventLoopPolicy())
+            
         return asyncio.run(
-            research(
-                user_id,
-                task=task,
-                report_type=report_type,
-                source=source,
-                format=format,
-                report_generation_id=report_generation_id,
-                subtopics=subtopics,
-                urls=urls,
-                restrict_search=restrict_search
-            )
+            research(params)
         )
 
     def generate_report_audio(
@@ -107,7 +86,7 @@ def report_generate(
         if (
             not len(report_folder)
             or not len(report_text)
-            or report_type not in [
+            or params.report_type not in [
                 Enumerator.ReportType.ResearchReport.value,
                 Enumerator.ReportType.DetailedReport.value
             ]
@@ -116,7 +95,7 @@ def report_generate(
 
         print("🎵 Generating report audio...")
         emit_report_status(
-            user_id, report_generation_id, "🎵 Generating report audio..."
+            params.user_id, params.report_generation_id, "🎵 Generating report audio..."
         )
 
         audio_text = extract_text_before_h2(report_text)
@@ -134,44 +113,41 @@ def report_generate(
 
     def emit_and_save_report(
         report_id: Union[str, ObjectId],
-        report: str,
         report_audio: dict[str, Union[bool, str]],
         report_path: str,
-        tables: list,
         table_path: str,
         report_urls: set,
         report_generation_time: float,
         status: int,
+        error_log: List[str] = []
     ) -> None:
-        def prepare_report_document():
 
-            document = {
-                "task": task,
-                "subtopics": subtopics,
+        def prepare_report_document():
+            document_data = params.dict(exclude={'user_id'})
+
+            document_data.update({
                 "report_path": report_path,
                 "table_path": table_path,
-                "report_type": report_type,
-                "createdBy": {"_id": ObjectId(user_id), "ref": "user"},
-                "createdOn": datetime.utcnow(),
-                "source": source,
-                "format": format,
+                "createdBy": {"_id": ObjectId(params.user_id), "ref": "user"},
+                "createdOn": datetime.datetime.now(datetime.timezone.utc),
                 "urls": list(report_urls),
-                "restrict_search": restrict_search,
-                "report_generation_id": report_generation_id,
                 "report_generation_time": report_generation_time,
                 "report_audio": report_audio
-            }
+            })
 
             if status == int(Enumerator.ReportStep.Success.value):
-                document["status"] = {"value": status, "ref": "success"}
+                document_data["status"] = {"value": status,
+                                           "ref": "success", "error_log": error_log}
             else:
-                document["status"] = {"value": status, "ref": "failure"}
+                document_data["status"] = {"value": status,
+                                           "ref": "failure", "error_log": error_log}
 
-            return document
+            return document_data
 
         def update_report_document_in_db(report_document):
             update_response = _update_document_in_db(
-                {"_id": ObjectId(report_id)}, report_document
+                {"_id": ObjectId(report_id)},
+                report_document
             )
 
             return update_response["updated_count"]
@@ -179,7 +155,7 @@ def report_generate(
         # Prepare report document for update
         report_document = prepare_report_document()
         # Update report document in db
-        
+
         update_count = update_report_document_in_db(report_document)
         # Transform the report data to suitable format before emitting
         report_document_for_emitting = transform_data(
@@ -187,7 +163,7 @@ def report_generate(
 
         if not update_count:
             Response.socket_response(
-                event=f"{user_id}_report",
+                event=f"{params.user_id}_report",
                 data=report_document_for_emitting,
                 message="Failed to update report in db!",
                 success=False,
@@ -196,7 +172,7 @@ def report_generate(
 
         if status == int(Enumerator.ReportStep.Success.value):
             Response.socket_response(
-                event=f"{user_id}_report",
+                event=f"{params.user_id}_report",
                 data=report_document_for_emitting,
                 message="Report successfully generated!",
                 success=True,
@@ -204,7 +180,7 @@ def report_generate(
             )
         else:
             Response.socket_response(
-                event=f"{user_id}_report",
+                event=f"{params.user_id}_report",
                 data=report_document_for_emitting,
                 message="Failed to generate report!",
                 success=False,
@@ -213,49 +189,58 @@ def report_generate(
 
     try:
         # Log start time of report generation
-        start_time = datetime.utcnow()
+        start_time = datetime.datetime.now(datetime.timezone.utc)
 
         emit_report_status(
-            user_id, report_generation_id, "✈️ Initiating report generation..."
+            params.user_id,
+            params.report_generation_id,
+            "✈️ Initiating report generation..."
         )
 
         report_id = emit_and_save_pending_report()
-        report, report_path, tables, table_path, report_urls = run_research()
+        report_data: ReportGenerationOutput = run_research()
+
+        report_markdown = report_data.report_markdown
+        report_path = report_data.report_path
+        tables = report_data.tables
+        table_path = report_data.table_path
+        visited_urls = report_data.visited_urls
+        error_log = report_data.error_log
 
         # Log end time of report generation
-        end_time = datetime.utcnow()
+        end_time = datetime.datetime.now(datetime.timezone.utc)
         report_generation_time = (end_time - start_time).total_seconds()
-        report_audio = generate_report_audio(report, "")
+        report_audio = generate_report_audio(report_markdown, "")
 
-        if len(report):
+        if len(report_markdown):
             report_folder = get_report_directory(report_path)
             print(f"🖫 Saved report to {report_folder}")
-            report_audio = generate_report_audio(report, report_folder)
+            report_audio = generate_report_audio(
+                report_markdown, report_folder)
             emit_and_save_report(
                 report_id,
-                report,
                 report_audio,
                 report_path,
-                tables,
                 table_path,
-                report_urls,
+                visited_urls,
                 report_generation_time,
                 int(Enumerator.ReportStep.Success.value),
+                error_log
             )
 
             # Update user subscription
-            UserService.update_report_subscription(user_id, report_type)
+            UserService.update_report_subscription(
+                params.user_id, params.report_type)
         else:
             emit_and_save_report(
                 report_id,
-                report,
                 report_audio,
                 report_path,
-                tables,
                 table_path,
-                report_urls,
+                visited_urls,
                 report_generation_time,
                 int(Enumerator.ReportStep.Failure.value),
+                error_log
             )
 
         print(f"📢 Emitted report!")
@@ -263,11 +248,11 @@ def report_generate(
     except Exception as e:
         Common.exception_details("generate_report", e)
         Response.socket_response(
-            event=f"{user_id}_report",
-            data={"report_generation_id": report_generation_id},
+            event=f"{params.user_id}_report",
+            data={"report_generation_id": params.report_generation_id},
             message="Failed to generate report!",
             success=False,
-            status=500,
+            status=500
         )
 
 
@@ -365,13 +350,13 @@ def get_all_reports_from_db(
     return cursor_to_dict(response)
 
 
-def get_report_from_db(reportid: Union[str, ObjectId]):
+def get_report_from_db(report_id: Union[str, ObjectId]):
     """
     The function `get_report_from_db` retrieves a report from a MongoDB database based on the
     provided report ID.
 
     Args:
-      reportid: The `reportid` parameter is the unique identifier of the report that you want to
+      report_id: The `report_id` parameter is the unique identifier of the report that you want to
     retrieve from the database.
 
     Returns:
@@ -380,7 +365,7 @@ def get_report_from_db(reportid: Union[str, ObjectId]):
     m_db = MongoClient.connect()
     response = m_db[Config.MONGO_REPORTS_MASTER_COLLECTION].aggregate(
         [
-            {"$match": {"_id": ObjectId(reportid)}},
+            {"$match": {"_id": ObjectId(report_id)}},
             {
                 "$addFields": {
                     "_id": {"$toString": "$_id"},
@@ -398,13 +383,13 @@ def get_report_from_db(reportid: Union[str, ObjectId]):
         return None
 
 
-def get_multiple_reports_from_db(reportids: List[Union[str, ObjectId]]):
+def get_multiple_reports_from_db(report_ids: List[Union[str, ObjectId]]):
     """
     The function `get_reports_from_db` retrieves reports from a MongoDB database based on the
     provided list of report IDs.
 
     Args:
-      reportids: A list of report IDs for the reports that you want to retrieve from the database.
+      report_ids: A list of report IDs for the reports that you want to retrieve from the database.
 
     Returns:
       A list of dictionaries, each containing the report information retrieved from the database.
@@ -414,7 +399,7 @@ def get_multiple_reports_from_db(reportids: List[Union[str, ObjectId]]):
         [
             {
                 "$match": {
-                    "_id": {"$in": [ObjectId(reportid) for reportid in reportids]}
+                    "_id": {"$in": [ObjectId(report_id) for report_id in report_ids]}
                 }
             },
             {
@@ -546,7 +531,8 @@ def _set_reports_as_failed_in_db(user_id: Union[str, ObjectId]):
         m_db = MongoClient.connect()
 
         # Calculate the time threshold (1 hour ago from the current time)
-        time_threshold = datetime.utcnow() - timedelta(hours=1)
+        time_threshold = datetime.datetime.now(
+            datetime.timezone.utc) - datetime.timedelta(hours=1)
 
         # Filter stage to filter out the reports based on various criteria
         query = {
@@ -623,13 +609,13 @@ def _update_document_in_db(query: dict, update_data: dict) -> dict:
         return {"updated_count": 0}
 
 
-def delete_report_from_db(reportid: str) -> dict:
+def delete_report_from_db(report_id: str) -> dict:
     """
     The function `_delete_report_from_db` deletes a report from a MongoDB database based on its
     report ID.
 
     Args:
-      reportid (str): The `reportid` parameter is a string that represents the unique identifier of
+      report_id (str): The `report_id` parameter is a string that represents the unique identifier of
     the report to be deleted from the database.
 
     Returns:
@@ -639,7 +625,7 @@ def delete_report_from_db(reportid: str) -> dict:
     m_db = MongoClient.connect()
 
     response = m_db[Config.MONGO_REPORTS_MASTER_COLLECTION].delete_one(
-        {"_id": ObjectId(reportid)}
+        {"_id": ObjectId(report_id)}
     )
 
     return {"deleted_count": response.deleted_count}
@@ -714,7 +700,7 @@ def get_file_contents(report_document):
         Common.exception_details(
             "report_generator_service.get_file_contents", e)
         return None, None
-    
+
 
 def get_data_table_contents(report_document):
     try:
