@@ -367,7 +367,7 @@ def account_reset_password_generate_token():
         if not existing_user:
             return Response.custom_response([], Messages.INVALID_EMAIL, False, 400)
 
-        success, token = UserService.send_mail_with_reset_token(
+        success, token = UserService.send_forget_password_mail_with_reset_token(
             existing_user["_id"], existing_user["name"], existing_user["email"]
         )
 
