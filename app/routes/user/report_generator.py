@@ -5,14 +5,18 @@
 import io
 import os
 import threading
+from typing import List, Optional, Union
 
+from bson import ObjectId
 from flask import Blueprint, request, send_file
+from pydantic import BaseModel, ValidationError
 
 from app.config import Config
-from app.utils.validator import ReportGenerationParameters
+from app.utils.validator import PydanticObjectId, ReportGenerationParameters
 
 from ...auth import authorized
-from ...services import report_generator_service as ReportGeneratorService, MyDocumentsService
+from ...services import MyDocumentsService
+from ...services import report_generator_service as ReportGeneratorService
 from ...utils import (Common, Enumerator, Messages, Production, Response,
                       Subscription)
 from ...utils.files_and_folders import get_report_audio_path
@@ -39,11 +43,12 @@ def generate_report(logged_in_user):
         ) and subscription.check_subscription_report(report_generation_info.report_type)
         if not subscription_validity:
             return Response.subscription_invalid(Messages.INVALID_SUBSCRIPTION_REPORT)
-        
+
         # Ok now if the source points to my documents and there are no my documents then error has to be generated
         if report_generation_info.source == "my_documents":
-            docs = MyDocumentsService().get_all_files(user_id, None)[0].get("uploaded", [])
-             
+            docs = MyDocumentsService().get_all_files(
+                user_id, None)[0].get("uploaded", [])
+
             if not len(docs):
                 return Response.custom_response([], "No documents available. Please upload the documents to proceed.", True, 400)
 
@@ -148,14 +153,16 @@ def download_report_data_table(logged_in_user, report_id):
             if user_id != str(report_document["createdBy"]["_id"]):
                 return Response.custom_response([], Messages.UNAUTHORIZED, False, 401)
 
-            file_bytes, file_name = ReportGeneratorService.get_data_table_contents(report_document)
+            file_bytes, file_name = ReportGeneratorService.get_data_table_contents(
+                report_document)
 
             return send_file(file_bytes, as_attachment=True, download_name=file_name)
 
         return Response.custom_response([], Messages.MISSING_REPORT, False, 400)
 
     except Exception as e:
-        Common.exception_details("mydocuments.py : download_report_data_table", e)
+        Common.exception_details(
+            "mydocuments.py : download_report_data_table", e)
         return Response.server_error()
 
 
@@ -281,4 +288,48 @@ def share_report(logged_in_user):
 
     except Exception as e:
         Common.exception_details("mydocuments.py : share_document", e)
+        return Response.server_error()
+
+
+@report_generator.route("", methods=["DELETE"])
+@authorized
+def delete_reports(logged_in_user):
+    try:
+        class ReportIds(BaseModel):
+            report_ids: List[str]
+
+        request_body = request.get_json()
+        user_id = str(logged_in_user["_id"])
+        report_ids = ReportIds(report_ids=request_body.get("reportIds"))
+
+        report_document = ReportGeneratorService.delete_reports_from_db(
+            user_id,
+            report_ids.report_ids
+        ).get("deleted_count", 0)
+
+        if report_document:
+            return Response.custom_response(
+                [{"deleted_count": report_document}],
+                Messages.OK_REPORT_DELETED,
+                True,
+                200
+            )
+        else:
+            return Response.custom_response(
+                [{"deleted_count": report_document}],
+                Messages.ERROR_REPORT_DELETED,
+                True,
+                200
+            )
+
+    except ValidationError as e:
+        return Response.custom_response(
+            [],
+            f"Missing required parameters : {e}",
+            False,
+            400
+        )
+
+    except Exception as e:
+        Common.exception_details("mydocuments.py : delete_reports", e)
         return Response.server_error()
