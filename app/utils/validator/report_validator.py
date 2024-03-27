@@ -1,6 +1,6 @@
 from typing import List, Literal, Union, Optional
 
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field, root_validator, HttpUrl
 
 from ..enumerator import Enumerator
 from ..messages import Messages
@@ -25,8 +25,9 @@ class ReportGenerationParameters(BaseModel):
     format: str = "pdf"
     report_generation_id: str = ""
     subtopics: List[Subtopic] = []
-    urls: List[str] = []
+    urls: List[HttpUrl] = []
     restrict_search: bool = False
+    websocket: bool = False
 
     @root_validator
     def check_values(cls, values):

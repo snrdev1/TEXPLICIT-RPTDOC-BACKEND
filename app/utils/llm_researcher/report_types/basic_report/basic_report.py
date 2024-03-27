@@ -1,11 +1,7 @@
 # basic_report.py
 
-from typing import List, Union
-
-from bson import ObjectId
-
 from app.utils.socket import emit_report_status
-from app.utils.validator import ReportGenerationOutput
+from app.utils.validator import ReportGenerationOutput, ReportGenerationParameters
 
 from ...master.research_agent import ResearchAgent
 
@@ -13,27 +9,18 @@ from ...master.research_agent import ResearchAgent
 class BasicReport:
     def __init__(
         self,
-        user_id: Union[ObjectId, str],
-        task: str,
-        report_type: str,
-        source: str,
-        format: str,
-        report_generation_id: str,
-        websocket,
-        subtopics: list,
-        urls: List[str],
-        restrict_search: bool
+        params: ReportGenerationParameters
     ):
-        self.user_id = user_id
-        self.task = task
-        self.report_type = report_type
-        self.source = source
-        self.format = format
-        self.report_generation_id = report_generation_id
-        self.websocket = websocket
-        self.subtopics = subtopics
-        self.urls = urls
-        self.restrict_search = restrict_search
+        self.user_id = params.user_id
+        self.task = params.task
+        self.report_type = params.report_type
+        self.source = params.source
+        self.format = params.format
+        self.report_generation_id = params.report_generation_id
+        self.websocket = params.websocket
+        self.subtopics = params.subtopics
+        self.urls = params.urls
+        self.restrict_search = params.restrict_search
         self.assistant = self._create_research_assistant()
 
     async def generate_report(self) -> ReportGenerationOutput:

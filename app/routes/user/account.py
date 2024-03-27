@@ -141,8 +141,8 @@ def account_login():
         subscription = Subscription(user_id)
         subscription_valid = subscription.check_subscription_duration()
         if not subscription_valid:
-            socket.emit_subscription_invalid_status(
-                user_id, "Subscription duration exceeded! Please check plan details.")
+            print("⚠️ Subscription duration exceeded! Please check plan details.")
+            socket.emit_subscription_invalid_status(user_id, "Subscription duration exceeded! Please check plan details.")
 
         return Response.custom_response(response_data, Messages.OK_LOGIN, True, 200)
 

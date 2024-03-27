@@ -18,7 +18,8 @@ from app.utils.files_and_folders import (get_report_data_table_path,
 from app.utils.formatter import cursor_to_dict, get_base64_encoding
 from app.utils.llm_researcher.llm_researcher import research
 from app.utils.socket import emit_report_status
-from app.utils.validator import ReportGenerationOutput
+from app.utils.validator import (ReportGenerationOutput,
+                                 ReportGenerationParameters)
 
 from ..utils import (AudioGenerator, Common, Enumerator, Production, Response,
                      send_mail)
@@ -26,15 +27,7 @@ from . import user_service as UserService
 
 
 def report_generate(
-    user_id: Union[str, ObjectId],
-    task: str,
-    report_type: str,
-    source: str,
-    format: str,
-    report_generation_id: Union[int, None],
-    subtopics: list,
-    urls: List[str],
-    restrict_search: bool
+    params: ReportGenerationParameters
 ) -> None:
 
     def transform_data(report_document, report_id: Union[ObjectId, str] = ""):
@@ -58,27 +51,17 @@ def report_generate(
         return report_document
 
     def emit_and_save_pending_report() -> str:
-        document_data = {
-            "status": {
-                "value": int(Enumerator.ReportStep.Pending.value),
-                "ref": "pending",
-            },
-            "task": task,
-            "subtopics": subtopics,
-            "report_type": report_type,
-            "createdBy": {"_id": ObjectId(user_id), "ref": "user"},
+        document_data = params.dict(exclude={'user_id'})
+        document_data.update({
+            "status": {"value": int(Enumerator.ReportStep.Pending.value), "ref": "pending"},
+            "createdBy": {"_id": ObjectId(params.user_id), "ref": "user"},
             "createdOn": datetime.datetime.now(datetime.timezone.utc),
-            "source": source,
-            "format": format,
-            "urls": urls,
-            "restrict_search": restrict_search,
-            "report_generation_id": report_generation_id
-        }
+        })
         insert_response = _insert_document_into_db(document_data)
 
         # Also emit the new document inserted as pending
         Response.socket_response(
-            event=f"{user_id}_report_pending",
+            event=f"{params.user_id}_report_pending",
             data=transform_data(document_data),
             message="Report generation successfully started!",
             success=True,
@@ -88,21 +71,13 @@ def report_generate(
         return str(insert_response["inserted_id"])
 
     def run_research() -> ReportGenerationOutput:
+        
         if platform.system() == 'Windows':
             asyncio.set_event_loop_policy(
                 asyncio.WindowsSelectorEventLoopPolicy())
+            
         return asyncio.run(
-            research(
-                user_id,
-                task=task,
-                report_type=report_type,
-                source=source,
-                format=format,
-                report_generation_id=report_generation_id,
-                subtopics=subtopics,
-                urls=urls,
-                restrict_search=restrict_search
-            )
+            research(params)
         )
 
     def generate_report_audio(
@@ -111,7 +86,7 @@ def report_generate(
         if (
             not len(report_folder)
             or not len(report_text)
-            or report_type not in [
+            or params.report_type not in [
                 Enumerator.ReportType.ResearchReport.value,
                 Enumerator.ReportType.DetailedReport.value
             ]
@@ -120,7 +95,7 @@ def report_generate(
 
         print("🎵 Generating report audio...")
         emit_report_status(
-            user_id, report_generation_id, "🎵 Generating report audio..."
+            params.user_id, params.report_generation_id, "🎵 Generating report audio..."
         )
 
         audio_text = extract_text_before_h2(report_text)
@@ -138,10 +113,8 @@ def report_generate(
 
     def emit_and_save_report(
         report_id: Union[str, ObjectId],
-        report_markdown: str,
         report_audio: dict[str, Union[bool, str]],
         report_path: str,
-        tables: list,
         table_path: str,
         report_urls: set,
         report_generation_time: float,
@@ -150,32 +123,26 @@ def report_generate(
     ) -> None:
 
         def prepare_report_document():
+            document_data = params.dict(exclude={'user_id'})
 
-            document = {
-                "task": task,
-                "subtopics": subtopics,
+            document_data.update({
                 "report_path": report_path,
                 "table_path": table_path,
-                "report_type": report_type,
-                "createdBy": {"_id": ObjectId(user_id), "ref": "user"},
+                "createdBy": {"_id": ObjectId(params.user_id), "ref": "user"},
                 "createdOn": datetime.datetime.now(datetime.timezone.utc),
-                "source": source,
-                "format": format,
                 "urls": list(report_urls),
-                "restrict_search": restrict_search,
-                "report_generation_id": report_generation_id,
                 "report_generation_time": report_generation_time,
                 "report_audio": report_audio
-            }
+            })
 
             if status == int(Enumerator.ReportStep.Success.value):
-                document["status"] = {"value": status,
-                                      "ref": "success", "error_log": error_log}
+                document_data["status"] = {"value": status,
+                                           "ref": "success", "error_log": error_log}
             else:
-                document["status"] = {"value": status,
-                                      "ref": "failure", "error_log": error_log}
+                document_data["status"] = {"value": status,
+                                           "ref": "failure", "error_log": error_log}
 
-            return document
+            return document_data
 
         def update_report_document_in_db(report_document):
             update_response = _update_document_in_db(
@@ -196,7 +163,7 @@ def report_generate(
 
         if not update_count:
             Response.socket_response(
-                event=f"{user_id}_report",
+                event=f"{params.user_id}_report",
                 data=report_document_for_emitting,
                 message="Failed to update report in db!",
                 success=False,
@@ -205,7 +172,7 @@ def report_generate(
 
         if status == int(Enumerator.ReportStep.Success.value):
             Response.socket_response(
-                event=f"{user_id}_report",
+                event=f"{params.user_id}_report",
                 data=report_document_for_emitting,
                 message="Report successfully generated!",
                 success=True,
@@ -213,7 +180,7 @@ def report_generate(
             )
         else:
             Response.socket_response(
-                event=f"{user_id}_report",
+                event=f"{params.user_id}_report",
                 data=report_document_for_emitting,
                 message="Failed to generate report!",
                 success=False,
@@ -225,8 +192,8 @@ def report_generate(
         start_time = datetime.datetime.now(datetime.timezone.utc)
 
         emit_report_status(
-            user_id,
-            report_generation_id,
+            params.user_id,
+            params.report_generation_id,
             "✈️ Initiating report generation..."
         )
 
@@ -248,13 +215,12 @@ def report_generate(
         if len(report_markdown):
             report_folder = get_report_directory(report_path)
             print(f"🖫 Saved report to {report_folder}")
-            report_audio = generate_report_audio(report_markdown, report_folder)
+            report_audio = generate_report_audio(
+                report_markdown, report_folder)
             emit_and_save_report(
                 report_id,
-                report_markdown,
                 report_audio,
                 report_path,
-                tables,
                 table_path,
                 visited_urls,
                 report_generation_time,
@@ -263,14 +229,13 @@ def report_generate(
             )
 
             # Update user subscription
-            UserService.update_report_subscription(user_id, report_type)
+            UserService.update_report_subscription(
+                params.user_id, params.report_type)
         else:
             emit_and_save_report(
                 report_id,
-                report_markdown,
                 report_audio,
                 report_path,
-                tables,
                 table_path,
                 visited_urls,
                 report_generation_time,
@@ -283,11 +248,11 @@ def report_generate(
     except Exception as e:
         Common.exception_details("generate_report", e)
         Response.socket_response(
-            event=f"{user_id}_report",
-            data={"report_generation_id": report_generation_id},
+            event=f"{params.user_id}_report",
+            data={"report_generation_id": params.report_generation_id},
             message="Failed to generate report!",
             success=False,
-            status=500,
+            status=500
         )
 
 
@@ -566,7 +531,8 @@ def _set_reports_as_failed_in_db(user_id: Union[str, ObjectId]):
         m_db = MongoClient.connect()
 
         # Calculate the time threshold (1 hour ago from the current time)
-        time_threshold = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=1)
+        time_threshold = datetime.datetime.now(
+            datetime.timezone.utc) - datetime.timedelta(hours=1)
 
         # Filter stage to filter out the reports based on various criteria
         query = {
