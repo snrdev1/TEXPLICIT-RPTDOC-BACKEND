@@ -60,6 +60,7 @@ class Messages:
     ERROR_USER_DEACTIVATED = "Failed to deactivate user!",
     ERROR_RAZORPAY_PAYMENT_VERIFICATION = "Failed to verify payment!"
     ERROR_DEMO_REQUEST = "Failed to submit demo request!"
+    ERROR_REPORT_DELETED = "Failed to delete report!"
 
     # INVALID_
     INVALID_LOGIN_INFO = "Invalid login information!"

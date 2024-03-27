@@ -5,7 +5,7 @@ import os
 import platform
 import re
 import urllib
-from typing import List, Tuple, Union
+from typing import List, Union
 from urllib.parse import unquote, urlparse, urlunparse
 
 from bson import ObjectId
@@ -609,23 +609,14 @@ def _update_document_in_db(query: dict, update_data: dict) -> dict:
         return {"updated_count": 0}
 
 
-def delete_report_from_db(report_id: str) -> dict:
-    """
-    The function `_delete_report_from_db` deletes a report from a MongoDB database based on its
-    report ID.
-
-    Args:
-      report_id (str): The `report_id` parameter is a string that represents the unique identifier of
-    the report to be deleted from the database.
-
-    Returns:
-      a dictionary with the key "deleted_count" and the value being the number of documents deleted
-    from the database.
-    """
+def delete_reports_from_db(user_id: Union[str, ObjectId], report_ids: Union[str, ObjectId]) -> dict:
     m_db = MongoClient.connect()
 
-    response = m_db[Config.MONGO_REPORTS_MASTER_COLLECTION].delete_one(
-        {"_id": ObjectId(report_id)}
+    # Convert report_ids from string to ObjectId
+    report_ids = [ObjectId(report_id) for report_id in report_ids]
+
+    response = m_db[Config.MONGO_REPORTS_MASTER_COLLECTION].delete_many(
+        {"_id": {"$in": report_ids}, "createdBy._id": ObjectId(user_id)}
     )
 
     return {"deleted_count": response.deleted_count}
