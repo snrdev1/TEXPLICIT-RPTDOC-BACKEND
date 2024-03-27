@@ -1,6 +1,6 @@
 import os
-from datetime import datetime
 from typing import Union
+from urllib.parse import urljoin
 
 from bson import ObjectId
 from flask import request
@@ -203,8 +203,8 @@ def send_mail_with_token(user_id, user_name, user_email, subject, body_template,
     """
     try:
         token = Parser.get_encoded_token(user_id)
-        reset_password_link = request.environ["HTTP_ORIGIN"] + \
-            f"/{link_path}/{token}"
+        origin = request.environ["HTTP_ORIGIN"]
+        reset_password_link = urljoin(origin, f"/{link_path}/{token}")
         mail_body = body_template.format(
             name=user_name,
             link=reset_password_link,
