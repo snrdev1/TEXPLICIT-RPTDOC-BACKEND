@@ -135,7 +135,7 @@ def create_or_update_user(user_info):
             user_id = response.upserted_id
             user_name = user_info["name"]
             user_email = user_info["email"]
-            success, token = UserService.send_mail_with_reset_token(
+            success, token = send_mail_with_reset_token(
                 user_id, user_name, user_email
             )
 
@@ -186,45 +186,83 @@ def active_user(user_details):
         return False
 
 
-def send_mail_with_reset_token(user_id, user_name, user_email):
+def send_mail_with_token(user_id, user_name, user_email, subject, body_template, link_path):
     """
-    The function `send_mail_with_reset_token` sends an email to a user with a password reset token
-    and returns a success status and the generated token.
+    Helper function to send an email with a token to the user.
 
     Args:
-      user_id: The user ID of the user for whom the password reset token is being generated.
-      user_name: The name of the user who requested the password reset.
-      user_email: The email address of the user who needs to reset their password.
+        user_id: The user ID of the user for whom the token is being generated.
+        user_name: The name of the user.
+        user_email: The email address of the user.
+        subject: The subject line of the email.
+        body_template: The template for the email body.
+        link_path: The path to be appended to the reset link.
 
     Returns:
-      The function `send_mail_with_reset_token` returns two values: `success` and `token`.
+        A tuple containing the success status (bool) and the generated token (str).
     """
     try:
-        # If user found, generate token
         token = Parser.get_encoded_token(user_id)
-
-        resetPasswordLink = request.environ["HTTP_ORIGIN"] + \
-            "/reset-password/" + token
-
-        mailBody = Constants.NEW_ACCOUNT_MAILBODY.format(
+        reset_password_link = request.environ["HTTP_ORIGIN"] + \
+            f"/{link_path}/{token}"
+        mail_body = body_template.format(
             name=user_name,
-            link=resetPasswordLink,
+            link=reset_password_link,
             sender=Config.MAIL_SENDER_NAME,
         )
-
-        receivers = []
-        receivers.append({"name": user_name, "email": user_email})
-
-        success = send_mail(
-            Constants.NEW_ACCOUNT_MAILSUBJECT, mailBody, receivers
-        )
-
+        receivers = [{"name": user_name, "email": user_email}]
+        success = send_mail(subject, mail_body, receivers)
         return success, token
-
     except Exception as e:
-        Common.exception_details(
-            "UserService.send_mail_with_reset_token : ", e)
+        Common.exception_details("UserService.send_mail_with_token : ", e)
         return None, None
+
+
+def send_forget_password_mail_with_reset_token(user_id, user_name, user_email):
+    """
+    The function `send_forget_password_mail_with_reset_token` sends an email to a user
+    with a password reset token and returns a success status and the generated token.
+
+    Args:
+        user_id: The user ID of the user for whom the password reset token is being generated.
+        user_name: The name of the user who requested the password reset.
+        user_email: The email address of the user who needs to reset their password.
+
+    Returns:
+        The function `send_forget_password_mail_with_reset_token` returns two values:
+        `success` and `token`.
+    """
+    return send_mail_with_token(
+        user_id,
+        user_name,
+        user_email,
+        Constants.PASSWORD_RESET_REQUEST_MAILSUBJECT,
+        Constants.PASSWORD_RESET_REQUEST_MAILBODY,
+        "reset-password",
+    )
+
+
+def send_mail_with_reset_token(user_id, user_name, user_email):
+    """
+    The function `send_mail_with_reset_token` sends an email to a user with a password
+    reset token and returns a success status and the generated token.
+
+    Args:
+        user_id: The user ID of the user for whom the password reset token is being generated.
+        user_name: The name of the user who requested the password reset.
+        user_email: The email address of the user who needs to reset their password.
+
+    Returns:
+        The function `send_mail_with_reset_token` returns two values: `success` and `token`.
+    """
+    return send_mail_with_token(
+        user_id,
+        user_name,
+        user_email,
+        Constants.NEW_ACCOUNT_MAILSUBJECT,
+        Constants.NEW_ACCOUNT_MAILBODY,
+        "reset-password",
+    )
 
 
 def get_all_users():
@@ -703,8 +741,9 @@ def _common_user_pipeline() -> list:
                     "$cond": {
                         "if": {
                             "$and": [
-                                { "$ifNull": ["$permissions", False] },
-                                { "$ifNull": ["$permissions.subscription_duration", False] }
+                                {"$ifNull": ["$permissions", False]},
+                                {"$ifNull": [
+                                    "$permissions.subscription_duration", False]}
                             ]
                         },
                         "then": {
