@@ -30,25 +30,18 @@ def generate_report(logged_in_user):
 
         report_generation_info = ReportGenerationParameters(
             user_id=user_id,
-            task=request_params.get("task"),
-            report_type=request_params.get("report_type", Enumerator.ReportType.ResearchReport.value),
-            source=request_params.get("source", "external"),
-            format=request_params.get("format", "pdf"),
-            report_generation_id=request_params.get("report_generation_id", None),
-            subtopics=request_params.get("subtopics", []),
-            urls=request_params.get("urls", []),
-            restrict_search=request_params.get("restrict_search", False)
-        ).dict()
+            **request_params
+        )
 
         # Check subscription validity before generating report
         subscription = Subscription(user_id)
         subscription_validity = subscription.check_subscription_duration(
-        ) and subscription.check_subscription_report(report_generation_info.get("report_type"))
+        ) and subscription.check_subscription_report(report_generation_info.report_type)
         if not subscription_validity:
             return Response.subscription_invalid(Messages.INVALID_SUBSCRIPTION_REPORT)
         
         # Ok now if the source points to my documents and there are no my documents then error has to be generated
-        if report_generation_info.get("source") == "my_documents":
+        if report_generation_info.source == "my_documents":
             docs = MyDocumentsService().get_all_files(user_id, None)[0].get("uploaded", [])
              
             if not len(docs):
@@ -58,15 +51,7 @@ def generate_report(logged_in_user):
         t1 = threading.Thread(
             target=ReportGeneratorService.report_generate,
             args=(
-                report_generation_info.get("user_id"),
-                report_generation_info.get("task"),
-                report_generation_info.get("report_type"),
-                report_generation_info.get("source"),
-                report_generation_info.get("format"),
-                report_generation_info.get("report_generation_id"),
-                report_generation_info.get("subtopics"),
-                report_generation_info.get("urls"),
-                report_generation_info.get("restrict_search")
+                report_generation_info,
             ),
         )
         t1.start()

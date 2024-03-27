@@ -7,7 +7,7 @@ from bson import ObjectId
 
 from app.utils import Enumerator
 from app.utils.socket import emit_report_status
-from app.utils.validator import ReportGenerationOutput
+from app.utils.validator import ReportGenerationOutput, ReportGenerationParameters
 
 from ...master.functions import extract_headers, table_of_contents
 from ...master.research_agent import ResearchAgent
@@ -16,27 +16,18 @@ from ...master.research_agent import ResearchAgent
 class DetailedReport:
     def __init__(
         self,
-        user_id: Union[ObjectId, str],
-        task: str,
-        report_type: str,
-        source: str,
-        format: str,
-        report_generation_id: str,
-        websocket,
-        subtopics: list,
-        urls: List[str],
-        restrict_search: bool
+        params: ReportGenerationParameters
     ):
-        self.user_id = user_id
-        self.task = task
-        self.report_type = report_type
-        self.source = source
-        self.format = format
-        self.report_generation_id = report_generation_id
-        self.websocket = websocket
-        self.subtopics = subtopics
-        self.urls = urls
-        self.restrict_search = restrict_search
+        self.user_id = params.user_id
+        self.task = params.task
+        self.report_type = params.report_type
+        self.source = params.source
+        self.format = params.format
+        self.report_generation_id = params.report_generation_id
+        self.websocket = params.websocket
+        self.subtopics = params.subtopics
+        self.urls = params.urls
+        self.restrict_search = params.restrict_search
         self.main_task_assistant = self._create_task_assistant()
         self.existing_headers = []
         # This is a global variable to store the entire context accumulated at any point through searching and scraping
