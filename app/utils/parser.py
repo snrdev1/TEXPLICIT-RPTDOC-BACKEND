@@ -27,12 +27,15 @@ class Parser:
             jwt_payload = {
                 "id": str(user_id),
                 # CHANGE NUMBER OF DAYS LATER
-                "exp": datetime.datetime.utcnow() + datetime.timedelta(days),
+                "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days),
             }
             jwt_secret_key = Config.JWT_SECRET_KEY
             jwt_algorithm = "HS256"  # Use the desired JWT algorithm
             jwt_token = jwt.encode(
-                jwt_payload, jwt_secret_key, algorithm=jwt_algorithm)
+                jwt_payload, 
+                jwt_secret_key, 
+                algorithm=jwt_algorithm
+            )
 
             return jwt_token
         except Exception as e:
@@ -55,7 +58,9 @@ class Parser:
             jwt_secret_key = Config.JWT_SECRET_KEY
             jwt_algorithm = "HS256"
             output = jwt.decode(
-                jwt_token, key=jwt_secret_key, algorithms=[jwt_algorithm]
+                jwt_token, 
+                key=jwt_secret_key, 
+                algorithms=[jwt_algorithm]
             )
 
             return output
@@ -68,13 +73,13 @@ class Parser:
         """
         The function `convert_to_datetime` converts a date string or dictionary to a datetime object
         using the `isoparse` method from the `dateutil.parser` module.
-        
+
         Args:
           date: The `date` parameter in the `convert_to_datetime` function is a datetime object with the
         current date and time in UTC timezone by default. If a dictionary is passed instead of a
         datetime object, it extracts the value associated with the key "" from the dictionary and
         converts it to a datetime
-        
+
         Returns:
           The function `convert_to_datetime` returns a datetime object parsed from the input date
         content. If the input date is in dictionary format, it extracts the date value from the key
@@ -83,5 +88,5 @@ class Parser:
         date_content = date
         if isinstance(date, dict):
             date_content = date["$date"]
-        
+
         return parser.isoparse(date_content)

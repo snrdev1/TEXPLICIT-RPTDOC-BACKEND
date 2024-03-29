@@ -1,7 +1,7 @@
 import os
 import pickle
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from io import BytesIO
 from typing import Generator, Iterable
 
@@ -228,7 +228,7 @@ class SummaryService:
 
         response["titleOptions"] = title_arr
         response["paragraphs"] = paragraphs
-        response["generatedDate"] = datetime.utcnow()
+        response["generatedDate"] = datetime.now(timezone.utc)
 
         return response
 
@@ -469,7 +469,7 @@ class SummaryService:
         title_shape.height = Inches(0.45)  # Set the width to 2 inches
         # Saving file
 
-        timestamp = datetime.utcnow().timestamp()
+        timestamp = datetime.now(timezone.utc).timestamp()
         file_name = f"Output_{timestamp}.pptx"
 
         # Ensure that the user image upload folder exists
@@ -520,7 +520,7 @@ class SummaryService:
         create_summary(summary_title, summary_content)
 
         # Save the document
-        timestamp = datetime.utcnow().timestamp()
+        timestamp = datetime.now(timezone.utc).timestamp()
         file_name = f"Consolidated_Output_{timestamp}.docx"
 
         # Ensure that the user image upload folder exists
@@ -563,7 +563,7 @@ class SummaryService:
             sheet.append(row)
             # print("Data row : ", row)
 
-        timestamp = datetime.utcnow().timestamp()
+        timestamp = datetime.now(timezone.utc).timestamp()
         file_name = f"consolidated_summary_{timestamp}.xlsx"
 
         # Ensure that the user image upload folder exists
@@ -797,7 +797,7 @@ class SummaryService:
         title_shape.height = Inches(0.45)  # Set the width to 2 inches
         # Saving file
 
-        timestamp = datetime.utcnow().timestamp()
+        timestamp = datetime.now(timezone.utc).timestamp()
         # root.save(f"app/ppt_outputs/Output_{timestamp}.pptx")
         # return f"ppt_outputs\Output_{timestamp}.pptx"
 
@@ -881,7 +881,7 @@ class SummaryService:
             create_summary(ki_title, ki_summary, ki_image_url, ki_link)
 
         # Save the document
-        timestamp = datetime.utcnow().timestamp()
+        timestamp = datetime.now(timezone.utc).timestamp()
         file_name = f"Output_{timestamp}.docx"
 
         # Ensure that the user image upload folder exists
@@ -924,7 +924,7 @@ class SummaryService:
             sheet.append(row)
             # print(row)
 
-        timestamp = datetime.utcnow().timestamp()
+        timestamp = datetime.now(timezone.utc).timestamp()
         file_name = f"itemized_summary_{timestamp}.xlsx"
 
         # Ensure that the user image upload folder exists
@@ -978,7 +978,7 @@ class SummaryService:
             # print(row)
 
         # return f"excel_outputs\Output_{timestamp}.xlsx"
-        timestamp = datetime.utcnow().timestamp()
+        timestamp = datetime.now(timezone.utc).timestamp()
         file_name = f"highlights_summary_{timestamp}.xlsx"
 
         # Ensure that the user image upload folder exists
@@ -1220,7 +1220,7 @@ class SummaryService:
         title_shape.height = Inches(0.45)  # Set the width to 2 inches
         # Saving file
 
-        timestamp = datetime.utcnow().timestamp()
+        timestamp = datetime.now(timezone.utc).timestamp()
         file_name = f"highlights_summary_{timestamp}.pptx"
 
         # Ensure that the user image upload folder exists
@@ -1311,7 +1311,7 @@ class SummaryService:
             create_summary(ki_title, ki_highlights, ki_image_url)
 
         # Save the document
-        timestamp = datetime.utcnow().timestamp()
+        timestamp = datetime.now(timezone.utc).timestamp()
         file_name = f"Highlights_Output_{timestamp}.docx"
 
         # Ensure that the user image upload folder exists
@@ -1383,7 +1383,7 @@ def key_phrases(para):
     try:
         print("para", para)
         para = _scrapper_text_clean(para)
-        st_time = datetime.utcnow()
+        st_time = datetime.now(timezone.utc)
         r = Rake(punctuations="")
         regexTwo = re.compile('"')
         regexOne = re.compile("”")
@@ -1469,7 +1469,7 @@ def key_phrases(para):
             frozenset(item.items()): item for item in topic_sentences
         }.values()
 
-        ed_time = datetime.utcnow()
+        ed_time = datetime.now(timezone.utc)
 
         print("Topic sentences", list(topic_sentences))
         if not len(list(topic_sentences)) > 0:

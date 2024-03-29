@@ -1,7 +1,7 @@
 import hashlib
 import os
 import urllib
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Union
 
 from bson import ObjectId
@@ -49,7 +49,7 @@ def get_report_folder(question, source: str = "external"):
       the directory path for the report folder.
     """
     # Create a hashed folder path using os.path.join
-    current_time = datetime.utcnow()
+    current_time = datetime.now(timezone.utc)
 
     folder_name = f"{question.strip().lower()}_{source}_{current_time}"
     hashed_folder = hashlib.sha1(folder_name.encode()).hexdigest()

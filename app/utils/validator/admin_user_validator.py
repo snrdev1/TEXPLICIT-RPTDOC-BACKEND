@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field
 
@@ -14,8 +14,8 @@ class ReportPermission(BaseModel):
 
 
 class SubscriptionDuration(BaseModel):
-    start_date: datetime = Field(default_factory=datetime.utcnow)
-    end_date: datetime = Field(default_factory=datetime.utcnow)
+    start_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    end_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class AllowedDocument(BaseModel):

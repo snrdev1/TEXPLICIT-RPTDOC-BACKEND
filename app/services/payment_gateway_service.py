@@ -1,5 +1,5 @@
 from app.config import Config
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Union
 from app.models.mongoClient import MongoClient
 from bson import ObjectId
@@ -21,7 +21,7 @@ def add_payment_history(user_id: Union[ObjectId, str], payment_details: dict):
         m_db = MongoClient.connect()
         response = m_db[Config.MONGO_PAYMENT_HISTORY_COLLECTION].insert_one({
             "createdBy": {"_id": ObjectId(user_id), "ref": "user"},
-            "createdOn": datetime.utcnow(),
+            "createdOn": datetime.now(timezone.utc),
             "payment_details": payment_details
         })
             

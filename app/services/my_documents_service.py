@@ -665,7 +665,7 @@ class MyDocumentsService:
             folder_data = {
                 "originalFileName": folder_name,
                 "createdBy": {"_id": ObjectId(user_id), "ref": "user"},
-                "createdOn": datetime.datetime.utcnow(),
+                "createdOn": datetime.datetime.now(datetime.timezone.utc),
                 "type": "Folder",
                 "root": db_path,
                 # "root": "/" + ObjectId(user_id) + "/" if path == None else path
@@ -1322,7 +1322,7 @@ class MyDocumentsService:
         title_shape.height = Inches(0.45)  # Set the width to 2 inches
         # Saving file
 
-        timestamp = datetime.datetime.utcnow().timestamp()
+        timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
         # root.save(f"app/ppt_outputs/Output_{timestamp}.pptx")
         # return f"ppt_outputs\Output_{timestamp}.pptx"
         file_name = f"itemized_summary_{timestamp}.pptx"
@@ -1536,7 +1536,7 @@ class MyDocumentsService:
         title_shape.height = Inches(0.45)  # Set the width to 2 inches
         # Saving file
 
-        timestamp = datetime.datetime.utcnow().timestamp()
+        timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
         # root.save(f"app/ppt_outputs/Output_{timestamp}.pptx")
         # return f"ppt_outputs\Output_{timestamp}.pptx"
         file_name = f"Itemized_summary_{timestamp}.pptx"
@@ -1574,7 +1574,7 @@ class MyDocumentsService:
             ]
             sheet.append(row)
 
-        timestamp = datetime.datetime.utcnow().timestamp()
+        timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
         file_name = f"Itemized_summary_{timestamp}.xlsx"
         # Ensure that the user image upload folder exists
         os.makedirs(Config.USER_SUMMARY_XLSX_DOWNLOAD_FOLDER, exist_ok=True)
@@ -1620,7 +1620,7 @@ class MyDocumentsService:
 
             # print(row)
 
-        timestamp = datetime.datetime.utcnow().timestamp()
+        timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
         file_name = f"Highlights_summary_{timestamp}.xlsx"
         # Ensure that the user image upload folder exists
         os.makedirs(Config.USER_SUMMARY_XLSX_DOWNLOAD_FOLDER, exist_ok=True)
@@ -1929,7 +1929,7 @@ class MyDocumentsService:
             "originalFileName": new_filename,  # Use the unique filename
             "virtualFileName": "",
             "createdBy": {"_id": ObjectId(user["_id"]), "ref": "user"},
-            "createdOn": datetime.datetime.utcnow(),
+            "createdOn": datetime.datetime.now(datetime.timezone.utc),
             "embeddings": None,
             "type": "File",
             "root": root,
