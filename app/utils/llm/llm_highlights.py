@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from langchain_openai import ChatOpenAI
 from langchain.output_parsers import ResponseSchema, StructuredOutputParser
@@ -30,13 +30,13 @@ def generate_highlights(text):
     """
     try:
         print("Using LLM for highlight generation!")
-        st_time = datetime.utcnow()
+        st_time = datetime.now(timezone.utc)
         highlights = []
 
         for chunk in break_up_text(text):
             highlights.extend(_get_highlight(chunk))
 
-        ed_time = datetime.utcnow()
+        ed_time = datetime.now(timezone.utc)
 
         if len(highlights) > 0:
             return {

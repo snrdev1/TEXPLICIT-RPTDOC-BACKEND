@@ -59,8 +59,8 @@ def authorized(f):
                     [], Messages.ERROR_TOKEN_EXPIRED, False, 401
                 )
 
-            current_time = datetime.datetime.now(datetime.timezone.utc)
-            expiry_time = datetime.datetime.utcfromtimestamp(decoded_token["exp"])
+            current_time = datetime.datetime.now(datetime.timezone.utc)            
+            expiry_time = datetime.datetime.fromtimestamp(decoded_token["exp"], datetime.timezone.utc)
 
             if current_time > expiry_time:
                 return Response.custom_response(

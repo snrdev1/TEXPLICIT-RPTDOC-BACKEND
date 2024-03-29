@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from operator import itemgetter
 
 from bson import ObjectId
@@ -77,7 +77,7 @@ class ChatService:
                     "prompt": question,
                     "response": self.default_chat_response,
                     "sources": [],
-                    "timestamp": datetime.utcnow().strftime("%d-%m-%Y %H:%M:%S"),
+                    "timestamp": datetime.now(timezone.utc).strftime("%d-%m-%Y %H:%M:%S"),
                     "chatType": int(Enumerator.ChatType.External.value),
                     "chatId": chatId,
                 }
@@ -267,7 +267,7 @@ class ChatService:
             "prompt": question,
             "response": response,
             "sources": sources,
-            "timestamp": datetime.utcnow().strftime("%d-%m-%Y %H:%M:%S"),
+            "timestamp": datetime.now(timezone.utc).strftime("%d-%m-%Y %H:%M:%S"),
             "chatType": chatType,
             "chatId": chatId,
         }

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.config import Config
 from app.models.mongoClient import MongoClient
@@ -22,7 +22,7 @@ def save_demo_request(demo_data: dict):
     or None if there was an exception or if the insertion was not acknowledged.
     """
     try:
-        demo_data["created"] = datetime.utcnow()
+        demo_data["created"] = datetime.now(timezone.utc)
 
         m_db = MongoClient.connect()
 

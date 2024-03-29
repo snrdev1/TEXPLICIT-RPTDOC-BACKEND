@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timezone
 from typing import Dict
 
 from pydantic import BaseModel, Field
@@ -16,8 +16,8 @@ class ReportPermission(BaseModel):
             self.used[report_type.value] = 0
 
 class SubscriptionDuration(BaseModel):
-    start_date: datetime = Field(default_factory=datetime.datetime.now(datetime.timezone.utc))
-    end_date: datetime = Field(default_factory=datetime.datetime.now(datetime.timezone.utc))
+    start_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    end_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class AllowedDocument(BaseModel):
@@ -57,5 +57,5 @@ class User(BaseModel):
     image: str = ""
     invoices: str = ""
     isActive: bool = True
-    createdOn: datetime = Field(default_factory=datetime.datetime.now(datetime.timezone.utc))
+    createdOn: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     permissions: UserPermissions = UserPermissions()

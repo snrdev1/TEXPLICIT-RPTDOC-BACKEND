@@ -1,7 +1,7 @@
 """
     All User account related routes
 """
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import Blueprint, request, send_file
 
@@ -412,7 +412,7 @@ def account_reset_password_check_token_validity(token):
             )
 
         existing_user = UserService.get_user_by_id(decoded_token["id"])
-        current_time = datetime.utcnow()
+        current_time = datetime.now(timezone.utc)
         expiry_time = datetime.utcfromtimestamp(decoded_token["exp"])
 
         if not existing_user:
