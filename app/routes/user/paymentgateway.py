@@ -14,7 +14,6 @@ from app.services import UserService
 
 payment_gateway = Blueprint("payment_gateway", __name__, url_prefix="/payment")
 
-
 @payment_gateway.route("/create_order", methods=["POST"])
 def create_order():
     try:

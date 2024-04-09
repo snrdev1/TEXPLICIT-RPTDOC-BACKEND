@@ -12,7 +12,8 @@ class Config(object):
 
     # MONGO Database
     MONGO_CONNECTION_STRING = os.getenv(
-        "MONGO_CONNECTION_STRING", "mongodb://localhost:27017"
+        "MONGO_CONNECTION_STRING", 
+        "mongodb://localhost:27017"
     )
 
     # JWT
@@ -78,6 +79,7 @@ class Config(object):
     MONGO_REPORTS_MASTER_COLLECTION = "REPORTS_MASTER"
     MONGO_PAYMENT_HISTORY_COLLECTION = "PAYMENT_HISTORY"
     MONGO_DEMO_REQUEST_COLLECTION = "DEMO_MASTER"
+    MONGO_PRICING_MASTER_COLLECTION = "PRICING_MASTER"
 
     # Media related configurations
     ALLOWED_IMAGE_EXTENSIONS = ["jpg", "png", "jpeg"]
@@ -130,3 +132,7 @@ class Config(object):
     # Sharing Reports via email
     DEFAULT_REPORT_EMAIL_SUBJECT = "Sharing report generated using TexplicitRW"
     DEFAULT_REPORT_EMAIL_MESSAGE = "Take a look at this report I generated using TexplicitRW."
+    
+    # Ipsatck and curreny exchange
+    IPSTACK_API_KEY = os.getenv("IPSTACK_API_KEY", "")
+    EXCHANGERATES_API_KEY = os.getenv("EXCHANGERATES_API_KEY", "")

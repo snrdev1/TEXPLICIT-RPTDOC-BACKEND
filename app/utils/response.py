@@ -138,3 +138,19 @@ def subscription_invalid(message: str = ""):
         ),
         400,
     )
+
+def missing_api_key(api: str):
+    """Generates a response for missing api key
+    Returns:
+        json: Response for missing api key(403)
+    """
+    return (
+        jsonify(
+            {
+                "data": [],
+                "message": Messages.MISSING_API_KEY + api,
+                "success": False,
+            }
+        ),
+        403,
+    )

@@ -81,6 +81,7 @@ class Messages:
     MISSING_PARAMETER_TOKEN = "Missing parameter token!"
     MISSING_REPORT = "Report does not exist!"
     MISSING_REPORT_SUBTOPICS = "Missing subtopics for detailed report generation!"
+    MISSING_API_KEY = "Missing API key : "
     
     # NOT_FOUND_
     NOT_FOUND_USER = "No user found!"
