@@ -9,19 +9,26 @@ from app.services import pricing_service as PricingService
 
 pricing = Blueprint("pricing", __name__, url_prefix="/pricing")
 
+
 @pricing.route("/get_prices", methods=["GET"])
 def get_prices():
-    try:       
+    try:
         if not Config.IPSTACK_API_KEY:
             return Response.missing_api_key()
-        
+
+        # Get country_name from ip
         ip_data = PricingService.get_ip_data()
+        country_name = ip_data.get("country_name", "INDIA")
         
-        print("IP DATA : ", ip_data)
-        
+        # Get all prices
         prices = PricingService.get_prices()
-        
-        return Response.custom_response(prices, "Found pricing amounts", True, 200)
+
+        pricing = {
+            "country_code": "INR" if country_name.upper() == "INDIA" else "USD",
+            "prices": prices
+        }
+
+        return Response.custom_response(pricing, "Found pricing amounts", True, 200)
 
     except Exception as e:
         Common.exception_details("pricing.py: get_prices", e)
