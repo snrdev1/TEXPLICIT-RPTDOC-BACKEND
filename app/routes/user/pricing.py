@@ -23,12 +23,9 @@ def get_prices():
         # Get all prices
         prices = PricingService.get_prices()
 
-        pricing = {
-            "country_code": "INR" if country_name.upper() == "INDIA" else "USD",
-            "prices": prices
-        }
+        country_prices = PricingService.get_country_prices(country_name, prices)
 
-        return Response.custom_response(pricing, "Found pricing amounts", True, 200)
+        return Response.custom_response(country_prices, "Found pricing amounts", True, 200)
 
     except Exception as e:
         Common.exception_details("pricing.py: get_prices", e)
