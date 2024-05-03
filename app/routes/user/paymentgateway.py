@@ -9,7 +9,7 @@ from app.config import Config
 from app.utils.common import Common
 from app.utils.messages import Messages
 from app.utils import Response
-from app.services import payment_gateway_service
+from app.services import payment_gateway_service as PaymentGatewayService
 from app.services import UserService
 
 payment_gateway = Blueprint("payment_gateway", __name__, url_prefix="/payment")
@@ -80,7 +80,7 @@ def capture_payment(logged_in_user):
         amount = float(request_params.get("amount"))
         
         # Verify payment signature
-        signature_verification = payment_gateway_service.verify_payment_signature(razorpay_order_id, razorpay_payment_id, razorpay_signature)
+        signature_verification = PaymentGatewayService.verify_payment_signature(razorpay_order_id, razorpay_payment_id, razorpay_signature)
 
         # If signature verification fails return failure response
         if not signature_verification:
@@ -92,7 +92,7 @@ def capture_payment(logged_in_user):
             )
         
         # If signature verification succeeds then update records in DB
-        payment_gateway_service.add_payment_history(user_id, request_params)
+        PaymentGatewayService.add_payment_history(user_id, request_params)
         UserService.update_user_balance(user_id, amount)
         
         return Response.custom_response(
@@ -104,4 +104,25 @@ def capture_payment(logged_in_user):
 
     except Exception as e:
         Common.exception_details("paymentgateway.py: capture_payment", e)
+        return Response.server_error()
+
+
+@payment_gateway.route("/payment-history", methods=["GET"])
+@authorized
+def get_payment_history(logged_in_user):
+    try:
+        user_id = logged_in_user["_id"]
+        
+        # Get payment history
+        payment_history = PaymentGatewayService.get_payment_history(user_id)
+
+        return Response.custom_response(
+            payment_history,
+            "Successfully retrieved payment history!",
+            True,
+            200,
+        )
+
+    except Exception as e:
+        Common.exception_details("paymentgateway.py: get_payment_history", e)
         return Response.server_error()
