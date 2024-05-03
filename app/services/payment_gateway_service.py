@@ -22,7 +22,7 @@ def verify_payment_signature(razorpay_order_id, razorpay_payment_id, razorpay_si
 
 
 def add_payment_history(user_id: Union[ObjectId, str], payment_details: dict):
-    try:
+    try:        
         m_db = MongoClient.connect()
         response = m_db[Config.MONGO_PAYMENT_HISTORY_COLLECTION].insert_one({
             "createdBy": {"_id": ObjectId(user_id), "ref": "user"},

@@ -570,7 +570,7 @@ def save_or_update_image(user_id, image):
         return None
 
 
-def update_user_balance(user_id: Union[ObjectId, str], amount: float):
+def update_user_balance(user_id: Union[ObjectId, str], amount: float, currency: str):
     try:
         m_db = MongoClient.connect()
         query = {"_id": ObjectId(user_id)}
