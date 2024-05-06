@@ -59,8 +59,8 @@ def authorized(f):
                     [], Messages.ERROR_TOKEN_EXPIRED, False, 401
                 )
 
-            current_time = datetime.datetime.utcnow()
-            expiry_time = datetime.datetime.utcfromtimestamp(decoded_token["exp"])
+            current_time = datetime.datetime.now(datetime.timezone.utc)            
+            expiry_time = datetime.datetime.fromtimestamp(decoded_token["exp"], datetime.timezone.utc)
 
             if current_time > expiry_time:
                 return Response.custom_response(
@@ -129,7 +129,7 @@ def anonymous(f):
             if decoded_token is None:
                 return f(None, *args, **kwargs)
 
-            current_time = datetime.datetime.utcnow()
+            current_time = datetime.datetime.now(datetime.timezone.utc)
             expiry_time = datetime.datetime.utcfromtimestamp(decoded_token["exp"])
 
             if current_time > expiry_time:

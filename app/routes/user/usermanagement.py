@@ -43,10 +43,8 @@ def add_user(logged_in_user):
             "image": "",
             "permissions": {
                 "menu": request_body["menus"]
-            },
-            "invoices": []
+            }
         }
-        print("User Data:", user_data)
 
         existing_user = UserService.get_user_by_email(user_data["email"])
 

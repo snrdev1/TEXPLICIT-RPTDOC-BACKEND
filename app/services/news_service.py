@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from io import BytesIO, StringIO
 
 import docx
@@ -316,7 +316,7 @@ class NewsService:
             font = run.font
             font.size = Pt(12)
 
-            timestamp = datetime.utcnow().timestamp()
+            timestamp = datetime.now(timezone.utc).timestamp()
             # print(f"SAVING FILE at {timestamp}!")
             # Ensure that the user upload folder exists
             # print("Folder in line 388 : ", folder)
@@ -405,7 +405,7 @@ class NewsService:
             "originalFileName": new_filename,  # Use the unique filename
             "virtualFileName": "",
             "createdBy": {"_id": ObjectId(user_id), "ref": "user"},
-            "createdOn": datetime.utcnow(),
+            "createdOn": datetime.now(timezone.utc),
             "root": root,
             "type": "File",
             "embeddings": None,

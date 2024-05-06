@@ -47,6 +47,7 @@ from app.routes import (
     summary,
     usermanagement,
     users,
+    pricing
 )
 
 # Admin routes
@@ -66,3 +67,4 @@ app.register_blueprint(menu)
 app.register_blueprint(report_generator)
 app.register_blueprint(payment_gateway)
 app.register_blueprint(demo)
+app.register_blueprint(pricing)

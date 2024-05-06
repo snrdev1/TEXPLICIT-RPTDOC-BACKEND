@@ -570,21 +570,6 @@ def save_or_update_image(user_id, image):
         return None
 
 
-def update_user_balance(user_id: Union[ObjectId, str], amount: float):
-    try:
-        m_db = MongoClient.connect()
-        query = {"_id": ObjectId(user_id)}
-        response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(
-            query, {"$inc": {"balance": amount}}
-        )
-
-        return response
-
-    except Exception as e:
-        Common.exception_details("user_service.update_user_balance : ", e)
-        return None
-
-
 def update_report_subscription(user_id: Union[ObjectId, str], report_type: str) -> int:
     """
     The function `update_report_subscription` updates a user's report subscription in a MongoDB database
@@ -695,6 +680,34 @@ def update_document_subscription(user_id: Union[ObjectId, str], document_size: i
             {
                 "$set": {
                     "permissions.document.used.document_size": {"$sum": ["$permissions.document.used.document_size", document_size]},
+                }
+            }
+        ]
+
+        response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(
+            query,
+            pipeline,
+            upsert=True  # Add this option to enable upsert
+        )
+
+        return response.modified_count
+
+    except Exception as e:
+        Common.exception_details("user_service.update_report_subscription", e)
+        return -1
+
+
+def update_user_subscription(user_id: Union[ObjectId, str], report_count: int, chat_count: int, document_size: int):
+    try:
+        m_db = MongoClient.connect()
+        query = {"_id": ObjectId(user_id)}
+
+        pipeline = [
+            {
+                "$set": {
+                    "permissions.report.allowed.total": {"$sum": ["$permissions.report.allowed.total", report_count]},
+                    "permissions.chat.allowed.chat_count": {"$sum": ["$permissions.chat.allowed.chat_count", chat_count]},
+                    "permissions.document.allowed.document_size": {"$sum": ["$permissions.document.allowed.document_size", document_size]}
                 }
             }
         ]

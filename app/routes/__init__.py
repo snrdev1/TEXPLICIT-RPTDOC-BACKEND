@@ -12,6 +12,7 @@ from .user.report_generator import report_generator
 from .user.summary import summary
 from .user.usermanagement import usermanagement
 from .user.users import users
+from .user.pricing import pricing
 
 __all__ = [
     "account",
@@ -26,6 +27,7 @@ __all__ = [
     "summary",
     "usermanagement",
     "users",
+    "pricing",
     "admin_account",
     "admin_users",
 ]

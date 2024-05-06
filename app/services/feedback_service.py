@@ -1,5 +1,5 @@
 import datetime
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.config import Config
 from app.models.mongoClient import MongoClient
@@ -21,7 +21,7 @@ class FeedbackService:
         Returns:
           either the response from the insert operation (if it was acknowledged) or None.
         """
-        feedback_object["created"] = datetime.utcnow()
+        feedback_object["created"] = datetime.now(timezone.utc)
 
         m_db = MongoClient.connect()
 

@@ -3,7 +3,7 @@
 """
 
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import Blueprint, request
 
@@ -37,7 +37,7 @@ def get_chat(logged_in_user):
     request_body = request.get_json()
     prompt = request_body.get("prompt")
     chat_type = request_body.get("chatType", int(Enumerator.ChatType.External.value))
-    chatId = request_body.get("chatId", f"{user_id}_{datetime.utcnow()}")
+    chatId = request_body.get("chatId", f"{user_id}_{datetime.now(timezone.utc)}")
 
     # Check subscription validity before using chat
     subscription = Subscription(user_id)
