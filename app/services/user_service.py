@@ -570,21 +570,6 @@ def save_or_update_image(user_id, image):
         return None
 
 
-def update_user_balance(user_id: Union[ObjectId, str], amount: float, currency: str):
-    try:
-        m_db = MongoClient.connect()
-        query = {"_id": ObjectId(user_id)}
-        response = m_db[Config.MONGO_USER_MASTER_COLLECTION].update_one(
-            query, {"$inc": {"balance": amount}}
-        )
-
-        return response
-
-    except Exception as e:
-        Common.exception_details("user_service.update_user_balance : ", e)
-        return None
-
-
 def update_report_subscription(user_id: Union[ObjectId, str], report_type: str) -> int:
     """
     The function `update_report_subscription` updates a user's report subscription in a MongoDB database

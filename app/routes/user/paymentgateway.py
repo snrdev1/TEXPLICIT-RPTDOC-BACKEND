@@ -64,8 +64,6 @@ def capture_payment(logged_in_user):
         razorpay_order_id = request_params.get("razorpay_order_id")
         razorpay_payment_id = request_params.get("razorpay_payment_id")
         razorpay_signature = request_params.get("razorpay_signature")
-        amount = float(request_params.get("amount"))
-        currency = request_params.get("currency")
         
         # Verify payment signature
         signature_verification = PaymentGatewayService.verify_payment_signature(razorpay_order_id, razorpay_payment_id, razorpay_signature)
@@ -81,7 +79,6 @@ def capture_payment(logged_in_user):
         
         # If signature verification succeeds then update records in DB
         PaymentGatewayService.add_payment_history(user_id, request_params)
-        UserService.update_user_balance(user_id, amount, currency)
         
         return Response.custom_response(
             [],
