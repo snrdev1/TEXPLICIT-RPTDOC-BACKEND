@@ -4,15 +4,17 @@
 
 import razorpay
 from flask import Blueprint, request
+
 from app.auth.userauthorization import authorized
 from app.config import Config
+from app.services import payment_gateway_service as PaymentGatewayService
+from app.services import user_service as UserService
+from app.utils import Response
 from app.utils.common import Common
 from app.utils.messages import Messages
-from app.utils import Response
-from app.services import payment_gateway_service as PaymentGatewayService
-from app.services import UserService
 
 payment_gateway = Blueprint("payment_gateway", __name__, url_prefix="/payment")
+
 
 @payment_gateway.route("/create_order", methods=["POST"])
 def create_order():
@@ -57,16 +59,18 @@ def capture_payment(logged_in_user):
 
         # Get the payment data sent by Razorpay after payment completion
         request_params = request.get_json()
-        
-        print("request_params : ", request_params)
 
         # Verify payment signature to ensure authenticity
         razorpay_order_id = request_params.get("razorpay_order_id")
         razorpay_payment_id = request_params.get("razorpay_payment_id")
         razorpay_signature = request_params.get("razorpay_signature")
-        
+        selected_plan = request_params.get("selected_plan")
+
+        print("Selected plan : ", selected_plan)
+
         # Verify payment signature
-        signature_verification = PaymentGatewayService.verify_payment_signature(razorpay_order_id, razorpay_payment_id, razorpay_signature)
+        signature_verification = PaymentGatewayService.verify_payment_signature(
+            razorpay_order_id, razorpay_payment_id, razorpay_signature)
 
         # If signature verification fails return failure response
         if not signature_verification:
@@ -76,13 +80,42 @@ def capture_payment(logged_in_user):
                 False,
                 401
             )
-        
+
         # If signature verification succeeds then update records in DB
         PaymentGatewayService.add_payment_history(user_id, request_params)
-        
+
+        # After payment history has been updated then modify the subscription of the user
+
+        report_count = selected_plan.get("report_plan").get("count")
+        chat_count = selected_plan.get("chat_plan").get("count")
+        document_size_amount = selected_plan.get("document_plan").get("amount")
+        document_size_unit = selected_plan.get("document_plan").get("unit")
+
+        # convert the document size amount to bytes
+        if document_size_unit == "GB":
+            document_size = document_size_amount * 1024 * 1024 * 1024
+        else:
+            document_size = document_size_amount * 1024 * 1024
+
+        user_subscription_update = UserService.update_user_subscription(
+            user_id,
+            report_count,
+            chat_count,
+            document_size
+        )
+
+        if not user_subscription_update:
+            return Response.custom_response(
+                [],
+                "Failed to update existing subscription!",
+                False,
+                400,
+            )
+
+        # Return success response
         return Response.custom_response(
             [],
-            Messages.OK_RAZORPAY_PAYMENT_VERIFIED,
+            "Successfully verified payment and modified existing subscription!",
             True,
             200,
         )
@@ -97,7 +130,7 @@ def capture_payment(logged_in_user):
 def get_payment_history(logged_in_user):
     try:
         user_id = logged_in_user["_id"]
-        
+
         # Get payment history
         payment_history = PaymentGatewayService.get_payment_history(user_id)
 

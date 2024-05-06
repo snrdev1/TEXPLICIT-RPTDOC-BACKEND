@@ -55,7 +55,6 @@ class User(BaseModel):
     role: int = int(Enumerator.Role.Personal.value)
     subscription: int = 1
     image: str = ""
-    invoices: str = ""
     isActive: bool = True
     createdOn: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     permissions: UserPermissions = UserPermissions()
