@@ -112,7 +112,7 @@ def admin_add_update_user(logged_in_user):
                 "document": {
                     "allowed": {
                         # The received document size must be in megabytes
-                        "document_size": files_and_folders.megabytes_to_bytes(int(request_params.get("document_size", 0)))
+                        "document_size": float(request_params.get("document_size", 0))
                     }
                 },
                 "chat": {

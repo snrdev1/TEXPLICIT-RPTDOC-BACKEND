@@ -88,14 +88,14 @@ def capture_payment(logged_in_user):
 
         report_count = selected_plan.get("report_plan").get("count")
         chat_count = selected_plan.get("chat_plan").get("count")
-        document_size_amount = selected_plan.get("document_plan").get("amount")
-        document_size_unit = selected_plan.get("document_plan").get("unit")
+        document_size_amount = selected_plan.get("document_plan").get("amount").get("value")
+        document_size_unit = selected_plan.get("document_plan").get("amount").get("unit")
 
         # convert the document size amount to bytes
         if document_size_unit == "GB":
-            document_size = document_size_amount * 1024 * 1024 * 1024
+            document_size = float(document_size_amount) * 1024 * 1024 * 1024
         else:
-            document_size = document_size_amount * 1024 * 1024
+            document_size = float(document_size_amount) * 1024 * 1024
 
         user_subscription_update = UserService.update_user_subscription(
             user_id,
