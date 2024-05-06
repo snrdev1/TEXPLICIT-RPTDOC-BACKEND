@@ -26,16 +26,21 @@ class MongoClient:
             # print('[database] connecting to database', connection_string, file=sys.stdout)
             sys.stdout.flush()
 
-            try:                
+            try:     
+                
+                print(f"\n🔌 Mongo connection string : {connection_string}\n")
+                print("🗳️ Connecting to database...")
+                        
                 if Config.GCP_PROD_ENV and not(Config.TESTING):
-                    print("🗳️ Connecting to GCP database...")
                     client = pymongo.MongoClient(
-                        connection_string, maxPoolSize=None, tlsCAFile=certifi.where()
+                        connection_string,
+                        maxPoolSize=None,
+                        tlsCAFile=certifi.where()
                     )
                 else:
-                    print("🗳️ Connecting to LOCAL database...") 
                     client = pymongo.MongoClient(
-                        connection_string, maxPoolSize=None
+                        connection_string,
+                        maxPoolSize=None
                     )
                     
                 # print('mongo server_info: ', client.server_info(), file=sys.stdout)
