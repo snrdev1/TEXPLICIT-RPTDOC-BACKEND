@@ -697,7 +697,43 @@ def update_document_subscription(user_id: Union[ObjectId, str], document_size: i
         return -1
 
 
-def update_user_subscription(user_id: Union[ObjectId, str], report_count: int, chat_count: int, document_size: int):
+def update_user_subscription(
+    user_id: Union[ObjectId, str],
+    report_count: int,
+    chat_count: int,
+    document_size: int,
+    subscription_duration: int = 180
+):
+    """
+    This Python function updates a user's subscription details in a MongoDB collection by incrementing
+    report count, chat count, document size, and extending the subscription duration.
+
+    Args:
+      user_id (Union[ObjectId, str]): The `user_id` parameter is the unique identifier of the user whose
+    subscription needs to be updated. It can be either an `ObjectId` or a string representing the user's
+    ID.
+      report_count (int): The `report_count` parameter in the `update_user_subscription` function
+    represents the number of reports that will be added to the user's total allowed reports. This value
+    will be used to update the user's permissions for reports in the database.
+      chat_count (int): The `chat_count` parameter in the `update_user_subscription` function represents
+    the number of chat messages allowed for the user's subscription. It is used to update the total chat
+    count allowed for the user in the database.
+      document_size (int): The `document_size` parameter in the `update_user_subscription` function
+    represents the size of documents that the user is allowed to access or store as part of their
+    subscription. This parameter is used to update the user's permissions related to document access or
+    storage based on the provided `document_size` value.
+      subscription_duration (int): The `subscription_duration` parameter in the
+    `update_user_subscription` function represents the duration in days for which the user's
+    subscription will be extended. By default, it is set to 180 days if no value is provided when
+    calling the function. Defaults to 180 (6 months)
+
+    Returns:
+      The function `update_user_subscription` returns the number of documents that were modified by the
+    update operation. This count is returned as the result of the `response.modified_count` attribute.
+    If the update operation is successful, this count represents the number of documents that were
+    updated with the new subscription information. If an error occurs during the update process, the
+    function returns -1.
+    """
     try:
         m_db = MongoClient.connect()
         query = {"_id": ObjectId(user_id)}
@@ -707,7 +743,15 @@ def update_user_subscription(user_id: Union[ObjectId, str], report_count: int, c
                 "$set": {
                     "permissions.report.allowed.total": {"$sum": ["$permissions.report.allowed.total", report_count]},
                     "permissions.chat.allowed.chat_count": {"$sum": ["$permissions.chat.allowed.chat_count", chat_count]},
-                    "permissions.document.allowed.document_size": {"$sum": ["$permissions.document.allowed.document_size", document_size]}
+                    "permissions.document.allowed.document_size": {"$sum": ["$permissions.document.allowed.document_size", document_size]},
+                    "permissions.subscription_duration.end_date": {
+                        "$add": [
+                            "$permissions.subscription_duration.end_date",
+                            # Convert days to milliseconds
+                            {"$multiply": [
+                                subscription_duration, 24 * 60 * 60 * 1000]}
+                        ]
+                    }
                 }
             }
         ]
