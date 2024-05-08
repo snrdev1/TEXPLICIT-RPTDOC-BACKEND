@@ -48,19 +48,42 @@ def get_prices():
             }
         },
         {
+            "$sort": {"count": 1}
+        },
+        {
             '$unionWith': {
                 'coll': collection_names[1],
-                'pipeline': [{'$addFields': {'category': collection_names[1]}}]
+                'pipeline': [
+                    {
+                        '$addFields': {
+                            'category': collection_names[1]
+                        }
+                    },
+                    {
+                        "$sort": {"amount.value": 1}
+                    },
+                ]
             }},
         {
             '$unionWith': {
                 'coll': collection_names[2],
-                'pipeline': [{'$addFields': {'category': collection_names[2]}}]
+                'pipeline': [
+                    {
+                        '$addFields': {
+                            'category': collection_names[2]
+                        }
+                    },
+                    {
+                        "$sort": {"count": 1}
+                    },
+                ]
             }},
         {
             '$group': {
                 '_id': '$category',
-                'documents': {'$push': '$$ROOT'}
+                'documents': {
+                    '$push': '$$ROOT'
+                }
             }
         },
         {
@@ -83,20 +106,25 @@ def get_country_prices(country_name: str, pricing_plans):
     country_prices = []
 
     for current_plan in pricing_plans:
-        category = ' '.join(word.capitalize() for word in current_plan.get("category").split('_'))
+        category = ' '.join(word.capitalize()
+                            for word in current_plan.get("category").split('_'))
         plans = []
 
         for price_info in current_plan.get("documents", []):
 
-            report_price = next((p.get("value") for p in price_info.get("pricing", []) if p.get("currency_code") == currency_code), None)
+            report_price = next((p.get("value") for p in price_info.get(
+                "pricing", []) if p.get("currency_code") == currency_code), None)
 
             if report_price is not None:
                 if category == "Document Pricing":
-                    plans.append({"amount": price_info.get("amount", {}), "price": report_price})
+                    plans.append({"amount": price_info.get(
+                        "amount", {}), "price": report_price})
                 else:
-                    plans.append({"count": price_info.get("count", 0), "price": report_price})
+                    plans.append({"count": price_info.get(
+                        "count", 0), "price": report_price})
 
         if plans:  # Only add plans if there are valid prices
-            country_prices.append({"category": category, "currency_code": currency_code, "plans": plans})
+            country_prices.append(
+                {"category": category, "currency_code": currency_code, "plans": plans})
 
     return country_prices
