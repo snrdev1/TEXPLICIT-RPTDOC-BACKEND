@@ -387,7 +387,7 @@ def account_reset_password_generate_token():
 
 
 @account.route("/reset-password/verify-token/<string:token>", methods=["GET"])
-def account_reset_password_check_token_validity(token):
+def account_reset_password_check_token_validity(token: str):
     """
     The function `account_forgot_password_check_token_validity` checks the validity of a token for a
     forgot password feature in an account system.
@@ -398,7 +398,7 @@ def account_reset_password_check_token_validity(token):
     Returns:
       a custom response with the validity of the token, along with a message and status code.
     """
-    try:
+    try:        
         if not token:
             return Response.custom_response(
                 [{"validity": False}], Messages.MISSING_PARAMETER_TOKEN, False, 400
@@ -406,14 +406,14 @@ def account_reset_password_check_token_validity(token):
 
         decoded_token = Parser.get_decoded_token(token)
 
-        if decoded_token is None:
+        if not decoded_token:
             return Response.custom_response(
                 [{"validity": False}], Messages.INVALID_TOKEN, False, 400
             )
 
         existing_user = UserService.get_user_by_id(decoded_token["id"])
         current_time = datetime.now(timezone.utc)
-        expiry_time = datetime.utcfromtimestamp(decoded_token["exp"])
+        expiry_time = datetime.fromtimestamp(decoded_token["exp"], timezone.utc)
 
         if not existing_user:
             return Response.custom_response(
