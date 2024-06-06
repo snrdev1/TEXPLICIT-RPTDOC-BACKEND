@@ -23,35 +23,33 @@ class MongoClient:
         """
         if MongoClient.__MongoDB is None:
             connection_string = Config.MONGO_CONNECTION_STRING
-            # print('[database] connecting to database', connection_string, file=sys.stdout)
             sys.stdout.flush()
 
-            try:     
-                
+            try:
                 print(f"\n🔌 Mongo connection string : {connection_string}\n")
                 print("🗳️ Connecting to database...")
-                        
-                if Config.GCP_PROD_ENV and not(Config.TESTING):
-                    client = pymongo.MongoClient(
-                        connection_string,
-                        maxPoolSize=None,
-                        tlsCAFile=certifi.where()
-                    )
-                else:
-                    client = pymongo.MongoClient(
-                        connection_string,
-                        maxPoolSize=None
-                    )
-                    
-                # print('mongo server_info: ', client.server_info(), file=sys.stdout)
-                # sys.stdout.flush()
+
+                # Configuration settings for the MongoDB client
+                client_settings = {
+                    'maxPoolSize': 100,  # Maximum number of connections in the pool
+                    'retryWrites': True,  # Automatically retry certain write operations if they fail
+                    'heartbeatFrequencyMS': 10000,  # Send heartbeat messages every 10 seconds
+                    'socketTimeoutMS': None,  # No timeout on socket operations (wait indefinitely)
+                }
+
+                if Config.GCP_PROD_ENV and not Config.TESTING:
+                    # Include TLS CA file for secure connections in production
+                    client_settings['tlsCAFile'] = certifi.where()
+
+                # Create a MongoDB client with the specified settings
+                client = pymongo.MongoClient(connection_string, **client_settings)
 
                 database = client[Config.MONGO_DATABASE]
 
                 MongoClient.__MongoDB = database
                 print("☑️ Successfully connected to database!")
-                
-                # `sys.stdout.flush()` is used to flush the standard output buffer.
+
+                # Flush the standard output buffer
                 sys.stdout.flush()
 
             except Exception as e:

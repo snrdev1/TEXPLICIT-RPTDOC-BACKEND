@@ -14,8 +14,10 @@ class ReportPermission(BaseModel):
 
 
 class SubscriptionDuration(BaseModel):
-    start_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    end_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    start_date: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
+    end_date: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
 
 
 class AllowedDocument(BaseModel):

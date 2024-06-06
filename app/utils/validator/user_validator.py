@@ -9,15 +9,18 @@ from ..enumerator import Enumerator
 class ReportPermission(BaseModel):
     allowed: Dict[str, int] = {"total": 0}
     used: Dict[str, int] = {"total": 0}
-    
+
     def __init__(self, **data):
         super().__init__(**data)
         for report_type in Enumerator.ReportType:
             self.used[report_type.value] = 0
 
+
 class SubscriptionDuration(BaseModel):
-    start_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    end_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    start_date: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
+    end_date: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
 
 
 class AllowedDocument(BaseModel):
@@ -29,8 +32,10 @@ class DocumentPermission(BaseModel):
     allowed: AllowedDocument = AllowedDocument()
     used: AllowedDocument = AllowedDocument()
 
+
 class ChatCount(BaseModel):
     chat_count: int = 0
+
 
 class ChatPermission(BaseModel):
     allowed: ChatCount = ChatCount()
@@ -56,5 +61,6 @@ class User(BaseModel):
     subscription: int = 1
     image: str = ""
     isActive: bool = True
-    createdOn: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    createdOn: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
     permissions: UserPermissions = UserPermissions()
