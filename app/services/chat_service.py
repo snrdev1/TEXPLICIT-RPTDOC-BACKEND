@@ -301,10 +301,15 @@ class ChatService:
                 {"$match": {"user._id": ObjectId(
                     self.user_id), "user.ref": "user"}},
                 {"$unwind": {"path": "$chat"}},
-                {"$sort": {"chat.timestamp": -1, "chat.role": -1}},
+                {
+                    "$addFields": {
+                    "chat.parsedDate": { "$toDate": "$chat.timestamp" } 
+                    }
+                },
+                {"$sort": {"chat.parsedDate": -1, "chat.role": -1}},
                 {"$skip": offset},
                 {"$limit": limit},
-                {"$sort": {"chat.timestamp": 1, "chat.role": -1}},
+                {"$sort": {"chat.parsedDate": 1, "chat.role": -1}},
                 {
                     "$group": {
                         "_id": "$_id",
@@ -314,7 +319,7 @@ class ChatService:
                 },
                 {"$project": {"user": 1, "chat": 1, "_id": 0}},
             ]
-
+          
             result = m_db[Config.MONGO_CHAT_MASTER_COLLECTION].aggregate(
                 pipeline)
 
